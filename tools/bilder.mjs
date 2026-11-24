@@ -9,7 +9,8 @@ const ziel = 'tools/bilder';
 mkdirSync(ziel, { recursive: true });
 
 const browser = await webkit.launch();
-const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, isMobile: false, hasTouch: false });
+const dunkel = process.env.DUNKEL === '1';
+const ctx = await browser.newContext({ colorScheme: dunkel ? 'dark' : 'light', viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, isMobile: false, hasTouch: false });
 const fehler = [];
 
 for (const stil of stile) {
@@ -18,7 +19,7 @@ for (const stil of stile) {
 	page.on('console', (m) => m.type() === 'error' && fehler.push(`${stil}: ${m.text()}`));
 	const foto = async (name, warten = 600) => {
 		await page.waitForTimeout(warten);
-		await page.screenshot({ path: `${ziel}/${stil}-${name}.png` });
+		await page.screenshot({ path: `${ziel}/${stil}${dunkel ? '-dunkel' : ''}-${name}.png` });
 	};
 	await page.goto(`${BASIS}#/entwurf/${stil}`);
 	await foto('1-start', 5000);

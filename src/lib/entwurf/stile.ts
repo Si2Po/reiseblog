@@ -1,17 +1,22 @@
 // Drei Stilrichtungen für die Design-Entwürfe.
 import type { KartenFarben } from '#lib/map/stil.ts';
 
-export type Variante = 'atlas' | 'nacht' | 'wegweiser';
+export type Variante = 'atlas' | 'nacht' | 'wegweiser' | 'mix';
 
-export interface Stil {
+export interface Modus {
+	vars: Record<string, string>;
+	karte: KartenFarben;
+	reiseFarben: string[];
+}
+
+export interface Stil extends Modus {
 	id: Variante;
 	buchstabe: string;
 	name: string;
 	idee: string;
-	vars: Record<string, string>;
-	karte: KartenFarben;
-	reiseFarben: string[];
 	dunkel: boolean;
+	/** eigener Dunkelmodus (nur beim gemischten Entwurf) */
+	nacht?: Modus;
 }
 
 export const stile: Stil[] = [
@@ -116,5 +121,38 @@ export const stile: Stil[] = [
 		reiseFarben: ['#1d5c3a', '#d9542b', '#2b5da8', '#c99a1e']
 	}
 ];
+
+// Gewählte Mischung: Schrift und Klarheit von C, große Bilder von B, eigener Dunkelmodus.
+const wegweiser = stile.find((s) => s.id === 'wegweiser')!;
+stile.push({
+	...wegweiser,
+	id: 'mix',
+	buchstabe: 'D',
+	name: 'Mischung',
+	idee: 'Schrift und Klarheit von C, große Bildkarten von B, dazu ein eigener Dunkelmodus (folgt dem iPhone).',
+	nacht: {
+		vars: {
+			...wegweiser.vars,
+			'--grund': '#0e1311',
+			'--flaeche': '#161c19',
+			'--flaeche-2': '#1f2723',
+			'--linie': '#2a3430',
+			'--text': '#edf2ee',
+			'--text-2': '#97a39c',
+			'--akzent': '#5cbf8a',
+			'--akzent-text': '#06120b',
+			'--tief': '#1f4532',
+			'--signal': '#f2c230',
+			'--schatten': '0 -1px 0 #2a3430, 0 -14px 36px rgba(0, 0, 0, 0.5)',
+			'--knopf-schatten': '0 8px 20px rgba(92, 191, 138, 0.25)'
+		},
+		karte: {
+			land: '#131a16', park: '#15201a', wald: '#16221b', wasser: '#0b1d24', fluss: '#11303a', eis: '#1b231f',
+			siedlung: '#19201c', gebaeude: '#1f2722', strasse: '#29332d', strasseKlein: '#212a25', strasseRand: '#19201b',
+			grenze: '#3a4740', text: '#7d8a83', textStark: '#d0d9d3', textHalo: '#0e1311', textWasser: '#4c7d8b', relief: 0
+		},
+		reiseFarben: ['#5cbf8a', '#f07a4f', '#79a3ea', '#e8bb3e']
+	}
+});
 
 export const stilVon = (id: string) => stile.find((s) => s.id === id) ?? stile[0];

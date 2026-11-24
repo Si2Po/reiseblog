@@ -35,9 +35,19 @@
 	import Heart from 'phosphor-svelte/lib/Heart';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import Crosshair from 'phosphor-svelte/lib/Crosshair';
+	import Sun from 'phosphor-svelte/lib/Sun';
+	import Moon from 'phosphor-svelte/lib/Moon';
 
 	const stil = $derived(stilVon(page.params.stil ?? 'atlas'));
-	const farbe = (u: string) => stil.reiseFarben[D.urlaube.find((x) => x.id === u)!.farbe];
+
+	// Hell/Dunkel: folgt dem System, lässt sich per Knopf festlegen (nur Entwurf D hat beides)
+	const systemFrage = matchMedia('(prefers-color-scheme: dark)');
+	let systemDunkel = $state(systemFrage.matches);
+	systemFrage.addEventListener('change', (e) => (systemDunkel = e.matches));
+	let thema = $state<'auto' | 'hell' | 'dunkel'>('auto');
+	const dunkel = $derived(stil.nacht ? (thema === 'auto' ? systemDunkel : thema === 'dunkel') : stil.dunkel);
+	const modus = $derived(dunkel && stil.nacht ? stil.nacht : stil);
+	const farbe = (u: string) => modus.reiseFarben[D.urlaube.find((x) => x.id === u)!.farbe];
 
 	// --- Zustand ---
 	let hoehe = $state<Hoehe>('halb');
@@ -169,7 +179,7 @@
 </script>
 
 <svelte:head>
-	<meta name="theme-color" content={stil.vars['--grund']} />
+	<meta name="theme-color" content={modus.vars['--grund']} />
 </svelte:head>
 
 <svelte:window
@@ -180,12 +190,12 @@
 	}}
 />
 
-<div class="app" data-stil={stil.id} style={Object.entries(stil.vars).map(([k, v]) => `${k}:${v}`).join(';')}>
-	{#key stil.id}
+<div class="app" data-stil={stil.id} data-dunkel={dunkel} style={Object.entries(modus.vars).map(([k, v]) => `${k}:${v}`).join(';')}>
+	{#key stil.id + dunkel}
 		<Karte
 			bind:this={karte}
-			farben={stil.karte}
-			halo={stil.vars['--flaeche']}
+			farben={modus.karte}
+			halo={modus.vars['--flaeche']}
 			{linien}
 			{punkte}
 			fotos={kartenFotos}
@@ -213,6 +223,11 @@
 		<button onclick={() => karte?.zeigePunkt(7.2059, 62.1007, sichtbar, 11)} aria-label="Mein Standort">
 			<NavigationArrow size={20} />
 		</button>
+		{#if stil.nacht}
+			<button onclick={() => (thema = dunkel ? 'hell' : 'dunkel')} aria-label={dunkel ? 'Heller Modus' : 'Dunkler Modus'}>
+				{#if dunkel}<Sun size={21} />{:else}<Moon size={20} />{/if}
+			</button>
+		{/if}
 	</div>
 
 	{#if hoehe !== 'voll'}
@@ -428,7 +443,7 @@
 				<span class="b-txt"><b>Geiranger, Norwegen</b><span class="zahl">62,1007° N · 7,2059° O · auf 8 m genau</span></span>
 			</div>
 			<button class="reisewahl" onclick={() => zeigeHinweis('Reise wählen kommt später')}>
-				<span class="punkt" style:background={stil.reiseFarben[0]}></span> Zur Reise <b>Norwegen</b>
+				<span class="punkt" style:background={modus.reiseFarben[0]}></span> Zur Reise <b>Norwegen</b>
 				<CaretDown size={14} />
 			</button>
 			<div class="wahl">
@@ -1300,12 +1315,12 @@
 	}
 
 	/* ===================== C: Wegweiser – Schilder und Zahlen ===================== */
-	[data-stil='wegweiser'] .reise {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .reise {
 		grid-template-columns: 6px 1fr 88px;
 		gap: 14px;
 		padding: 14px 0;
 	}
-	[data-stil='wegweiser'] .reise::before {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .reise::before {
 		content: '';
 		grid-column: 1;
 		grid-row: 1;
@@ -1313,61 +1328,61 @@
 		border-radius: 3px;
 		background: var(--rf);
 	}
-	[data-stil='wegweiser'] .cover {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .cover {
 		grid-column: 3;
 		grid-row: 1;
 		width: 88px;
 		height: 88px;
 	}
-	[data-stil='wegweiser'] .r-txt {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .r-txt {
 		grid-column: 2;
 		grid-row: 1;
 	}
-	[data-stil='wegweiser'] .jahr {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .jahr {
 		color: var(--text-2);
 		letter-spacing: 0.08em;
 	}
-	[data-stil='wegweiser'] .r-titel {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .r-titel {
 		font-size: 22px;
 	}
-	[data-stil='wegweiser'] .zahlen b {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .zahlen b {
 		font-size: 15px;
 	}
-	[data-stil='wegweiser'] .u-kopf h2 {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .u-kopf h2 {
 		font-size: 34px;
 	}
-	[data-stil='wegweiser'] .kennzahlen {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .kennzahlen {
 		gap: 6px;
 		border: 0;
 	}
-	[data-stil='wegweiser'] .kennzahlen div {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .kennzahlen div {
 		padding: 10px;
 		border: 0;
 		border-radius: var(--radius);
 		background: var(--tief);
 		color: #fff;
 	}
-	[data-stil='wegweiser'] .kennzahlen div:first-child {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .kennzahlen div:first-child {
 		background: var(--signal);
 		color: #111;
 	}
-	[data-stil='wegweiser'] .kennzahlen div:first-child span {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .kennzahlen div:first-child span {
 		color: #333;
 	}
-	[data-stil='wegweiser'] .kennzahlen span {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .kennzahlen span {
 		color: rgba(255, 255, 255, 0.75);
 	}
-	[data-stil='wegweiser'] .kennzahlen b {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .kennzahlen b {
 		font-size: 24px;
 		font-weight: 700;
 	}
-	[data-stil='wegweiser'] .ueber,
-	[data-stil='wegweiser'] .tagkopf {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .ueber,
+	:is([data-stil='wegweiser'], [data-stil='mix']) .tagkopf {
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
 		font-size: 12px;
 	}
-	[data-stil='wegweiser'] .tagnr {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .tagnr {
 		padding: 2px 8px;
 		border-radius: 4px;
 		background: var(--rf);
@@ -1375,10 +1390,10 @@
 		font-size: 12px;
 		font-weight: 700;
 	}
-	[data-stil='wegweiser'] .sym {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .sym {
 		border-radius: 8px;
 	}
-	[data-stil='wegweiser'] .hier {
+	:is([data-stil='wegweiser'], [data-stil='mix']) .hier {
 		border-radius: var(--radius);
 	}
 
@@ -1420,5 +1435,67 @@
 		width: 0;
 		border-left: 2px dotted color-mix(in srgb, var(--rf) 55%, transparent);
 		background: none;
+	}
+
+	/* ===================== D: Mischung – C mit großen Bildern aus B ===================== */
+	[data-stil='mix'] .reisen {
+		gap: 12px;
+	}
+	[data-stil='mix'] .reise {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+		height: 200px;
+		padding: 0;
+		border: 0;
+		border-radius: var(--radius-gross);
+		overflow: hidden;
+	}
+	[data-stil='mix'] .reise::before {
+		display: none;
+	}
+	[data-stil='mix'] .cover {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		border-radius: 0;
+	}
+	[data-stil='mix'] .r-txt {
+		position: relative;
+		width: 100%;
+		align-self: stretch;
+		padding: 56px 16px 14px;
+		background: linear-gradient(transparent, rgba(6, 10, 8, 0.84));
+		color: #fff;
+	}
+	[data-stil='mix'] .jahr {
+		align-self: flex-start;
+		margin-bottom: 6px;
+		padding: 2px 8px;
+		border-radius: 4px;
+		background: var(--rf);
+		color: #fff;
+		font-size: 12px;
+	}
+	[data-stil='mix'] .r-titel {
+		font-size: 28px;
+	}
+	[data-stil='mix'] .zeit,
+	[data-stil='mix'] .zahlen {
+		color: rgba(255, 255, 255, 0.78);
+	}
+	[data-stil='mix'] .zahlen b {
+		color: #fff;
+	}
+	[data-stil='mix'] .streifen button {
+		width: 120px;
+		height: 150px;
+	}
+	/* Im Dunkeln sind die Reisefarben hell → dunkle Schrift darauf */
+	[data-dunkel='true'] .jahr,
+	[data-dunkel='true'] .tagnr {
+		color: #08110c;
 	}
 </style>
