@@ -1,0 +1,62 @@
+/* Grundlagen für die ganze App. Farben und Schriften kommen als CSS-Variablen vom gewählten Stil. */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+html,
+body {
+	margin: 0;
+	height: 100%;
+	overflow: hidden;
+	overscroll-behavior: none;
+}
+:root {
+	--sicher-oben: env(safe-area-inset-top);
+	--sicher-unten: env(safe-area-inset-bottom);
+	-webkit-text-size-adjust: 100%;
+	-webkit-tap-highlight-color: transparent;
+}
+body {
+	font-family: var(--schrift-ui, system-ui, sans-serif);
+	font-size: 16px;
+	line-height: 1.4;
+	color: var(--text);
+	background: var(--grund);
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+button {
+	font: inherit;
+	color: inherit;
+	cursor: pointer;
+	touch-action: manipulation;
+}
+input,
+select,
+textarea {
+	font: inherit;
+	font-size: max(16px, 1em); /* iOS zoomt sonst hinein */
+	color: inherit;
+}
+h1,
+h2,
+h3 {
+	margin: 0;
+	font-family: var(--schrift-kopf);
+	font-weight: var(--kopf-gewicht);
+	font-style: var(--kopf-stil);
+	letter-spacing: var(--kopf-sperrung);
+	line-height: 1.1;
+	text-wrap: balance;
+}
+p {
+	margin: 0;
+}
+img {
+	display: block;
+	max-width: 100%;
+}
+.zahl {
+	font-variant-numeric: tabular-nums;
+}
