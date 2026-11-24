@@ -14,7 +14,7 @@
 		{:else if gerundet >= i - 0.5}
 			<StarHalf weight="fill" size={groesse} />
 		{:else}
-			<Star weight="regular" size={groesse} class="leer" />
+			<Star weight="regular" size={groesse} class="aus" />
 		{/if}
 	{/each}
 </span>
@@ -23,10 +23,10 @@
 	.sterne {
 		display: inline-flex;
 		gap: 1px;
-		color: var(--akzent);
+		color: var(--stern);
 		vertical-align: -2px;
 	}
-	.sterne :global(.leer) {
-		color: var(--linie);
+	.sterne :global(.aus) {
+		color: color-mix(in srgb, var(--text-2) 45%, transparent);
 	}
 </style>

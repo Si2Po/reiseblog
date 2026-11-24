@@ -1,56 +1,24 @@
-# sv
+# Reiseblog
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Ein Reisetagebuch für Camper-Reisen – als Web-App, die sich auf dem iPhone wie eine App installieren lässt.
 
-## Creating a project
+- **Reisen auf der Karte** mit echten Straßenrouten
+- **Übernachtungen, Fahrten, Ausflüge, Events** in einer Zeitleiste nach Tagen
+- **Stellplätze** mit Ausstattung, Bewertung und allen Besuchen
+- **Fotos** mit Ort und Datum aus dem Foto, auch als eigene Foto-Karte
+- **Suche** nach Ort, Notiz, Jahr und Zeitraum
+- **„Hier eintragen“** mit dem aktuellen Standort
+- Funktioniert offline, hell und dunkel, am iPhone und am PC
 
-If you're seeing this, you've probably already done this step. Congrats!
+Die App: https://si2po.github.io/reiseblog/
 
-```sh
-# create a new project
-npx sv create my-app
+## Entwickeln
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm run check      # Typprüfung
+npm test           # Tests
 ```
 
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv@1.7.1 create --template minimal --types ts --install npm Reiseblog
-```
-
-## Adding features
-
-Add features to your project with `sv add`:
-
-```sh
-npx sv add
-```
-
-For example, to add Tailwind CSS:
-
-```sh
-npx sv add tailwindcss
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Gebaut mit SvelteKit, MapLibre GL und OpenFreeMap. Kartendaten © OpenStreetMap-Mitwirkende.

@@ -3,8 +3,12 @@ import { de } from 'date-fns/locale';
 
 const d = (s: string) => parseISO(s);
 
-/** „5.–19. Juli 2025“, „28. Juni – 3. Juli 2025“, „30. Dez. 2024 – 4. Jan. 2025“ */
-export function zeitraum(start: string, ende: string): string {
+/** Heutiges Datum als JJJJ-MM-TT (lokale Zeit) */
+export const heute = () => format(new Date(), 'yyyy-MM-dd');
+
+/** „5.–19. Juli 2025“, „28. Juni – 3. Juli 2025“, „30. Dez. 2024 – 4. Jan. 2025“, „seit 3. Mai 2026“ */
+export function zeitraum(start: string, ende: string | undefined): string {
+	if (!ende || ende === start) return ende ? format(d(start), 'd. MMMM yyyy', { locale: de }) : `seit ${format(d(start), 'd. MMMM yyyy', { locale: de })}`;
 	const a = d(start),
 		b = d(ende);
 	if (a.getFullYear() !== b.getFullYear()) return `${format(a, 'd. MMM yyyy', { locale: de })} – ${format(b, 'd. MMM yyyy', { locale: de })}`;
@@ -29,3 +33,11 @@ export function dauer(min: number): string {
 }
 
 export const zahl = (n: number) => n.toLocaleString('de-DE');
+
+/** „38 €“, „420 NOK“, „gratis“ */
+export function preisText(preis: number | undefined, waehrung = 'EUR'): string {
+	if (preis === undefined || preis === null) return '';
+	if (preis === 0) return 'gratis';
+	const symbol: Record<string, string> = { EUR: '€', CHF: 'CHF', NOK: 'NOK', SEK: 'SEK', DKK: 'DKK', GBP: '£', HRK: 'kn', CZK: 'Kč', PLN: 'zł' };
+	return `${preis.toLocaleString('de-DE', { maximumFractionDigits: 2 })} ${symbol[waehrung] ?? waehrung}`;
+}

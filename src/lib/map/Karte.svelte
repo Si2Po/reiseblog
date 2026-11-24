@@ -1,6 +1,7 @@
 <!--
   Karte mit MapLibre: Routen und Punkte als GeoJSON-Ebenen,
-  Fotos als runde Vorschaubilder (nahe beieinander → Stapel mit Anzahl).
+  Fotos als runde Vorschaubilder (nahe beieinander → Stapel mit Anzahl),
+  eigener Standort als Punkt. Wird über die exportierten Funktionen gesteuert.
 -->
 <script lang="ts" module>
 	export interface KartenFoto {
@@ -8,6 +9,12 @@
 		lat: number;
 		lng: number;
 		url: string;
+	}
+	export interface Rand {
+		top: number;
+		bottom: number;
+		left: number;
+		right: number;
 	}
 </script>
 
@@ -31,6 +38,7 @@
 		fotos = [],
 		fotosAn = false,
 		auswahl = null,
+		ich = null,
 		onpunkt,
 		onreise,
 		onfoto,
@@ -43,6 +51,8 @@
 		fotos?: KartenFoto[];
 		fotosAn?: boolean;
 		auswahl?: string | null;
+		/** eigener Standort */
+		ich?: { lat: number; lng: number; genau: number } | null;
 		onpunkt?: (id: string) => void;
 		onreise?: (id: string) => void;
 		onfoto?: (id: string) => void;
@@ -53,21 +63,31 @@
 	let map: maplibregl.Map | undefined = $state();
 	let bereit = $state(false);
 	let fotoMarker: maplibregl.Marker[] = [];
+	let ichMarker: maplibregl.Marker | null = null;
 
 	// --- von außen aufrufbar ---
-	export function zeigeBereich(coords: [number, number][], unten: number) {
+	export function zeigeBereich(coords: [number, number][], rand: Rand, maxZoom = 11) {
 		if (!map || !coords.length) return;
 		const b = new maplibregl.LngLatBounds(coords[0], coords[0]);
 		for (const c of coords) b.extend(c);
-		map.fitBounds(b as LngLatBoundsLike, {
-			padding: { top: 90, bottom: unten + 40, left: 40, right: 40 },
-			duration: 1400,
-			maxZoom: 11,
-			essential: true
-		});
+		map.fitBounds(b as LngLatBoundsLike, { padding: rand, duration: 1300, maxZoom, essential: true });
 	}
-	export function zeigePunkt(lng: number, lat: number, unten: number, zoom = 12) {
-		map?.flyTo({ center: [lng, lat], zoom, padding: { top: 60, bottom: unten, left: 0, right: 0 }, duration: 1400, essential: true });
+	export function zeigePunkt(lng: number, lat: number, rand: Rand, zoom = 12) {
+		// nie herauszoomen, wenn man schon näher dran ist
+		map?.flyTo({ center: [lng, lat], zoom: Math.max(zoom, map.getZoom()), padding: rand, duration: 1300, essential: true });
+	}
+	/** Mitte des sichtbaren Bereichs (berücksichtigt den Rand) */
+	export function mitte(): { lat: number; lng: number } | null {
+		if (!map) return null;
+		const c = map.getCenter();
+		return { lat: c.lat, lng: c.lng };
+	}
+	/** Koordinate unter einem Bildschirmpunkt (für das Fadenkreuz bei „Ort wählen“) */
+	export function ortBei(x: number, y: number): { lat: number; lng: number } | null {
+		if (!map) return null;
+		const r = box.getBoundingClientRect();
+		const p = map.unproject([x - r.left, y - r.top]);
+		return { lat: p.lat, lng: p.lng };
 	}
 
 	function ebenenAnlegen() {
@@ -86,8 +106,21 @@
 			id: 'linien',
 			type: 'line',
 			source: 'linien',
+			filter: ['!', ['to-boolean', ['get', 'gerade']]],
 			layout: { 'line-cap': 'round', 'line-join': 'round' },
 			paint: { 'line-color': ['get', 'farbe'], 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 2.4, 10, 4.5] }
+		});
+		// Fahrten ohne berechnete Straßenroute: gestrichelte gerade Linie
+		map.addLayer({
+			id: 'linien-gerade',
+			type: 'line',
+			source: 'linien',
+			filter: ['to-boolean', ['get', 'gerade']],
+			paint: {
+				'line-color': ['get', 'farbe'],
+				'line-width': ['interpolate', ['linear'], ['zoom'], 3, 2, 10, 3.5],
+				'line-dasharray': [1.5, 1.5]
+			}
 		});
 		map.addLayer({
 			id: 'punkte',
@@ -104,10 +137,6 @@
 				'circle-stroke-width': ['case', ['==', ['get', 'typ'], 'stay'], 2.5, 2]
 			}
 		});
-		for (const id of ['punkte', 'linien']) {
-			map.on('mouseenter', id, () => map && (map.getCanvas().style.cursor = 'pointer'));
-			map.on('mouseleave', id, () => map && (map.getCanvas().style.cursor = ''));
-		}
 		bereit = true;
 		hervorheben();
 		onbereit?.();
@@ -117,6 +146,7 @@
 		if (!map || !bereit) return;
 		const deck: maplibregl.ExpressionSpecification | number = auswahl ? ['case', ['==', ['get', 'reise'], auswahl], 1, 0.22] : 1;
 		map.setPaintProperty('linien', 'line-opacity', deck);
+		map.setPaintProperty('linien-gerade', 'line-opacity', deck);
 		map.setPaintProperty('linien-halo', 'line-opacity', deck);
 		map.setPaintProperty('punkte', 'circle-opacity', deck);
 		map.setPaintProperty('punkte', 'circle-stroke-opacity', deck);
@@ -125,7 +155,7 @@
 	// --- Foto-Stapel ---
 	let index: Supercluster | null = null;
 	function fotosNeu() {
-		index = new Supercluster({ radius: 56, maxZoom: 16 });
+		index = new Supercluster({ radius: 60, maxZoom: 17 });
 		index.load(
 			fotos.map((f) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [f.lng, f.lat] }, properties: { id: f.id, url: f.url } }))
 		);
@@ -142,19 +172,19 @@
 			const p = c.properties as { cluster?: boolean; cluster_id?: number; point_count?: number; id?: string; url?: string };
 			const el = document.createElement('button');
 			el.className = 'fpin';
-			let url = p.url;
 			if (p.cluster) {
 				const erstes = index.getLeaves(p.cluster_id!, 1)[0];
-				url = (erstes.properties as { url: string }).url;
 				el.classList.add('stapel');
-				el.innerHTML = `<img alt="" src="${url}"><span>${p.point_count}</span>`;
+				el.innerHTML = `<img alt="" src="${(erstes.properties as { url: string }).url}"><span>${p.point_count}</span>`;
+				el.setAttribute('aria-label', `${p.point_count} Fotos`);
 				el.onclick = (e) => {
 					e.stopPropagation();
 					const zoom = index!.getClusterExpansionZoom(p.cluster_id!);
-					map!.easeTo({ center: [lng, lat], zoom: Math.min(zoom, 16), duration: 700 });
+					map!.easeTo({ center: [lng, lat], zoom: Math.min(zoom, 17), duration: 700 });
 				};
 			} else {
-				el.innerHTML = `<img alt="" src="${url}">`;
+				el.innerHTML = `<img alt="" src="${p.url}">`;
+				el.setAttribute('aria-label', 'Foto ansehen');
 				el.onclick = (e) => {
 					e.stopPropagation();
 					onfoto?.(p.id!);
@@ -176,8 +206,8 @@
 			map = new maplibregl.Map({
 				container: box,
 				style,
-				center: [6, 54],
-				zoom: 2.6,
+				center: [10, 50],
+				zoom: 3.2,
 				attributionControl: { compact: true },
 				dragRotate: false,
 				pitchWithRotate: false
@@ -193,11 +223,30 @@
 				const r = e.features?.[0]?.properties?.reise;
 				if (r) onreise?.(r);
 			});
+			map.on('click', 'linien-gerade', (e) => {
+				const r = e.features?.[0]?.properties?.reise;
+				if (r) onreise?.(r);
+			});
+			for (const id of ['punkte', 'linien', 'linien-gerade']) {
+				map.on('mouseenter', id, () => map && (map.getCanvas().style.cursor = 'pointer'));
+				map.on('mouseleave', id, () => map && (map.getCanvas().style.cursor = ''));
+			}
 		});
 		return () => {
 			weg = true;
 			map?.remove();
 		};
+	});
+
+	// Hell/Dunkel: Stil tauschen, Kamera bleibt
+	// svelte-ignore state_referenced_locally
+	let ersteFarben = farben;
+	$effect(() => {
+		const f = farben;
+		if (!map || f === ersteFarben) return;
+		ersteFarben = f;
+		bereit = false;
+		kartenStil(f).then((s) => map?.setStyle(s));
 	});
 
 	// Daten- und Auswahländerungen nachziehen
@@ -216,6 +265,19 @@
 		void fotos;
 		void fotosAn;
 		if (map) fotosNeu();
+	});
+	$effect(() => {
+		if (!map) return;
+		if (!ich) {
+			ichMarker?.remove();
+			ichMarker = null;
+			return;
+		}
+		if (!ichMarker) {
+			const el = document.createElement('div');
+			el.className = 'ich';
+			ichMarker = new maplibregl.Marker({ element: el }).setLngLat([ich.lng, ich.lat]).addTo(map);
+		} else ichMarker.setLngLat([ich.lng, ich.lat]);
 	});
 </script>
 
@@ -239,7 +301,7 @@
 		background: var(--flaeche);
 		box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
 		cursor: pointer;
-		animation: fpin-rein 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+		animation: fpin-rein 0.35s var(--sanft);
 	}
 	:global(.fpin img) {
 		width: 100%;
@@ -264,10 +326,20 @@
 		height: 22px;
 		padding: 0 6px;
 		border-radius: 11px;
-		background: var(--akzent);
-		color: var(--akzent-text);
-		font: 650 12px/22px var(--schrift-ui);
+		background: var(--signal);
+		color: var(--signal-text);
+		font: 650 12px/22px var(--schrift);
 		font-variant-numeric: tabular-nums;
+	}
+	:global(.ich) {
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		background: #2f7cf6;
+		border: 3px solid #fff;
+		box-shadow:
+			0 0 0 6px rgba(47, 124, 246, 0.2),
+			0 2px 6px rgba(0, 0, 0, 0.3);
 	}
 	@keyframes fpin-rein {
 		from {
@@ -276,6 +348,10 @@
 		}
 	}
 	:global(.maplibregl-ctrl-attrib) {
-		font: 11px var(--schrift-ui);
+		font: 11px var(--schrift);
+	}
+	:global(.maplibregl-ctrl-attrib.maplibregl-compact) {
+		background: var(--flaeche);
+		color: var(--text-2);
 	}
 </style>

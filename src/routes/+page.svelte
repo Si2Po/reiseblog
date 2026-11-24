@@ -1,113 +1,203 @@
-<!-- Vorläufige Startseite: Design-Entwürfe im Vergleich. -->
+<!-- Startseite: alle Reisen als große Bildkarten. -->
 <script lang="ts">
-	import { stile } from '#lib/entwurf/stile.ts';
+	import { onMount } from 'svelte';
+	import Plus from 'phosphor-svelte/lib/Plus';
+	import Van from 'phosphor-svelte/lib/Van';
+	import Reiter from '#lib/ui/Reiter.svelte';
+	import { daten } from '#lib/db/daten.svelte.ts';
+	import { ui } from '#lib/ui.svelte.ts';
+	import { thema } from '#lib/thema.svelte.ts';
+	import { reiseFarbe } from '#lib/farben.ts';
+	import { reisenSortiert, naechte, km, fotosVon, reiseEnde, summe } from '#lib/auswertung.ts';
+	import { zeitraum, jahr, zahl } from '#lib/datum.ts';
+	import { beispielLaden } from '#lib/beispiel/daten.ts';
 
-	const haupt = stile.filter((s) => !s.id.startsWith('mix-') && s.id !== 'mix');
-	const dunkel = stile.filter((s) => s.id.startsWith('mix'));
+	const reisen = $derived(reisenSortiert());
+	const s = $derived(summe());
+
+	onMount(() => {
+		ui.auswahl = null;
+		ui.markiert = null;
+		if (daten.geladen) ui.zeigeAlles();
+	});
+
+	function titelbild(id: string) {
+		const r = daten.reise(id);
+		return daten.foto(r?.titelbild)?.vorschau ?? fotosVon(id)[0]?.vorschau;
+	}
 </script>
 
-<main>
-	<header>
-		<h1>Reiseblog – Dunkelmodus für Entwurf D</h1>
-		<p>
-			Hell bleibt wie D. Für dunkel gibt es vier Varianten. Alles ist anklickbar; der Knopf mit Sonne/Mond an der Karte
-			schaltet zwischen hell und dunkel.
-		</p>
-	</header>
-	<div class="reihe">
-		{#each dunkel as s, i (s.id)}
-			<section>
-				<a class="titel" href="#/entwurf/{s.id}/dunkel"><b>{i + 1}</b> {s.id === 'mix' ? 'Wald (bisher)' : s.name}</a>
-				<p>{s.id === 'mix' ? 'Dunkles Grau-Grün, Mintgrün als Akzent – der bisherige Stand.' : s.idee}</p>
-				<iframe title={s.name} src="{location.pathname}#/entwurf/{s.id}/dunkel"></iframe>
-			</section>
-		{/each}
-	</div>
+<Reiter />
 
-	<header class="zweit">
-		<h2>Die ersten Entwürfe</h2>
-	</header>
-	<div class="reihe">
-		{#each haupt as s (s.id)}
-			<section>
-				<a class="titel" href="#/entwurf/{s.id}"><b>{s.buchstabe}</b> {s.name}</a>
-				<p>{s.idee}</p>
-				<iframe title={s.name} src="{location.pathname}#/entwurf/{s.id}" loading="lazy"></iframe>
-			</section>
-		{/each}
-	</div>
-</main>
+<div class="seite">
+	{#if !daten.geladen}
+		<p class="leer">Lädt …</p>
+	{:else if !reisen.length}
+		<div class="willkommen">
+			<span class="symbol"><Van size={40} weight="duotone" /></span>
+			<h2>Deine erste Reise</h2>
+			<p>
+				Leg eine Reise an und trag unterwegs Übernachtungen, Fahrten, Ausflüge und Fotos ein. Mit „Hier eintragen“ geht
+				das direkt mit deinem Standort.
+			</p>
+			<button class="knopf" onclick={() => (ui.dialog = { art: 'reise' })}><Plus size={18} weight="bold" /> Neue Reise</button>
+			<button class="knopf still" onclick={beispielLaden}>Zum Ausprobieren: Beispielreisen laden</button>
+		</div>
+	{:else}
+		<p class="ueber summe zahl">
+			{s.reisen}
+			{s.reisen === 1 ? 'Reise' : 'Reisen'} · {s.naechte} Nächte · {zahl(s.km)} km
+		</p>
+		<div class="reisen">
+			{#each reisen as r (r.id)}
+				{@const bild = titelbild(r.id)}
+				<a class="reise" class:ohne-bild={!bild} href="#/reise/{r.id}" style="--rf:{reiseFarbe(r.farbe, thema.dunkel)}">
+					{#if bild}<img class="cover" alt="" src={bild} loading="lazy" />{/if}
+					<span class="r-txt">
+						<span class="jahr zahl">{jahr(r.start)}</span>
+						<span class="r-titel">{r.titel}</span>
+						<span class="zeit">{zeitraum(r.start, r.ende ?? reiseEnde(r))}</span>
+						<span class="zahlen zahl">
+							<span><b>{naechte(r.id)}</b> Nächte</span>
+							<span><b>{zahl(km(r.id))}</b> km</span>
+							<span><b>{fotosVon(r.id).length}</b> Fotos</span>
+						</span>
+					</span>
+				</a>
+			{/each}
+		</div>
+		<button class="neue-reise" onclick={() => (ui.dialog = { art: 'reise' })}><Plus size={18} /> Neue Reise</button>
+	{/if}
+</div>
 
 <style>
-	main {
-		height: 100%;
-		overflow: auto;
-		padding: 28px 24px 40px;
-		background: #ecebe7;
-		color: #1d1d1b;
-		font-family: 'Instrument Sans Variable', system-ui, sans-serif;
+	.seite {
+		padding: 4px 18px 0;
 	}
-	header {
-		max-width: 760px;
-		margin: 0 auto 24px;
-		text-align: center;
+	.summe {
+		margin: 4px 0 12px;
 	}
-	header.zweit {
-		margin-top: 56px;
-	}
-	h1 {
-		font-size: 26px;
-		margin-bottom: 8px;
-	}
-	h2 {
-		font-size: 20px;
-	}
-	header p {
-		color: #555;
-	}
-	.reihe {
+	.reisen {
 		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		gap: 28px;
+		flex-direction: column;
+		gap: 12px;
 	}
-	section {
-		width: 375px;
+	.reise {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+		height: 200px;
+		border-radius: var(--radius-gross);
+		overflow: hidden;
+		color: #fff;
+		text-decoration: none;
+		background: var(--flaeche-2);
+		transition: transform 0.2s var(--sanft);
 	}
-	.titel {
+	.reise:active {
+		transform: scale(0.985);
+	}
+	.cover {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.r-txt {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		width: 100%;
+		padding: 56px 16px 14px;
+		background: linear-gradient(transparent, rgba(6, 10, 8, 0.84));
+	}
+	/* Ohne Foto: Fläche in Reisefarbe statt Bild */
+	.ohne-bild {
+		height: 150px;
+		background: linear-gradient(135deg, color-mix(in srgb, var(--rf) 85%, #000), color-mix(in srgb, var(--rf) 55%, #000));
+	}
+	.ohne-bild .r-txt {
+		background: none;
+		padding-top: 16px;
+	}
+	.jahr {
+		align-self: flex-start;
+		margin-bottom: 6px;
+		padding: 2px 8px;
+		border-radius: 4px;
+		background: var(--rf);
+		color: var(--schild-text);
+		font-size: 12px;
+		font-weight: 650;
+		letter-spacing: 0.08em;
+	}
+	.ohne-bild .jahr {
+		background: rgba(255, 255, 255, 0.2);
+		color: #fff;
+	}
+	.r-titel {
+		font-size: 28px;
+		font-weight: var(--kopf-gewicht);
+		letter-spacing: var(--kopf-sperrung);
+		line-height: 1.1;
+	}
+	.zeit {
+		color: rgba(255, 255, 255, 0.78);
+		font-size: 14px;
+	}
+	.zahlen {
+		display: flex;
+		gap: 12px;
+		margin-top: 4px;
+		font-size: 13px;
+		color: rgba(255, 255, 255, 0.78);
+	}
+	.zahlen b {
+		color: #fff;
+		font-size: 15px;
+		font-weight: 650;
+	}
+	.neue-reise {
 		display: flex;
 		align-items: center;
+		justify-content: center;
 		gap: 8px;
-		color: inherit;
-		text-decoration: none;
-		font-weight: 650;
-		font-size: 18px;
+		width: 100%;
+		height: 50px;
+		margin-top: 14px;
+		border: 1.5px dashed var(--linie);
+		border-radius: var(--radius);
+		background: none;
+		color: var(--text-2);
+		font-weight: 550;
 	}
-	.titel b {
+	.willkommen {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+		padding: 18px 4px 10px;
+	}
+	.willkommen .symbol {
 		display: grid;
 		place-items: center;
-		width: 28px;
-		height: 28px;
-		border-radius: 14px;
-		background: #1d1d1b;
-		color: #fff;
-		font-size: 14px;
+		width: 64px;
+		height: 64px;
+		border-radius: var(--radius-gross);
+		background: var(--signal);
+		color: var(--signal-text);
 	}
-	section p {
-		min-height: 44px;
-		margin: 6px 0 12px;
-		font-size: 14px;
-		color: #555;
+	.willkommen h2 {
+		font-size: 28px;
 	}
-	iframe {
-		display: block;
-		width: 375px;
-		height: 812px;
-		border: 0;
-		border-radius: 36px;
-		box-shadow:
-			0 0 0 10px #1d1d1b,
-			0 20px 50px rgba(0, 0, 0, 0.25);
-		background: #fff;
+	.willkommen p {
+		color: var(--text-2);
+		line-height: 1.5;
+	}
+	.willkommen .knopf {
+		width: 100%;
 	}
 </style>

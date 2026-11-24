@@ -1,0 +1,63 @@
+/*
+  Design-Werte „Wegweiser“: klar und grafisch wie Verkehrsschilder.
+  Hell: Waldgrün + Signal-Gelb. Dunkel („Asphalt“): Graphit, cremeweiße Knöpfe, gelbe Schilder.
+  Umschalten über data-thema am <html> (siehe thema.svelte.ts).
+*/
+:root {
+	--grund: #f6f6f2;
+	--flaeche: #ffffff;
+	--flaeche-2: #eff0eb;
+	--linie: #e1e3dc;
+	--text: #111914;
+	--text-2: #5b655e;
+	--akzent: #1d5c3a;
+	--akzent-text: #ffffff;
+	--tief: #1d5c3a;
+	--tief-text: #ffffff;
+	--signal: #f2c230;
+	--signal-text: #111111;
+	--gefahr: #c2412d;
+	--stern: #1d5c3a;
+	--schild-text: #ffffff;
+
+	--schrift: 'Instrument Sans Variable', system-ui, -apple-system, sans-serif;
+	--kopf-gewicht: 680;
+	--kopf-sperrung: -0.025em;
+
+	--radius: 6px;
+	--radius-gross: 14px;
+	--schatten: 0 -1px 0 #e1e3dc, 0 -10px 28px rgba(17, 25, 20, 0.08);
+	--schatten-leiste: 1px 0 0 #e1e3dc, 10px 0 28px rgba(17, 25, 20, 0.06);
+	--schatten-dialog: 0 20px 60px rgba(0, 0, 0, 0.22);
+	--knopf-schatten: 0 6px 14px rgba(29, 92, 58, 0.3);
+	--dimmer: rgba(10, 14, 12, 0.35);
+
+	--leiste-breite: 400px;
+	--sanft: cubic-bezier(0.22, 1, 0.36, 1);
+	color-scheme: light;
+}
+
+:root[data-thema='dunkel'] {
+	--grund: #111111;
+	--flaeche: #1a1a19;
+	--flaeche-2: #242423;
+	--linie: #323230;
+	--text: #f5f4ee;
+	--text-2: #a3a29a;
+	--akzent: #f1ecdc;
+	--akzent-text: #111111;
+	--tief: #2c2c2a;
+	--tief-text: #f5f4ee;
+	--signal: #ffd23f;
+	--signal-text: #111111;
+	--gefahr: #ff7a5c;
+	--stern: #ffd23f;
+	--schild-text: #111111;
+
+	--schatten: 0 -1px 0 #323230, 0 -14px 36px rgba(0, 0, 0, 0.55);
+	--schatten-leiste: 1px 0 0 #323230, 14px 0 36px rgba(0, 0, 0, 0.4);
+	--schatten-dialog: 0 20px 60px rgba(0, 0, 0, 0.6);
+	--knopf-schatten: 0 8px 22px rgba(0, 0, 0, 0.5);
+	--dimmer: rgba(0, 0, 0, 0.55);
+	color-scheme: dark;
+}

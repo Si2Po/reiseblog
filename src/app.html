@@ -8,7 +8,19 @@
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-title" content="Reiseblog" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="theme-color" content="#f6f6f2" />
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/icons/apple-touch-icon.png" />
+		<link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/icons/icon.svg" />
 		<title>Reiseblog</title>
+		<script>
+			// Hell/Dunkel schon vor dem ersten Bild setzen (kein Aufblitzen)
+			(function () {
+				var w = localStorage.getItem('reiseblog-thema');
+				var d = w ? w === 'dunkel' : matchMedia('(prefers-color-scheme: dark)').matches;
+				document.documentElement.dataset.thema = d ? 'dunkel' : 'hell';
+				if (d) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#111111');
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body>

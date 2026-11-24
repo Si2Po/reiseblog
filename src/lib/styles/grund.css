@@ -1,4 +1,4 @@
-/* Grundlagen für die ganze App. Farben und Schriften kommen als CSS-Variablen vom gewählten Stil. */
+/* Grundlagen für die ganze App. Farben und Maße stehen in design.css. */
 *,
 *::before,
 *::after {
@@ -12,13 +12,11 @@ body {
 	overscroll-behavior: none;
 }
 :root {
-	--sicher-oben: env(safe-area-inset-top);
-	--sicher-unten: env(safe-area-inset-bottom);
 	-webkit-text-size-adjust: 100%;
 	-webkit-tap-highlight-color: transparent;
 }
 body {
-	font-family: var(--schrift-ui, system-ui, sans-serif);
+	font-family: var(--schrift);
 	font-size: 16px;
 	line-height: 1.4;
 	color: var(--text);
@@ -32,6 +30,10 @@ button {
 	cursor: pointer;
 	touch-action: manipulation;
 }
+button:disabled {
+	cursor: default;
+	opacity: 0.45;
+}
 input,
 select,
 textarea {
@@ -43,9 +45,7 @@ h1,
 h2,
 h3 {
 	margin: 0;
-	font-family: var(--schrift-kopf);
 	font-weight: var(--kopf-gewicht);
-	font-style: var(--kopf-stil);
 	letter-spacing: var(--kopf-sperrung);
 	line-height: 1.1;
 	text-wrap: balance;
@@ -59,4 +59,264 @@ img {
 }
 .zahl {
 	font-variant-numeric: tabular-nums;
+}
+:focus-visible {
+	outline: 2px solid var(--signal);
+	outline-offset: 2px;
+}
+
+/* Kleine Überschrift über Abschnitten, wie Schildbeschriftung */
+.ueber {
+	display: block;
+	color: var(--text-2);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+.leer {
+	padding: 28px 8px;
+	color: var(--text-2);
+	text-align: center;
+}
+
+/* Knöpfe */
+.knopf {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 48px;
+	padding: 0 18px;
+	border: 0;
+	border-radius: var(--radius);
+	background: var(--akzent);
+	color: var(--akzent-text);
+	font-weight: 620;
+	text-decoration: none;
+}
+.knopf.zweit {
+	background: var(--flaeche-2);
+	color: var(--text);
+}
+.knopf.still {
+	background: none;
+	color: var(--text-2);
+}
+.knopf.gefahr {
+	background: none;
+	color: var(--gefahr);
+}
+.knopf:active:not(:disabled) {
+	transform: scale(0.98);
+}
+.rund {
+	display: grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: var(--flaeche-2);
+	color: var(--text);
+}
+
+/* Chips (Filter, Auswahl) */
+.chips {
+	display: flex;
+	gap: 8px;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+.chips button {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	height: 36px;
+	padding: 0 14px;
+	border: 1px solid var(--linie);
+	border-radius: 18px;
+	background: none;
+	font-size: 14px;
+	font-weight: 550;
+	color: var(--text);
+}
+.chips button.an {
+	background: var(--text);
+	border-color: var(--text);
+	color: var(--flaeche);
+}
+
+@media (hover: hover) {
+	.knopf:hover:not(:disabled) {
+		filter: brightness(1.06);
+	}
+	.knopf.zweit:hover:not(:disabled),
+	.rund:hover {
+		background: var(--linie);
+	}
+}
+
+/* Formulare */
+.feld {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 16px;
+	min-width: 0;
+}
+.feld > .name {
+	font-size: 12px;
+	font-weight: 650;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--text-2);
+}
+.eingabe,
+.feld input:not([type='checkbox']):not([type='radio']),
+.feld select,
+.feld textarea {
+	width: 100%;
+	min-width: 0;
+	height: 46px;
+	padding: 0 12px;
+	border: 1px solid var(--linie);
+	border-radius: var(--radius);
+	background: var(--flaeche);
+	color: var(--text);
+	outline: 0;
+}
+.feld textarea {
+	height: auto;
+	min-height: 96px;
+	padding: 10px 12px;
+	line-height: 1.45;
+	resize: vertical;
+}
+.feld input:focus,
+.feld select:focus,
+.feld textarea:focus {
+	border-color: var(--text-2);
+}
+.feldreihe {
+	display: flex;
+	gap: 10px;
+}
+.feldreihe > .feld {
+	flex: 1;
+}
+.schalter {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	min-height: 48px;
+	margin-bottom: 8px;
+	font-weight: 520;
+	cursor: pointer;
+}
+.schalter small {
+	display: block;
+	color: var(--text-2);
+	font-size: 13px;
+	font-weight: 400;
+}
+.schalter input {
+	appearance: none;
+	flex: none;
+	position: relative;
+	width: 50px;
+	height: 30px;
+	margin: 0;
+	border-radius: 15px;
+	background: var(--linie);
+	transition: background 0.2s;
+	cursor: pointer;
+}
+.schalter input::after {
+	content: '';
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+	transition: transform 0.2s var(--sanft);
+}
+.schalter input:checked {
+	background: var(--akzent);
+}
+.schalter input:checked::after {
+	transform: translateX(20px);
+}
+:root[data-thema='dunkel'] .schalter input:checked::after {
+	background: #111;
+}
+.aufklapp {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	height: 44px;
+	margin: 4px 0 8px;
+	padding: 0;
+	border: 0;
+	border-top: 1px solid var(--linie);
+	background: none;
+	color: var(--text);
+	font-weight: 600;
+}
+.wahl-typ {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 6px;
+	margin-bottom: 16px;
+}
+.wahl-typ button {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	padding: 10px 2px 8px;
+	border: 1px solid var(--linie);
+	border-radius: var(--radius);
+	background: var(--flaeche);
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text-2);
+}
+.wahl-typ button.an {
+	border-color: var(--text);
+	background: var(--text);
+	color: var(--flaeche);
+}
+.fuss-links {
+	margin-right: auto;
+}
+/* Zahlenfelder ohne Pfeile */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+input[type='number'] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+/* Suchfelder: Safaris eigenes Löschen-Kreuz ausblenden (wir haben ein eigenes) */
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration {
+	-webkit-appearance: none;
+	appearance: none;
+}
+/* Datumsfelder: nicht breiter als ihr Platz (WebKit hat sonst eine Mindestbreite) */
+input[type='date'] {
+	min-width: 0;
+	max-width: 100%;
+	-webkit-appearance: none;
+	appearance: none;
 }

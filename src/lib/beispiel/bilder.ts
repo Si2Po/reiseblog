@@ -1,5 +1,5 @@
-// Platzhalter-„Fotos“ für die Entwürfe: gezeichnete Landschaften als SVG.
-import type { Motiv } from './daten.ts';
+// Platzhalter-„Fotos“ für die Beispielreisen: gezeichnete Landschaften als SVG.
+export type Motiv = 'fjord' | 'kueste' | 'alpen' | 'abend' | 'wald' | 'nebel';
 
 const MOTIVE: Record<Motiv, { himmel: [string, string]; sonne: string; berge: string[]; wasser?: string }> = {
 	fjord: { himmel: ['#9fc3d6', '#e8eef0'], sonne: '#fff8e6', berge: ['#7d93a0', '#4f6b5c', '#2f4a3c'], wasser: '#3f6f80' },
