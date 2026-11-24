@@ -6,17 +6,18 @@
 	import MagnifyingGlass from 'phosphor-svelte/lib/MagnifyingGlass';
 	import GearSix from 'phosphor-svelte/lib/GearSix';
 	import { ui } from '#lib/ui.svelte.ts';
+	import { daten } from '#lib/db/daten.svelte.ts';
 
 	const aktiv = $derived(page.route.id);
 </script>
 
 <nav class="reiter" aria-label="Bereiche">
 	<div class="gruppe">
-		<a href="#/" class:aktiv={aktiv === '/'}><MapTrifold size={18} /> Reisen</a>
+		<a href={daten.gast ? (ui.gastStart ?? '#/') : '#/'} class:aktiv={aktiv === '/' || aktiv === '/teilen/[token]'}><MapTrifold size={18} /> Reisen</a>
 		<a href="#/plaetze" class:aktiv={aktiv === '/plaetze'}><Tent size={18} /> Plätze</a>
 		<a href="#/suche" class:aktiv={aktiv === '/suche'} onclick={() => !ui.breit && (ui.hoehe = 'voll')}><MagnifyingGlass size={18} /> Suche</a>
 	</div>
-	<a class="zahnrad" href="#/einstellungen" class:aktiv={aktiv === '/einstellungen'} aria-label="Einstellungen"><GearSix size={20} /></a>
+	{#if !daten.gast}<a class="zahnrad" href="#/einstellungen" class:aktiv={aktiv === '/einstellungen'} aria-label="Einstellungen"><GearSix size={20} /></a>{/if}
 </nav>
 
 <style>

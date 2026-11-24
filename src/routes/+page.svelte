@@ -1,6 +1,7 @@
 <!-- Startseite: alle Reisen als große Bildkarten. -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import Van from 'phosphor-svelte/lib/Van';
 	import Reiter from '#lib/ui/Reiter.svelte';
@@ -16,6 +17,8 @@
 	const s = $derived(summe());
 
 	onMount(() => {
+		// Gast-Ansicht: „Reisen“ ist die geteilte Übersicht
+		if (daten.gast && ui.gastStart) return goto(ui.gastStart);
 		ui.auswahl = null;
 		ui.markiert = null;
 		if (daten.geladen) ui.zeigeAlles();

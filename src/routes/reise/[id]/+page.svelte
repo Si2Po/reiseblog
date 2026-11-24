@@ -109,9 +109,9 @@
 				{#each fs as f, i (f.id)}
 					<button onclick={() => grossAb(fs, i)} aria-label="Foto ansehen"><img alt="" src={f.vorschau} loading="lazy" /></button>
 				{/each}
-				<button class="mehr" onclick={() => fotosWaehlen({ reise: r.id })}><Camera size={22} /><span>Fotos</span></button>
+				{#if !daten.gast}<button class="mehr" onclick={() => fotosWaehlen({ reise: r.id })}><Camera size={22} /><span>Fotos</span></button>{/if}
 			</div>
-		{:else}
+		{:else if !daten.gast}
 			<button class="fotos-leer" onclick={() => fotosWaehlen({ reise: r.id })}>
 				<Camera size={20} /> Fotos hinzufügen
 				<span>Ort und Tag kommen aus dem Foto</span>
@@ -119,7 +119,7 @@
 		{/if}
 
 		{#if !liste.length}
-			<p class="leer">Noch keine Einträge. Füg die erste Übernachtung oder Fahrt hinzu.</p>
+			<p class="leer">{daten.gast ? 'Hier ist nichts freigegeben.' : 'Noch keine Einträge. Füg die erste Übernachtung oder Fahrt hinzu.'}</p>
 		{/if}
 
 		<ol class="zeitleiste">
@@ -166,9 +166,11 @@
 									{#if ef.length}
 										<button onclick={() => grossAb(ef, 0)}><Camera size={16} /> {ef.length} Fotos</button>
 									{/if}
-									<button onclick={() => fotosWaehlen({ reise: r.id, eintrag: e.id })}><Plus size={16} /> Fotos</button>
-									<button onclick={() => (ui.dialog = { art: 'eintrag', id: e.id })}><PencilSimple size={16} /> Bearbeiten</button>
-									<button class="weg" onclick={() => loeschen(e)} aria-label="Löschen"><Trash size={16} /></button>
+									{#if !daten.gast}
+										<button onclick={() => fotosWaehlen({ reise: r.id, eintrag: e.id })}><Plus size={16} /> Fotos</button>
+										<button onclick={() => (ui.dialog = { art: 'eintrag', id: e.id })}><PencilSimple size={16} /> Bearbeiten</button>
+										<button class="weg" onclick={() => loeschen(e)} aria-label="Löschen"><Trash size={16} /></button>
+									{/if}
 								</div>
 							{/if}
 						</div>
@@ -177,7 +179,7 @@
 			{/each}
 		</ol>
 
-		<button class="knopf neu" onclick={neuerEintrag}><Plus size={18} weight="bold" /> Eintrag hinzufügen</button>
+		{#if !daten.gast}<button class="knopf neu" onclick={neuerEintrag}><Plus size={18} weight="bold" /> Eintrag hinzufügen</button>{/if}
 	</article>
 {:else if daten.geladen}
 	<Kopf />

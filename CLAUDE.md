@@ -15,7 +15,9 @@ Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit
 - Lokal: Dexie (`src/lib/db/db.ts`). Zentraler reaktiver Speicher `daten` (`src/lib/db/daten.svelte.ts`): **alle Änderungen über `daten.speichern()` / `daten.loeschen()`** – die schreiben IndexedDB und die Outbox (für den späteren Abgleich). Löschen ist weich und gibt eine Rückgängig-Funktion zurück → `ui.zeige(text, rueckgaengig)`.
 - Abgeleitete Werte (Nächte, km, Tage, laufende Reise, Plätze in der Nähe) in `src/lib/auswertung.ts`.
 - Beispieldaten (`src/lib/beispiel/`): IDs beginnen mit `bsp-`, gehen nicht in die Outbox und dürfen nie hochgeladen werden.
-- Abgleich mit Supabase: noch offen (siehe TODO). Eigenes Supabase-Projekt, Wecker-Ablauf gegen das Pausieren.
+- **Abgleich** (`src/lib/db/abgleich.svelte.ts`): Supabase-Tabelle `dokumente` (id = lokale UUID, `art` reise/eintrag/platz/foto, `inhalt` = Datensatz als JSON, weiches Löschen, Server-Zeit `geaendert_am`). Hochladen aus der Outbox per upsert (Fotos vorher in den Eimer `fotos`, Pfad `<user-id>/<foto-id>.jpg`), Abholen mit `geaendert_am > stand`. Konflikte: neueres `geaendert` gewinnt. Ein Konto pro Haushalt (Partnerin meldet sich mit demselben Konto an). Ohne Eintrag in `src/lib/config.ts` ist der Abgleich aus.
+- **Teilen**: Tabelle `freigaben` (token, name, umfang), Gast-Ansicht `#/teilen/<token>` lädt über RPC `freigabe_lesen` nur Freigegebenes; der Server entfernt nicht freigegebene Felder. Gast-Daten liegen nur im Speicher (`daten.gast`), Bearbeiten ist ausgeblendet.
+- **Datenbank**: `supabase/komplett.sql` = ganzer Stand für neue Projekte; jede Schema-Änderung zusätzlich als kleine Datei in `supabase/schritte/` und Zeile in der Tabelle von `supabase/ANLEITUNG.md`. Wecker `.github/workflows/wecker.yml` liest URL und Schlüssel aus `config.ts` (Format der beiden Zeilen beibehalten).
 
 ## Oberfläche
 - `src/routes/+layout.svelte`: Karte im Hintergrund, darüber Sheet (iPhone, `src/lib/ui/Sheet.svelte`, drei Höhen) bzw. Seitenleiste (PC). Dialoge laufen über `ui.dialog` (`src/lib/ui.svelte.ts`), Formulare in `src/lib/formulare/`.
@@ -28,6 +30,8 @@ Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit
 - Node.js ist installiert (`C:\Program Files\nodejs`). In Git Bash ggf. `export PATH="/c/Program Files/nodejs:$PATH"`.
 - `npm run dev` (Port 5173, im WLAN erreichbar) · `npm run check` · `npm test` (Vitest) · Build: `BASE_PATH=/reiseblog npm run build` (in Git Bash wird `/reiseblog` umgeschrieben → in PowerShell bauen).
 - `node tools/bilder.mjs [handy|pc]` (optional `DUNKEL=1`): spielt die App mit WebKit durch und legt Bildschirmfotos in `tools/bilder/` (nicht im Git). Nach Oberflächen-Änderungen laufen lassen und die Bilder ansehen.
+- `node tools/ablauf.mjs`: Funktionstest der Hauptabläufe (Reise, Hier eintragen, automatische Fahrt mit Route, Foto, Löschen/Rückgängig).
+- `node tools/abgleich-test.mjs`: Abgleich und Teilen gegen eine nachgebaute Supabase (zwei Geräte + Gast). Braucht einen zweiten Dev-Server: `VITE_TEST_SUPABASE_URL=https://test.supabase.example npx vite dev --port 5174`.
 - `node tools/icons.mjs`: PNG-Icons aus `static/icons/icon.svg` neu erzeugen.
 
 ## Git und Veröffentlichen

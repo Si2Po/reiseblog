@@ -1,6 +1,8 @@
-<!-- Einstellungen: Darstellung, Daten sichern, Beispieldaten. Konto/Teilen folgen mit dem Abgleich. -->
+<!-- Einstellungen: Darstellung, Konto, Teilen, Sicherung, Beispieldaten. -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Konto from '#lib/einstellungen/Konto.svelte';
+	import Teilen from '#lib/einstellungen/Teilen.svelte';
 	import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
 	import Kopf from '#lib/ui/Kopf.svelte';
@@ -49,10 +51,8 @@
 		<p class="hilfe">„Automatisch“ folgt der Einstellung des iPhones bzw. Computers.</p>
 	</section>
 
-	<section>
-		<h4>Konto und Teilen</h4>
-		<p class="hilfe">Kommt als Nächstes: Anmeldung, Abgleich zwischen iPhone und PC, Teilen-Links. Bis dahin bleiben alle Daten nur auf diesem Gerät.</p>
-	</section>
+	<Konto />
+	<Teilen />
 
 	<section>
 		<h4>Sicherung</h4>
@@ -85,11 +85,11 @@
 		font-size: 30px;
 		margin: 4px 0 8px;
 	}
-	section {
+	.seite :global(section) {
 		padding: 14px 0;
 		border-bottom: 1px solid var(--linie);
 	}
-	h4 {
+	.seite :global(h4) {
 		margin: 0 0 10px;
 		font-size: 12px;
 		font-weight: 650;
@@ -118,15 +118,15 @@
 		color: var(--text);
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	}
-	.zeile {
+	.seite :global(.zeile) {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
 	}
-	.zeile .knopf {
+	.seite :global(.zeile .knopf) {
 		flex: 1;
 	}
-	.hilfe {
+	.seite :global(.hilfe) {
 		margin-top: 8px;
 		color: var(--text-2);
 		font-size: 14px;

@@ -53,6 +53,16 @@ export default defineConfig({
 							options: { cacheName: 'karte-stil', expiration: { maxEntries: 20, maxAgeSeconds: 30 * TAG } }
 						},
 						{
+							// Hochgeladene Fotos (Supabase): einmal angesehen = offline verfügbar
+							urlPattern: /\/storage\/v1\/object\/public\/fotos\//,
+							handler: 'CacheFirst',
+							options: {
+								cacheName: 'fotos',
+								expiration: { maxEntries: 1500, maxAgeSeconds: 365 * TAG },
+								cacheableResponse: { statuses: [0, 200] }
+							}
+						},
+						{
 							// Kacheln, Schriften, Symbole: einmal geladen = offline verfügbar
 							urlPattern: /^https:\/\/tiles\.openfreemap\.org\//,
 							handler: 'CacheFirst',

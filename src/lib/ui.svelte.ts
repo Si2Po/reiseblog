@@ -18,7 +18,8 @@ export type Dialog =
 	| { art: 'reise'; id?: string }
 	| { art: 'eintrag'; id?: string; vorlage?: Partial<Eintrag> }
 	| { art: 'hier' }
-	| { art: 'platz'; id: string };
+	| { art: 'platz'; id: string }
+	| { art: 'freigabe'; token?: string };
 
 interface Hinweis {
 	nr: number;
@@ -47,6 +48,11 @@ class Ui {
 	gross = $state<{ ids: string[]; i: number } | null>(null);
 	/** „Ort auf der Karte wählen“ läuft */
 	ortWahl = $state<{ fertig: (o: { lat: number; lng: number } | null) => void } | null>(null);
+
+	/** Gast-Ansicht: Startseite des geteilten Links (#/teilen/…) */
+	gastStart = $state<string | null>(null);
+	/** Teilen-Links neu laden (nach Änderung im Dialog) */
+	freigabenStand = $state(0);
 
 	karte: KartenApi | null = null;
 

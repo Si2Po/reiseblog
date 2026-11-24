@@ -1,14 +1,14 @@
 # Offene Punkte
 
 ## Als Nächstes
-- [ ] **Supabase-Abgleich**: eigenes Projekt anlegen (Anleitung in `supabase/ANLEITUNG.md`), Anmeldung, Outbox hochladen, Änderungen holen, Fotos in den Speicher hochladen, Beispieldaten (`bsp-…`) nie hochladen.
-- [ ] **Wecker-Ablauf** (`.github/workflows/wecker.yml`), damit das kostenlose Supabase-Projekt nicht pausiert.
-- [ ] **Teilen-Links** mit Auswahl (welche Reisen, Stellplätze/Einträge/Texte/Preise/Fotos), Gast-Ansicht nur zum Lesen.
+- [ ] **Supabase-Projekt anlegen** (Anleitung `supabase/ANLEITUNG.md`), URL + Publishable-Key in `src/lib/config.ts` eintragen, dann den Abgleich einmal echt testen (zwei Geräte, Fotos, Teilen-Link).
+- [ ] Erster Push → GitHub Pages; auf dem iPhone „Zum Home-Bildschirm“, Standort und Fotoauswahl mit Standort testen.
 
 ## Später / Ideen
-- [ ] Private Fotos über zeitlich begrenzte Adressen (Edge Function) statt öffentlich lesbarem Eimer mit Zufallsnamen.
+- [ ] Private Fotos über zeitlich begrenzte Adressen (Edge Function) statt öffentlich lesbarem Eimer mit Zufallsnamen. Bis dahin gilt: Wer ein Foto einmal über einen Link gesehen hat, kann dessen Adresse weiter benutzen.
+- [ ] Gelöschte Fotos auch aus dem Speicher-Eimer entfernen (derzeit bleibt die Datei liegen).
 - [ ] Zwischenziele (`via`) bei Fahrten in der Oberfläche bearbeiten.
-- [ ] Uhrzeit bei Einträgen (Reihenfolge am Tag), Fotos per Ziehen einem Eintrag zuordnen.
+- [ ] Fotos per Ziehen einem anderen Eintrag/Tag zuordnen, Titelbild direkt aus der Großansicht wählen.
 - [ ] Statistik: Länder, Nächte pro Jahr, längste Fahrt, Lieblingsplätze.
-- [ ] Platz-Suche „In der Nähe“ auch für fremde Plätze (z. B. Stellplatz-Datenbanken) – nur wenn kostenlos und erlaubt.
 - [ ] Export einer Reise als druckbares Fotobuch / PDF.
+- [ ] Passwort vergessen: Vorlage `supabase/passwort_setzen.sql` (wie bei der Einkaufsroute).

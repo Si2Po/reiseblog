@@ -25,6 +25,8 @@
 	import EintragFormular from '#lib/formulare/EintragFormular.svelte';
 	import HierEintragen from '#lib/formulare/HierEintragen.svelte';
 	import PlatzFormular from '#lib/formulare/PlatzFormular.svelte';
+	import FreigabeFormular from '#lib/formulare/FreigabeFormular.svelte';
+	import { abgleich } from '#lib/db/abgleich.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { thema } from '#lib/thema.svelte.ts';
@@ -41,8 +43,14 @@
 	$effect(() => thema.anwenden());
 
 	onMount(() => {
-		daten.laden().then(offeneRoutenNachtragen);
-		addEventListener('online', offeneRoutenNachtragen);
+		// Geteilter Link: keine eigenen Daten laden, nichts abgleichen
+		if (!location.hash.startsWith('#/teilen/')) {
+			daten.laden().then(() => {
+				offeneRoutenNachtragen();
+				abgleich.starten();
+			});
+			addEventListener('online', offeneRoutenNachtragen);
+		}
 		const breit = matchMedia('(min-width: 900px)');
 		ui.breit = breit.matches;
 		breit.addEventListener('change', (e) => (ui.breit = e.matches));
@@ -51,13 +59,14 @@
 	// Fotos per Drag & Drop (PC): Zuordnung zu Reise und Tag nach Aufnahmedatum
 	let ziehtDatei = $state(false);
 	function dragover(e: DragEvent) {
-		if (!e.dataTransfer?.types.includes('Files')) return;
+		if (!e.dataTransfer?.types.includes('Files') || daten.gast) return;
 		e.preventDefault();
 		ziehtDatei = true;
 	}
 	function drop(e: DragEvent) {
 		e.preventDefault();
 		ziehtDatei = false;
+		if (daten.gast) return;
 		const dateien = [...(e.dataTransfer?.files ?? [])];
 		const reise = page.route.id === '/reise/[id]' ? page.params.id : undefined;
 		if (dateien.length) fotosHinzufuegen(dateien, { reise });
@@ -176,7 +185,7 @@
 				<button class="knopf" onclick={ortUebernehmen}>Ort übernehmen</button>
 			</div>
 		</div>
-	{:else if !dialogOffen && (ui.breit || ui.hoehe !== 'voll')}
+	{:else if !dialogOffen && !daten.gast && (ui.breit || ui.hoehe !== 'voll')}
 		<button
 			class="hier"
 			class:breit={ui.breit}
@@ -197,6 +206,8 @@
 		<HierEintragen />
 	{:else if ui.dialog?.art === 'platz'}
 		<PlatzFormular id={ui.dialog.id} />
+	{:else if ui.dialog?.art === 'freigabe'}
+		<FreigabeFormular token={ui.dialog.token} />
 	{/if}
 
 	<Hinweis />

@@ -2,8 +2,11 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import CaretLeft from 'phosphor-svelte/lib/CaretLeft';
+	import { daten } from '#lib/db/daten.svelte.ts';
+	import { ui } from '#lib/ui.svelte.ts';
 
-	let { zurueck = '#/', rechts }: { zurueck?: string; rechts?: Snippet } = $props();
+	let { zurueck, rechts }: { zurueck?: string; rechts?: Snippet } = $props();
+	const ziel = $derived(zurueck ?? (daten.gast ? (ui.gastStart ?? '#/') : '#/'));
 
 	function weg(e: MouseEvent) {
 		// Wenn es eine Seite davor in der App gibt, dorthin zurück (behält Scrollposition)
@@ -15,8 +18,8 @@
 </script>
 
 <div class="kopf">
-	<a class="zurueck" href={zurueck} onclick={weg}><CaretLeft size={18} weight="bold" /> Zurück</a>
-	{#if rechts}<div class="rechts">{@render rechts()}</div>{/if}
+	<a class="zurueck" href={ziel} onclick={weg}><CaretLeft size={18} weight="bold" /> Zurück</a>
+	{#if rechts && !daten.gast}<div class="rechts">{@render rechts()}</div>{/if}
 </div>
 
 <style>
