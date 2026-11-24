@@ -43,7 +43,7 @@ export interface Eintrag extends Basis {
 	typ: Typ;
 	titel: string;
 	datum: string;
-	/** optionale Uhrzeit HH:MM für die Reihenfolge am Tag */
+	/** Uhrzeit HH:MM:SS (nur für die Reihenfolge am Tag, wird nicht angezeigt) */
 	zeit?: string;
 	ort?: Ort;
 	text?: string;

@@ -104,12 +104,19 @@
 			{#if r.notiz}<p class="notiz">{r.notiz}</p>{/if}
 		</header>
 
-		<div class="streifen">
-			{#each fs as f, i (f.id)}
-				<button onclick={() => grossAb(fs, i)} aria-label="Foto ansehen"><img alt="" src={f.vorschau} loading="lazy" /></button>
-			{/each}
-			<button class="mehr" onclick={() => fotosWaehlen({ reise: r.id })}><Camera size={22} /><span>Fotos</span></button>
-		</div>
+		{#if fs.length}
+			<div class="streifen">
+				{#each fs as f, i (f.id)}
+					<button onclick={() => grossAb(fs, i)} aria-label="Foto ansehen"><img alt="" src={f.vorschau} loading="lazy" /></button>
+				{/each}
+				<button class="mehr" onclick={() => fotosWaehlen({ reise: r.id })}><Camera size={22} /><span>Fotos</span></button>
+			</div>
+		{:else}
+			<button class="fotos-leer" onclick={() => fotosWaehlen({ reise: r.id })}>
+				<Camera size={20} /> Fotos hinzufügen
+				<span>Ort und Tag kommen aus dem Foto</span>
+			</button>
+		{/if}
 
 		{#if !liste.length}
 			<p class="leer">Noch keine Einträge. Füg die erste Übernachtung oder Fahrt hinzu.</p>
@@ -254,6 +261,28 @@
 		font-size: 13px;
 		border: 1.5px dashed var(--linie);
 		background: none;
+	}
+	.fotos-leer {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 10px;
+		width: 100%;
+		margin: 14px 0 6px;
+		padding: 12px 14px;
+		border: 1.5px dashed var(--linie);
+		border-radius: var(--radius);
+		background: none;
+		color: var(--text);
+		font-weight: 600;
+		text-align: left;
+	}
+	.fotos-leer span {
+		flex-basis: 100%;
+		padding-left: 30px;
+		color: var(--text-2);
+		font-size: 13px;
+		font-weight: 400;
 	}
 	.zeitleiste {
 		list-style: none;

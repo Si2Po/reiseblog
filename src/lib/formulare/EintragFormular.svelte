@@ -7,6 +7,7 @@
 -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { format } from 'date-fns';
 	import { page } from '$app/state';
 	import { slide } from 'svelte/transition';
 	import Tent from 'phosphor-svelte/lib/Tent';
@@ -107,6 +108,10 @@
 
 	async function speichern() {
 		if (!ok) return;
+		// vor dem Speichern merken – danach ist die neue Übernachtung selbst „die letzte“
+		const start = typ === 'stay' && fahrtSinnvoll && fahrtMit ? vorige : undefined;
+		// heutige Einträge bekommen die Uhrzeit, damit die Reihenfolge am Tag stimmt
+		const zeit = alt ? alt.zeit : datum === heute() ? format(new Date(), 'HH:mm:ss') : undefined;
 		let platz: string | undefined;
 		if (typ === 'stay') {
 			const p = daten.platz(platzId);
@@ -125,7 +130,7 @@
 			typ,
 			titel: titel.trim() || autoTitel || TYP_NAME[typ],
 			datum,
-			zeit: alt?.zeit,
+			zeit,
 			text: text.trim() || undefined,
 			privat: privat || undefined
 		};
@@ -143,13 +148,14 @@
 		if (e.typ === 'drive' && e.routeOk === false) routeNachtragen(e.id);
 
 		// Fahrt vom letzten Platz gleich mit anlegen
-		if (typ === 'stay' && fahrtSinnvoll && fahrtMit && vorige?.ort && ort) {
+		if (start?.ort && ort) {
 			const f = await daten.speichern('eintraege', {
 				reise,
 				typ: 'drive',
-				titel: `${vorige.ort.name ?? daten.platz(vorige.platz)?.name ?? 'Start'} → ${ort.name ?? platzName ?? 'Ziel'}`,
+				titel: `${start.ort.name ?? daten.platz(start.platz)?.name ?? 'Start'} → ${ort.name ?? (platzName || 'Ziel')}`,
 				datum,
-				von: vorige.ort,
+				zeit,
+				von: start.ort,
 				nach: ort,
 				routeOk: false
 			});

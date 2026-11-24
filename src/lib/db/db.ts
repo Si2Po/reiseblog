@@ -5,8 +5,9 @@ import type { Reise, Eintrag, Platz, Foto, TabellenName } from './typen.ts';
 export interface Datei {
 	/** gleiche ID wie das Foto */
 	id: string;
-	/** verkleinertes Bild (JPEG) */
-	bild: Blob;
+	/** verkleinertes Bild (JPEG) als Bytes – kein Blob, den kann Safari im privaten Modus nicht speichern */
+	bild: ArrayBuffer;
+	typ: string;
 }
 
 export interface OutboxEintrag {

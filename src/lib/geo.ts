@@ -29,6 +29,6 @@ export function standort(): Promise<GeolocationPosition> {
 				3: 'Standort hat zu lange gedauert.'
 			};
 			fehler(new Error(texte[e.code] ?? e.message));
-		}, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+		}, { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 });
 	});
 }

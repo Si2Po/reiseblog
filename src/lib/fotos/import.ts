@@ -48,7 +48,7 @@ export async function fotosHinzufuegen(dateien: File[], ziel: Ziel = {}) {
 			if (!f.ort) ohneOrt++;
 			if (!f.reise) ohneReise++;
 		} catch (e) {
-			console.error('Foto ging nicht:', datei.name, e);
+			console.error('Foto ging nicht:', datei.name, (e as Error)?.name, (e as Error)?.message);
 		}
 	}
 	const teile = [ok === 1 ? '1 Foto hinzugefügt' : `${ok} Fotos hinzugefügt`];
@@ -81,7 +81,7 @@ async function einFoto(datei: File, ziel: Ziel): Promise<Foto> {
 	if (!ort) ort = eintrag?.ort ?? (reise ? ortAmTag(reise, tag) : undefined);
 
 	const id = crypto.randomUUID();
-	await db.dateien.put({ id, bild: bild as Blob });
+	await db.dateien.put({ id, bild: await (bild as Blob).arrayBuffer(), typ: 'image/jpeg' });
 	return daten.speichern('fotos', {
 		id,
 		reise,

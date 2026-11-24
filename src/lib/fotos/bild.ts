@@ -10,7 +10,7 @@ export async function vollbild(f: Foto): Promise<string> {
 	if (hit) return hit;
 	const datei = await db.dateien.get(f.id);
 	if (datei) {
-		const url = URL.createObjectURL(datei.bild);
+		const url = URL.createObjectURL(new Blob([datei.bild], { type: datei.typ }));
 		lokal.set(f.id, url);
 		return url;
 	}
