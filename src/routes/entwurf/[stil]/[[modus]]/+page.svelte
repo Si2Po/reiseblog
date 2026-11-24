@@ -44,7 +44,7 @@
 	const systemFrage = matchMedia('(prefers-color-scheme: dark)');
 	let systemDunkel = $state(systemFrage.matches);
 	systemFrage.addEventListener('change', (e) => (systemDunkel = e.matches));
-	let thema = $state<'auto' | 'hell' | 'dunkel'>('auto');
+	let thema = $state<'auto' | 'hell' | 'dunkel'>(page.params.modus === 'dunkel' ? 'dunkel' : page.params.modus === 'hell' ? 'hell' : 'auto');
 	const dunkel = $derived(stil.nacht ? (thema === 'auto' ? systemDunkel : thema === 'dunkel') : stil.dunkel);
 	const modus = $derived(dunkel && stil.nacht ? stil.nacht : stil);
 	const farbe = (u: string) => modus.reiseFarben[D.urlaube.find((x) => x.id === u)!.farbe];
@@ -123,7 +123,7 @@
 	}
 	function stilWechseln() {
 		const i = stile.findIndex((s) => s.id === stil.id);
-		goto('#/entwurf/' + stile[(i + 1) % stile.length].id);
+		goto('#/entwurf/' + stile[(i + 1) % stile.length].id + (thema === 'auto' ? '' : '/' + thema));
 	}
 
 	// --- Reise-Zeitleiste ---
@@ -190,7 +190,7 @@
 	}}
 />
 
-<div class="app" data-stil={stil.id} data-dunkel={dunkel} style={Object.entries(modus.vars).map(([k, v]) => `${k}:${v}`).join(';')}>
+<div class="app" data-stil={stil.id.startsWith('mix') ? 'mix' : stil.id} data-dunkel={dunkel} style={Object.entries(modus.vars).map(([k, v]) => `${k}:${v}`).join(';')}>
 	{#key stil.id + dunkel}
 		<Karte
 			bind:this={karte}

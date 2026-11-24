@@ -1,22 +1,38 @@
-<!-- Vorläufige Startseite: die drei Design-Entwürfe im Vergleich. -->
+<!-- Vorläufige Startseite: Design-Entwürfe im Vergleich. -->
 <script lang="ts">
 	import { stile } from '#lib/entwurf/stile.ts';
+
+	const haupt = stile.filter((s) => !s.id.startsWith('mix-') && s.id !== 'mix');
+	const dunkel = stile.filter((s) => s.id.startsWith('mix'));
 </script>
 
 <main>
 	<header>
-		<h1>Reiseblog – drei Stilrichtungen</h1>
+		<h1>Reiseblog – Dunkelmodus für Entwurf D</h1>
 		<p>
-			Gleicher Aufbau, drei Stile. Alles ist anklickbar: Reise antippen, Zeitleiste, Platz, Fotos-Knopf oben rechts,
-			„Hier eintragen“. Das Sheet unten lässt sich wischen. Am iPhone: einen Entwurf öffnen, oben links wechselt der Stil.
+			Hell bleibt wie D. Für dunkel gibt es vier Varianten. Alles ist anklickbar; der Knopf mit Sonne/Mond an der Karte
+			schaltet zwischen hell und dunkel.
 		</p>
 	</header>
 	<div class="reihe">
-		{#each stile as s (s.id)}
+		{#each dunkel as s, i (s.id)}
+			<section>
+				<a class="titel" href="#/entwurf/{s.id}/dunkel"><b>{i + 1}</b> {s.id === 'mix' ? 'Wald (bisher)' : s.name}</a>
+				<p>{s.id === 'mix' ? 'Dunkles Grau-Grün, Mintgrün als Akzent – der bisherige Stand.' : s.idee}</p>
+				<iframe title={s.name} src="{location.pathname}#/entwurf/{s.id}/dunkel"></iframe>
+			</section>
+		{/each}
+	</div>
+
+	<header class="zweit">
+		<h2>Die ersten Entwürfe</h2>
+	</header>
+	<div class="reihe">
+		{#each haupt as s (s.id)}
 			<section>
 				<a class="titel" href="#/entwurf/{s.id}"><b>{s.buchstabe}</b> {s.name}</a>
 				<p>{s.idee}</p>
-				<iframe title={s.name} src="{location.pathname}#/entwurf/{s.id}"></iframe>
+				<iframe title={s.name} src="{location.pathname}#/entwurf/{s.id}" loading="lazy"></iframe>
 			</section>
 		{/each}
 	</div>
@@ -36,9 +52,15 @@
 		margin: 0 auto 24px;
 		text-align: center;
 	}
+	header.zweit {
+		margin-top: 56px;
+	}
 	h1 {
 		font-size: 26px;
 		margin-bottom: 8px;
+	}
+	h2 {
+		font-size: 20px;
 	}
 	header p {
 		color: #555;
