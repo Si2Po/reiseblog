@@ -1,8 +1,8 @@
-// Straßenrouten für Fahrten im Hintergrund berechnen; offline angelegte Fahrten später nachholen.
+// Straßenrouten für Fahrten im Hintergrund berechnen; offline Angelegtes (Routen, Ortsnamen) später nachholen.
 import { daten } from '#lib/db/daten.svelte.ts';
-import { routeBerechnen } from './dienste.ts';
+import { routeBerechnen, ortsname } from './dienste.ts';
 import { abstand } from '#lib/geo.ts';
-import type { Ort } from '#lib/db/typen.ts';
+import { TYP_NAME, type Eintrag, type Ort } from '#lib/db/typen.ts';
 
 const laeuft = new Set<string>();
 
@@ -57,5 +57,38 @@ export async function offeneRoutenNachtragen() {
 	for (const e of offen) {
 		await routeNachtragen(e.id);
 		await new Promise((r) => setTimeout(r, 1200)); // Routendienst schonen
+	}
+}
+
+/**
+ * Ohne Netz eingetragene Orte haben keinen Namen (die Ortssuche fehlte). Sobald wieder Netz da ist:
+ * Namen nachtragen und Ersatztitel („Ausflug“, „Start → Ziel“, Platz „Platz“) durch den Ortsnamen ersetzen.
+ */
+export async function ortsnamenNachtragen() {
+	if (!navigator.onLine || daten.gast) return;
+	const offen = daten.eintraege.filter((e) => !e.id.startsWith('bsp-') && [e.ort, e.von, e.nach].some((o) => o && !o.name));
+	const merk = new Map<string, Partial<Ort>>();
+	const benennen = async (o: Ort | undefined): Promise<Ort | undefined> => {
+		if (!o || o.name) return o;
+		const k = o.lat.toFixed(4) + ',' + o.lng.toFixed(4);
+		if (!merk.has(k)) merk.set(k, await ortsname(o.lat, o.lng));
+		const info = merk.get(k)!;
+		return info.name ? { ...o, ...info } : o;
+	};
+	for (const alt of offen) {
+		const e = daten.eintrag(alt.id);
+		if (!e) continue;
+		const neu: Eintrag = { ...e, ort: await benennen(e.ort), von: await benennen(e.von), nach: await benennen(e.nach) };
+		if (!neu.ort?.name && !neu.von?.name && !neu.nach?.name) continue; // Dienst nicht erreichbar
+		if (e.typ === 'drive') {
+			neu.titel = neu.titel.replace(/^Start →/, `${neu.von?.name ?? 'Start'} →`).replace(/→ Ziel$/, `→ ${neu.nach?.name ?? 'Ziel'}`);
+		} else if (neu.titel === TYP_NAME[e.typ] && neu.ort?.name) neu.titel = neu.ort.name;
+		const p = daten.platz(e.platz);
+		if (p && neu.ort?.name && (!p.ort.name || p.name === 'Platz')) {
+			await daten.speichern('plaetze', { ...p, name: p.name === 'Platz' ? neu.ort.name : p.name, ort: { ...p.ort, ...neu.ort, lat: p.ort.lat, lng: p.ort.lng } });
+			if (neu.titel === 'Platz') neu.titel = neu.ort.name;
+		}
+		await daten.speichern('eintraege', neu);
+		await new Promise((r) => setTimeout(r, 400)); // Ortsdienst schonen
 	}
 }

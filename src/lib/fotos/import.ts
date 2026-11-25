@@ -2,7 +2,7 @@
   Fotos hinzufügen:
   1. Aufnahmeort und -zeit aus den EXIF-Daten lesen (vor dem Verkleinern, das Canvas entfernt sie)
   2. auf max. 1600 px verkleinern (JPEG, ca. 300 KB) + Vorschaubild 320 px
-  3. Reise und Eintrag zuordnen (vorgegeben oder nach Datum)
+  3. Reise und Eintrag zuordnen (vorgegeben oder nach Datum; mit GPS landen Fotos beim passenden Ausflug)
   4. Bild lokal speichern (IndexedDB), Hochladen übernimmt später der Abgleich
 */
 import exifr from 'exifr';
@@ -11,7 +11,9 @@ import { db } from '#lib/db/db.ts';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { ui } from '#lib/ui.svelte.ts';
 import { reiseBis, eintraegeVon } from '#lib/auswertung.ts';
-import type { Foto, Ort } from '#lib/db/typen.ts';
+import { abstand } from '#lib/geo.ts';
+import { plusTage } from '#lib/datum.ts';
+import type { Eintrag, Foto, Ort } from '#lib/db/typen.ts';
 
 const GROSS = 1600;
 const KLEIN = 320;
@@ -47,12 +49,14 @@ export async function fotosHinzufuegen(dateien: File[], ziel: Ziel = {}) {
 		ohneOrt = 0,
 		ohneReise = 0,
 		ausserhalb = 0;
+	const einsortiert = new Map<string, number>();
 	for (const [i, datei] of bilder.entries()) {
 		ui.zeige(bilder.length === 1 ? 'Foto wird hinzugefügt …' : `Foto ${i + 1} von ${bilder.length} …`);
 		try {
 			const f = await einFoto(datei, ziel);
 			ok++;
 			if (!f.ort) ohneOrt++;
+			if (f.eintrag && !ziel.eintrag) einsortiert.set(f.eintrag, (einsortiert.get(f.eintrag) ?? 0) + 1);
 			if (!f.reise) ohneReise++;
 			else if (!f.eintrag && ausserhalbDerReise(f)) ausserhalb++;
 		} catch (e) {
@@ -62,6 +66,10 @@ export async function fotosHinzufuegen(dateien: File[], ziel: Ziel = {}) {
 	const eintrag = daten.eintrag(ziel.eintrag);
 	const fotos = ok === 1 ? '1 Foto' : `${ok} Fotos`;
 	const teile = [eintrag ? `${fotos} zu „${eintrag.titel}“ hinzugefügt` : `${fotos} hinzugefügt`];
+	if (einsortiert.size === 1) {
+		const [[eid, n]] = [...einsortiert];
+		teile.push(`${n === ok ? (n === 1 ? 'passt' : 'alle passen') : n} zu „${daten.eintrag(eid)?.titel}“`);
+	} else if (einsortiert.size) teile.push(`${[...einsortiert.values()].reduce((a, b) => a + b)} bei ${einsortiert.size} Ausflügen einsortiert`);
 	if (ok < bilder.length) teile.push(`${bilder.length - ok} ließen sich nicht lesen`);
 	if (ohneReise) teile.push(`${ohneReise} passen zu keiner Reise`);
 	else if (ausserhalb) teile.push(`${ausserhalb} außerhalb des Reisezeitraums – unter „Weitere Fotos“`);
@@ -92,9 +100,9 @@ async function einFoto(datei: File, ziel: Ziel): Promise<Foto> {
 	bitmap.close();
 
 	// Zuordnung
-	const eintrag = daten.eintrag(ziel.eintrag);
-	const reise = ziel.reise ?? eintrag?.reise ?? reiseAm(tag);
 	let ort: Ort | undefined = gps && Number.isFinite(gps.latitude) ? { lat: gps.latitude, lng: gps.longitude } : undefined;
+	const reise = ziel.reise ?? daten.eintrag(ziel.eintrag)?.reise ?? reiseAm(tag);
+	const eintrag = daten.eintrag(ziel.eintrag) ?? (reise && ort ? ausflugBeiFoto(reise, tag, ort) : undefined);
 	if (!ort) ort = eintrag?.ort ?? (reise ? ortAmTag(reise, tag) : undefined);
 
 	const id = crypto.randomUUID();
@@ -109,6 +117,27 @@ async function einFoto(datei: File, ziel: Ziel): Promise<Foto> {
 		hoehe,
 		vorschau: vorschau as string
 	});
+}
+
+/**
+ * Ausflug, zu dem ein Foto passt: am selben Tag, höchstens 15 km entfernt und näher am Ausflug
+ * als an der Übernachtung (Fotos am Stellplatz bleiben beim Tag).
+ */
+export function ausflugBeiFoto(reise: string, tag: string, ort: Ort): Eintrag | undefined {
+	const liste = eintraegeVon(reise);
+	let bester: Eintrag | undefined;
+	let weite = 15000;
+	for (const e of liste) {
+		if (e.typ !== 'outing' || e.datum !== tag || !e.ort) continue;
+		const m = abstand(ort, e.ort);
+		if (m < weite) [bester, weite] = [e, m];
+	}
+	if (!bester) return undefined;
+	// Übernachtungen rund um diesen Tag (Nacht davor und Nacht danach)
+	const naeherAmPlatz = liste.some(
+		(e) => e.typ === 'stay' && e.ort && e.datum <= tag && plusTage(e.datum, e.naechte ?? 1) >= tag && abstand(ort, e.ort) < weite
+	);
+	return naeherAmPlatz ? undefined : bester;
 }
 
 /** Reise, in deren Zeitraum das Datum fällt */

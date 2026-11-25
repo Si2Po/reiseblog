@@ -7,8 +7,9 @@ Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit
 - Importe aus `src/lib` über `#lib/…` **mit Dateiendung** (`#lib/datum.ts`, `#lib/ui/Sheet.svelte`).
 - PWA: `@vite-pwa/sveltekit` (`withPwa` in `vite.config.ts`), `registerType: 'prompt'` → `src/lib/ui/NeueVersion.svelte` zeigt „Neue Version – tippen zum Laden“. Auf localhost kein Service Worker. Kartenkacheln werden offline zwischengespeichert (runtimeCaching).
 - Karte: MapLibre GL + OpenFreeMap (Positron), eigene Farben in `src/lib/farben.ts`, Umfärben in `src/lib/map/stil.ts`. Der Worker wird über `?worker&url` eingebunden (sonst lädt er nach dem Bündeln nicht).
-- Dienste ohne Schlüssel (`src/lib/geo/dienste.ts`): Photon (Ortssuche, Ortsname), OSRM (Straßenroute, vereinfacht auf ≤ 300 Punkte). Nur Suchbegriffe/Koordinaten senden, nie persönliche Daten.
-- Fotos (`src/lib/fotos/import.ts`): EXIF (exifr) vor dem Verkleinern lesen, 1600 px JPEG als Blob in IndexedDB (`dateien`), Vorschau 320 px als Data-URL im Datensatz. Zuordnung zu Reise/Tag nach Aufnahmedatum.
+- Dienste ohne Schlüssel: Photon (Ortssuche, Ortsname) und OSRM (Straßenroute, vereinfacht auf ≤ 300 Punkte) in `src/lib/geo/dienste.ts`, Open-Meteo (Wetter, `src/lib/wetter.ts`), Frankfurter/EZB (Wechselkurse, `src/lib/kosten.svelte.ts`). Nur Suchbegriffe/Koordinaten/Datum senden, nie persönliche Daten. Neue Dienste auch in der README nennen.
+- Offline: alles wird lokal gespeichert; fehlende Ortsnamen (`ortsnamenNachtragen`) und Straßenrouten (`offeneRoutenNachtragen`) werden beim Start und bei „online“ nachgeholt (`src/lib/geo/routen.ts`).
+- Fotos (`src/lib/fotos/import.ts`): EXIF (exifr) vor dem Verkleinern lesen, 1600 px JPEG als Blob in IndexedDB (`dateien`), Vorschau 320 px als Data-URL im Datensatz. Zuordnung zu Reise/Tag nach Aufnahmedatum; mit GPS landet ein Foto beim Ausflug desselben Tages (≤ 15 km und näher als an der Übernachtung, `ausflugBeiFoto`).
 
 ## Daten
 - Datenmodell im Kopfkommentar von `src/lib/db/typen.ts` (Reise, Eintrag, Platz, Foto, Ziel; jede mit `id`, `geaendert`, `geloescht`).
@@ -20,6 +21,8 @@ Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit
 - Abgeleitete Werte (Nächte, km, Tage, laufende Reise, Plätze in der Nähe) in `src/lib/auswertung.ts`.
 - **Unterwegs** (`src/lib/unterwegs.ts`): aktuelle Übernachtung, offene Fahrt (`von` ohne `nach`), „Weiterfahren“ setzt die Nächte bis heute und legt eine offene Fahrt an; die nächste Übernachtung schließt sie ab. Neue Übernachtung → Nächte der vorigen werden bis zum neuen Datum ergänzt (`naechteBis`).
 - **Ziele/Planung**: Art `ziel` (Name, Art, Ort, Links, Notiz, optional `reise` = geplant für diese Reise, `erledigt`). Seite `#/ziele`, Formular `ZielFormular.svelte`; Reisen in der Zukunft ohne Einträge zeigen zuerst ihre geplanten Ziele. Ziele werden nicht geteilt.
+- **Kosten** (`src/lib/kosten.svelte.ts`): `kosten[]` am Eintrag (Art laut `KOSTEN_ART`, Betrag, Währung), Übernachtung = `preis` × Nächte + Merkmale `stromkosten`/`kurtaxe`. Übersicht am Ende der Reise; Summen je Währung, „≈ €“ mit aktuellen EZB-Kursen (1× am Tag, localStorage).
+- **Wetter** (`src/lib/wetter.ts`): `wetter[datum]` an dem Eintrag, der den Ort des Tages angibt (Übernachtung dieser Nacht, sonst letzter Eintrag mit Ort). Wird beim Öffnen einer Reise für vergangene Tage still nachgetragen und reist beim Abgleich mit. Beim Bearbeiten eines Eintrags `wetter` behalten.
 - **Statistik** (`src/lib/statistik.ts`, Seite `#/statistik`): Länder per Punkt-in-Polygon aus `static/laender.json` (Natural Earth, vereinfacht; Eigenschaften `c` = Ländercode, `n` = Name), Färbung über `ui.laender` auf der Karte. Plätze-Karte färbt nach Bewertung (`src/lib/map/zusatz.ts`), Filter über `ui.sichtbarePlaetze`.
 - Beispieldaten (`src/lib/beispiel/`): IDs beginnen mit `bsp-`, gehen nicht in die Outbox und dürfen nie hochgeladen werden.
 - **Abgleich** (`src/lib/db/abgleich.svelte.ts`): Supabase-Tabelle `dokumente` (id = lokale UUID, `art` reise/eintrag/platz/foto/ziel, `inhalt` = Datensatz als JSON, weiches Löschen, Server-Zeit `geaendert_am`). Hochladen aus der Outbox per upsert (Fotos vorher in den Eimer `fotos`, Pfad `<user-id>/<foto-id>.jpg`), Abholen mit `geaendert_am > stand`. Konflikte: neueres `geaendert` gewinnt. Ein Konto pro Haushalt (Partnerin meldet sich mit demselben Konto an). Ohne Eintrag in `src/lib/config.ts` ist der Abgleich aus.
@@ -39,6 +42,7 @@ Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit
 - `node tools/bilder.mjs [handy|pc]` (optional `DUNKEL=1`): spielt die App mit WebKit durch und legt Bildschirmfotos in `tools/bilder/` (nicht im Git). Nach Oberflächen-Änderungen laufen lassen und die Bilder ansehen.
 - `node tools/ablauf.mjs`: Funktionstest der Hauptabläufe (Reise, Hier eintragen, automatische Fahrt mit Route, Foto, Löschen/Rückgängig).
 - `node tools/neu-test.mjs`: Folgenächte/Notizen, Währung, Reisezeitraum, Ort-Wahl mit Suche, langes Drücken (Stecknadel), „Fahrt über hier“, Fotos am Eintrag, Links/Merkmale am Platz.
+- `node tools/kosten-test.mjs`: Kosten (Übersicht, Umrechnung, Formular), Wetter, Foto beim passenden Ausflug, Ziele in der Nähe, Eintragen ohne Internet und Nachtragen des Ortsnamens.
 - `node tools/planung-test.mjs`: Statistik/Länder, Plätze-Filter, Ziele merken, geplante Reise, Weiterfahren mit automatischen Nächten und offener Fahrt, Stecknadel → Ziel.
 - `node tools/abgleich-test.mjs`: Abgleich und Teilen gegen eine nachgebaute Supabase (zwei Geräte + Gast). Braucht einen zweiten Dev-Server: `VITE_TEST_SUPABASE_URL=https://test.supabase.example npx vite dev --port 5174`.
 - `node tools/icons.mjs`: PNG-Icons aus `static/icons/icon.svg` neu erzeugen.

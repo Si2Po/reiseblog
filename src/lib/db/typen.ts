@@ -1,6 +1,7 @@
 /*
-  Datenmodell – bewusst nur vier Sorten von Objekten:
-    Reise · Eintrag (Art: Übernachtung, Fahrt, Ausflug) · Platz · Foto
+  Datenmodell – bewusst nur wenige Sorten von Objekten:
+    Reise · Eintrag (Art: Übernachtung, Fahrt, Ausflug) · Platz · Foto · Ziel
+  Ausgaben (`kosten`) und Tageswetter (`wetter`) hängen am Eintrag.
   Zusätzliche, auswertbare Eigenschaften stehen NICHT als eigene Felder im Code, sondern als
   `merkmale` (Schlüssel → Wert). Welche Merkmale es gibt, beschreibt der Katalog in src/lib/merkmale.ts.
   Neues Merkmal = eine Zeile im Katalog, alte Daten bleiben gültig.
@@ -74,6 +75,10 @@ export interface Eintrag extends Basis {
 	notizen?: Notiz[];
 	/** weitere Eigenschaften laut Katalog */
 	merkmale?: Merkmale;
+	/** Ausgaben (Tanken, Maut, Fähre, Eintritt …) – Übernachtungspreis steht extra in `preis` */
+	kosten?: Kosten[];
+	/** Wetter der Tage, für die dieser Eintrag den Ort angibt (Datum → Wetter), automatisch nachgetragen */
+	wetter?: Record<string, Wetter>;
 
 	// Übernachtung
 	platz?: string;
@@ -92,6 +97,23 @@ export interface Eintrag extends Basis {
 	minuten?: number;
 	/** false = gerade Linie, Straßenroute noch nicht berechnet */
 	routeOk?: boolean;
+}
+
+export type KostenArt = 'tanken' | 'maut' | 'faehre' | 'eintritt' | 'essen' | 'einkauf' | 'sonstig';
+
+export interface Kosten {
+	id: string;
+	art: KostenArt;
+	betrag: number;
+	waehrung: string;
+}
+
+/** Tageswetter (Open-Meteo): WMO-Code, Höchst-/Tiefsttemperatur °C, Niederschlag mm */
+export interface Wetter {
+	c: number;
+	max: number;
+	min: number;
+	regen?: number;
 }
 
 export type PlatzArt = 'camping' | 'stellplatz' | 'frei' | 'hof' | 'sonstig';
@@ -150,6 +172,16 @@ export const TYP_NAME: Record<Typ, string> = {
 	stay: 'Übernachtung',
 	drive: 'Fahrt',
 	outing: 'Ausflug'
+};
+
+export const KOSTEN_ART: Record<KostenArt, string> = {
+	tanken: 'Tanken',
+	maut: 'Maut / Vignette',
+	faehre: 'Fähre',
+	eintritt: 'Eintritt',
+	essen: 'Essen gehen',
+	einkauf: 'Einkauf',
+	sonstig: 'Sonstiges'
 };
 
 export const ZIEL_ART: Record<ZielArt, string> = {

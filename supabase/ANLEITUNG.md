@@ -5,6 +5,8 @@ Supabase speichert deine Reisen und Fotos online, damit iPhone und PC dasselbe z
 ## 1. Projekt anlegen
 1. Auf https://supabase.com anmelden (mit GitHub geht es am schnellsten).
 2. **New project**: Name `reiseblog`, ein Datenbank-Passwort vergeben (gut aufheben, wird aber im Alltag nicht gebraucht), Region **Frankfurt (eu-central-1)**.
+   - **GitHub (optional)**: leer lassen. Die Datenbank wird über den SQL Editor eingerichtet (Schritt 2), nicht automatisch beim Push.
+   - **Data access**: „Enable Data API“ **an** (die App braucht sie). „Grant API access to new tables automatically“ **aus** lassen (die nötigen Rechte vergibt `komplett.sql` selbst). „Enable RLS on new tables automatically“ **an** (schadet nicht; `komplett.sql` schaltet es ohnehin ein).
 3. Warten, bis das Projekt bereit ist (1–2 Minuten).
 
 ## 2. Datenbank anlegen

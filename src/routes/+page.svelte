@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { differenceInCalendarDays, parseISO } from 'date-fns';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import Van from 'phosphor-svelte/lib/Van';
 	import ChartBar from 'phosphor-svelte/lib/ChartBar';
@@ -62,9 +63,17 @@
 						<span class="r-titel">{r.titel}</span>
 						<span class="zeit">{zeitraum(r.start, r.ende ?? reiseEnde(r))}</span>
 						<span class="zahlen zahl">
-							<span><b>{naechte(r.id)}</b> Nächte</span>
-							<span><b>{zahl(km(r.id))}</b> km</span>
-							<span><b>{fotosVon(r.id).length}</b> Fotos</span>
+							{#if r.start > heute() && !naechte(r.id)}
+								<!-- geplante Reise: Vorfreude statt Nullen -->
+								{@const z = daten.ziele.filter((x) => x.reise === r.id && !x.erledigt).length}
+								{@const bis = differenceInCalendarDays(parseISO(r.start), parseISO(heute()))}
+								<span>noch <b>{zahl(bis)}</b> {bis === 1 ? 'Tag' : 'Tage'}</span>
+								{#if z}<span><b>{z}</b> {z === 1 ? 'Ziel' : 'Ziele'} geplant</span>{/if}
+							{:else}
+								<span><b>{naechte(r.id)}</b> Nächte</span>
+								<span><b>{zahl(km(r.id))}</b> km</span>
+								<span><b>{fotosVon(r.id).length}</b> Fotos</span>
+							{/if}
 						</span>
 					</span>
 				</a>

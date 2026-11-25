@@ -33,6 +33,8 @@ create trigger dokumente_zeit before insert or update on public.dokumente
 	for each row execute function public.dokumente_zeit();
 
 alter table public.dokumente enable row level security;
+-- Zugriff über die App (Data API) ausdrücklich erlauben – welche Zeilen, regeln die Policies
+grant select, insert, update on public.dokumente to authenticated;
 
 drop policy if exists "eigene lesen" on public.dokumente;
 create policy "eigene lesen" on public.dokumente for select to authenticated using (owner = auth.uid());
@@ -56,6 +58,7 @@ create table if not exists public.freigaben (
 );
 
 alter table public.freigaben enable row level security;
+grant select, insert, update, delete on public.freigaben to authenticated;
 
 drop policy if exists "eigene freigaben" on public.freigaben;
 create policy "eigene freigaben" on public.freigaben for all to authenticated

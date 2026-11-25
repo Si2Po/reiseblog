@@ -2,10 +2,12 @@
   Eine Reise: Kennzahlen, Fotos, Zeitleiste nach Tagen.
   Mehrtägige Übernachtungen erscheinen an jedem Tag (Folgenacht), Notizen bei ihrer Nacht.
   Fotos eines Eintrags stehen direkt beim Eintrag; Fotos außerhalb des Zeitraums unter „Weitere Fotos“.
+  Wetter steht im Tageskopf (wird beim Öffnen still nachgetragen), Kosten am Ende.
 -->
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { untrack } from 'svelte';
 	import { slide } from 'svelte/transition';
 	import Tent from 'phosphor-svelte/lib/Tent';
 	import Van from 'phosphor-svelte/lib/Van';
@@ -27,11 +29,14 @@
 	import { naechte, km, plaetzeAnzahl, fotosVon, fotosVonEintrag, tage, reiseEnde, weitereFotos, nachtNotizen } from '#lib/auswertung.ts';
 	import { zeitraum, tagLang, monatJahr, reiseTag, dauer, zahl, preisText, notizZeit, heute } from '#lib/datum.ts';
 	import { fotosWaehlen } from '#lib/fotos/import.ts';
-	import { aktuelleUebernachtung, weiterfahren } from '#lib/unterwegs.ts';
+	import { aktuelleUebernachtung, weiterfahren, zieleInDerNaehe, entfernungText } from '#lib/unterwegs.ts';
+	import { laufendeReise } from '#lib/auswertung.ts';
+	import { wetterNachtragen, tagesWetter, wetterArt } from '#lib/wetter.ts';
+	import { reiseKosten, summe, wechselkurse, nurEuro, type Betraege } from '#lib/kosten.svelte.ts';
 	import { zielFarbe } from '#lib/map/zusatz.ts';
 	import Flag from 'phosphor-svelte/lib/Flag';
 	import type { Eintrag, Foto } from '#lib/db/typen.ts';
-	import { TYP_NAME, ZIEL_ART } from '#lib/db/typen.ts';
+	import { TYP_NAME, ZIEL_ART, KOSTEN_ART } from '#lib/db/typen.ts';
 
 	async function losfahren(e: Eintrag) {
 		await weiterfahren(e);
@@ -58,7 +63,11 @@
 			.filter((t) => t.eintraege.length || t.naechte.length || t.fotos.length);
 	});
 	const weitere = $derived(r ? weitereFotos(r.id) : []);
-	const geplant = $derived(daten.ziele.filter((z) => z.reise === id && !z.erledigt));
+	// Während der Reise: gemerkte Ziele in der Nähe (GPS oder aktuelle Übernachtung)
+	const nahe = $derived(!daten.gast && r && laufendeReise()?.id === r.id ? zieleInDerNaehe().slice(0, 5) : []);
+	const geplant = $derived(daten.ziele.filter((z) => z.reise === id && !z.erledigt && !nahe.some((n) => n.ziel.id === z.id)));
+	const posten = $derived(r ? reiseKosten(r.id) : []);
+	const gesamt = $derived(summe(posten));
 	// Reise in der Zukunft ohne Einträge: Planung statt leerer Kennzahlen zeigen
 	const inPlanung = $derived(!!r && r.start > heute() && !alleTage.length && !fs.length);
 	let offen = $state<string | null>(null);
@@ -73,6 +82,23 @@
 	$effect(() => {
 		if (ui.markiert) offen = ui.markiert;
 	});
+	// Wetter vergangener Tage nachtragen, Wechselkurse für die Kosten holen
+	$effect(() => {
+		if (!r || !daten.geladen || daten.gast) return;
+		const reise = r.id;
+		const fremd = posten.some((p) => !nurEuro(p.betraege));
+		untrack(() => {
+			wetterNachtragen(reise);
+			if (fremd) wechselkurse.holen();
+		});
+	});
+
+	/** „120 € + 850 NOK“ */
+	const betragText = (b: Betraege) =>
+		Object.entries(b)
+			.map(([w, x]) => preisText(Math.round(x * 100) / 100, w))
+			.join(' + ');
+	const ausgabenText = (e: Eintrag) => (e.kosten ?? []).map((k) => `${KOSTEN_ART[k.art].split(' /')[0]} ${preisText(k.betrag, k.waehrung)}`).join(' · ');
 
 	const SYMBOL = { stay: Tent, drive: Van, outing: Footprints };
 
@@ -97,14 +123,14 @@
 		if (e.typ === 'drive') {
 			const teile = [e.km ? `${zahl(e.km)} km` : '', e.minuten ? dauer(e.minuten) : ''].filter(Boolean);
 			if (e.via?.length) teile.push('über ' + e.via.map((o) => o.name ?? 'Zwischenziel').join(', '));
-			if (!teile.length) return e.routeOk === false ? 'Route wird berechnet …' : 'Fahrt';
-			return teile.join(' · ');
+			if (!teile.length && !e.kosten?.length) return e.routeOk === false ? 'Route wird berechnet …' : 'Fahrt';
+			return [...teile, ausgabenText(e)].filter(Boolean).join(' · ');
 		}
 		if (e.typ === 'stay') {
 			const n = e.naechte ?? 1;
-			return [`${n} ${n === 1 ? 'Nacht' : 'Nächte'}`, preisText(e.preis, e.waehrung)].filter(Boolean).join(' · ');
+			return [`${n} ${n === 1 ? 'Nacht' : 'Nächte'}`, preisText(e.preis, e.waehrung), ausgabenText(e)].filter(Boolean).join(' · ');
 		}
-		return [TYP_NAME[e.typ], e.ort?.name].filter(Boolean).join(' · ');
+		return [TYP_NAME[e.typ], e.ort?.name, ausgabenText(e)].filter(Boolean).join(' · ');
 	}
 
 	function grossAb(fotos: Foto[], i: number) {
@@ -184,6 +210,19 @@
 			</button>
 		{/if}
 
+		{#if nahe.length}
+			<section class="geplant nahe">
+				<h4>Gemerkt, in der Nähe</h4>
+				{#each nahe as { ziel: z, m } (z.id)}
+					<button class="ziel" onclick={() => ((ui.dialog = { art: 'ziel', id: z.id }), ui.zeigeOrt(z.ort, 12))}>
+						<span class="punkt" style:background={zielFarbe(z.art, thema.dunkel)}></span>
+						<span class="z-txt"><b>{z.name}</b><span>{ZIEL_ART[z.art]}{z.ort.name && z.ort.name !== z.name ? ` · ${z.ort.name}` : ''}</span></span>
+						<span class="weit zahl">{entfernungText(m)}</span>
+					</button>
+				{/each}
+			</section>
+		{/if}
+
 		{#if !daten.gast && (geplant.length || r.start > heute())}
 			<section class="geplant">
 				<h4>Geplant</h4>
@@ -207,6 +246,13 @@
 					<div class="tagkopf">
 						<span class="tagnr zahl">Tag {reiseTag(r.start, tag.datum)}</span>
 						<span>{tagLang(tag.datum)}</span>
+						{#if tagesWetter(tag)}
+							{@const w = tagesWetter(tag)!}
+							{@const art = wetterArt(w.c)}
+							<span class="wetter zahl" title="{art.name}{w.regen ? `, ${w.regen.toLocaleString('de-DE')} mm Regen` : ''}">
+								<art.icon size={16} weight="duotone" /><span>{w.max}°<small> / {w.min}°</small></span>
+							</span>
+						{/if}
 					</div>
 					{#if tag.fotos.length}<div class="lose">{@render fotoreihe(tag.fotos)}</div>{/if}
 
@@ -270,6 +316,26 @@
 				</li>
 			{/each}
 		</ol>
+
+		{#if posten.length && !filter}
+			{@const euro = wechselkurse.inEuro(gesamt)}
+			{@const n = naechte(r.id)}
+			<section class="kosten">
+				<h4>Kosten</h4>
+				<dl class="zahl">
+					{#each posten as p (p.art)}
+						<div><dt>{p.name}</dt><dd>{betragText(p.betraege)}</dd></div>
+					{/each}
+					<div class="summe">
+						<dt>Zusammen</dt>
+						<dd>{nurEuro(gesamt) ? betragText(gesamt) : euro !== null ? `≈ ${preisText(Math.round(euro), 'EUR')}` : betragText(gesamt)}</dd>
+					</div>
+				</dl>
+				{#if n && euro !== null}
+					<p>{nurEuro(gesamt) ? '' : '≈ '}{preisText(Math.round(euro / n), 'EUR')} pro Nacht{nurEuro(gesamt) ? '' : ' · umgerechnet mit aktuellen Kursen'}</p>
+				{/if}
+			</section>
+		{/if}
 
 		{#if weitere.length}
 			<section class="weitere">
@@ -661,6 +727,60 @@
 		background: none;
 		color: var(--text);
 		font-weight: 600;
+	}
+	.wetter {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		margin-left: auto;
+		letter-spacing: 0;
+		color: var(--text);
+		font-size: 13px;
+	}
+	.wetter small {
+		color: var(--text-2);
+		font-size: 12px;
+	}
+	.nahe .weit {
+		margin-left: auto;
+		color: var(--text-2);
+		font-size: 13px;
+	}
+	.kosten {
+		margin-top: 18px;
+		padding-top: 14px;
+		border-top: 1px solid var(--linie);
+	}
+	.kosten h4 {
+		margin: 0 0 6px;
+		font-size: 12px;
+		font-weight: 650;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-2);
+	}
+	.kosten dl {
+		margin: 0;
+	}
+	.kosten dl div {
+		display: flex;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 7px 0;
+		border-bottom: 1px solid var(--linie);
+	}
+	.kosten dd {
+		margin: 0;
+		text-align: right;
+	}
+	.kosten .summe {
+		border-bottom: 0;
+		font-weight: 700;
+	}
+	.kosten p {
+		margin: 0;
+		color: var(--text-2);
+		font-size: 13px;
 	}
 	.weitere {
 		margin-top: 18px;

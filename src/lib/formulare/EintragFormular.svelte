@@ -25,6 +25,8 @@
 	import SterneWahl from '#lib/ui/SterneWahl.svelte';
 	import OrtFeld from './OrtFeld.svelte';
 	import MerkmalFelder from './MerkmalFelder.svelte';
+	import KostenFeld from './KostenFeld.svelte';
+	import { WAEHRUNGEN } from '#lib/kosten.svelte.ts';
 	import LinkFeld from './LinkFeld.svelte';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
@@ -34,7 +36,7 @@
 	import { offeneFahrt, naechteBis } from '#lib/unterwegs.ts';
 	import { koordText } from '#lib/geo.ts';
 	import { aufraeumen } from '#lib/merkmale.ts';
-	import { TYP_NAME, PLATZ_ART, type Eintrag, type Merkmale, type Notiz, type Ort, type PlatzArt, type Typ } from '#lib/db/typen.ts';
+	import { TYP_NAME, PLATZ_ART, type Eintrag, type Kosten, type Merkmale, type Notiz, type Ort, type PlatzArt, type Typ } from '#lib/db/typen.ts';
 
 	let { id, vorlage }: { id?: string; vorlage?: Partial<Eintrag> } = $props();
 
@@ -51,6 +53,7 @@
 	let ort = $state<Ort | undefined>(v.ort);
 	let text = $state(v.text ?? '');
 	let merkmale = $state<Merkmale>({ ...(v.merkmale ?? {}) });
+	let kosten = $state<Kosten[]>((v.kosten ?? []).map((k) => ({ ...k })));
 
 	// Übernachtung
 	let platzId = $state<string | undefined>(v.platz);
@@ -161,7 +164,17 @@
 			}
 		}
 
-		const gemeinsam = { reise, typ, titel: titel.trim() || autoTitel || TYP_NAME[typ], datum, zeit, merkmale: aufraeumen(merkmale) };
+		const ausgaben = kosten.filter((k) => Number(k.betrag) > 0).map((k) => ({ ...k, betrag: Number(k.betrag) }));
+		const gemeinsam = {
+			reise,
+			typ,
+			titel: titel.trim() || autoTitel || TYP_NAME[typ],
+			datum,
+			zeit,
+			merkmale: aufraeumen(merkmale),
+			kosten: ausgaben.length ? ausgaben : undefined,
+			wetter: alt?.wetter
+		};
 		let neu: Omit<Eintrag, 'id' | 'geaendert'> & { id?: string };
 		if (typ === 'stay') {
 			const alle = neueNotiz.trim() ? [...notizen, { id: crypto.randomUUID(), zeit: notizZeitpunkt(), text: neueNotiz.trim() }] : notizen;
@@ -240,7 +253,6 @@
 		{ t: 'drive', icon: Van },
 		{ t: 'outing', icon: Footprints }
 	];
-	const WAEHRUNGEN = ['EUR', 'CHF', 'NOK', 'SEK', 'DKK', 'GBP', 'CZK', 'PLN', 'HUF'];
 </script>
 
 <Dialog titel={alt ? `${TYP_NAME[typ]} bearbeiten` : 'Neuer Eintrag'} onschliessen={zu} versteckt={!!ui.ortWahl}>
@@ -393,6 +405,8 @@
 				<textarea bind:value={text} placeholder="Was habt ihr erlebt?"></textarea>
 			</label>
 		{/if}
+
+		<KostenFeld bind:kosten {waehrung} {typ} />
 
 		<button type="button" class="aufklapp" onclick={() => (mehr = !mehr)} aria-expanded={mehr}>
 			<CaretDown size={16} style="transform: rotate({mehr ? 180 : 0}deg); transition: transform .2s" /> Mehr

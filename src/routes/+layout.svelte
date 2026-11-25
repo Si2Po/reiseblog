@@ -36,7 +36,7 @@
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { thema } from '#lib/thema.svelte.ts';
 	import { KARTE_DUNKEL, KARTE_HELL, halo, reiseFarbe } from '#lib/farben.ts';
-	import { offeneRoutenNachtragen } from '#lib/geo/routen.ts';
+	import { offeneRoutenNachtragen, ortsnamenNachtragen } from '#lib/geo/routen.ts';
 	import { fotosHinzufuegen } from '#lib/fotos/import.ts';
 
 	let { children }: LayoutProps = $props();
@@ -50,11 +50,13 @@
 	onMount(() => {
 		// Geteilter Link: keine eigenen Daten laden, nichts abgleichen
 		if (!location.hash.startsWith('#/teilen/')) {
+			// offline Eingetragenes vervollständigen: erst Ortsnamen (für die Titel), dann Straßenrouten
+			const nachtragen = () => ortsnamenNachtragen().then(offeneRoutenNachtragen);
 			daten.laden().then(() => {
-				offeneRoutenNachtragen();
+				nachtragen();
 				abgleich.starten();
 			});
-			addEventListener('online', offeneRoutenNachtragen);
+			addEventListener('online', nachtragen);
 		}
 		const breit = matchMedia('(min-width: 900px)');
 		ui.breit = breit.matches;

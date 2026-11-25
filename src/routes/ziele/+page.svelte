@@ -11,7 +11,8 @@
 	import { thema } from '#lib/thema.svelte.ts';
 	import { zielFarbe } from '#lib/map/zusatz.ts';
 	import { abstand } from '#lib/geo.ts';
-	import { zahl, heute } from '#lib/datum.ts';
+	import { heute } from '#lib/datum.ts';
+	import { ungefaehrHier, zieleInDerNaehe, entfernungText } from '#lib/unterwegs.ts';
 	import { ZIEL_ART, type Ziel } from '#lib/db/typen.ts';
 
 	let erledigteOffen = $state(false);
@@ -36,11 +37,10 @@
 		if (k.length) setTimeout(() => ui.karte?.zeigeBereich(k, ui.rand(), 12), 100);
 	});
 
-	const entfernung = (z: Ziel) => {
-		if (!ui.ich) return '';
-		const m = abstand(ui.ich, z.ort);
-		return m < 1000 ? `${Math.round(m)} m` : `${zahl(Math.round(m / 1000))} km`;
-	};
+	// Entfernung: GPS, sonst (während einer Reise) von der aktuellen Übernachtung aus
+	const hier = $derived(ungefaehrHier());
+	const entfernung = (z: Ziel) => (hier ? entfernungText(abstand(hier, z.ort)) : '');
+	const nahe = $derived(zieleInDerNaehe());
 	const oeffnen = (z: Ziel) => {
 		ui.zeigeOrt(z.ort, 13);
 		ui.dialog = { art: 'ziel', id: z.id };
@@ -57,6 +57,24 @@
 			Sammle hier Orte, an die du willst: Stellplätze, Städte, Sehenswürdigkeiten, Wanderungen, Restaurants. Per Suche, per langem Drücken auf die Karte
 			oder mit einem Park4Night-Link – und ordne sie einer geplanten Reise zu.
 		</p>
+	{/if}
+
+	{#if nahe.length}
+		<h4>In der Nähe</h4>
+		<ul class="ziele">
+			{#each nahe as { ziel: z, m } (z.id)}
+				<li>
+					<button onclick={() => oeffnen(z)}>
+						<span class="punkt" style:background={zielFarbe(z.art, thema.dunkel)}></span>
+						<span class="z-txt">
+							<b>{z.name}</b>
+							<span>{ZIEL_ART[z.art]}{z.reise ? ` · für „${daten.reise(z.reise)?.titel ?? 'Reise'}“` : ''}</span>
+						</span>
+						<span class="weit zahl">{entfernungText(m)}</span>
+					</button>
+				</li>
+			{/each}
+		</ul>
 	{/if}
 
 	{#each gruppen as g (g.titel)}
@@ -149,6 +167,11 @@
 	.z-txt span {
 		font-size: 13px;
 		color: var(--text-2);
+	}
+	.weit {
+		flex: none;
+		color: var(--text-2);
+		font-size: 13px;
 	}
 	.fertig {
 		color: var(--stern);

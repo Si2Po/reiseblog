@@ -7,7 +7,7 @@ import { fotoUrl, type Motiv } from './bilder.ts';
 import { db } from '#lib/db/db.ts';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { ui } from '#lib/ui.svelte.ts';
-import type { Eintrag, Foto, LngLat, Platz, PlatzArt, Reise, TabellenName, Ziel, ZielArt } from '#lib/db/typen.ts';
+import type { Eintrag, Foto, KostenArt, LngLat, Platz, PlatzArt, Reise, TabellenName, Ziel, ZielArt } from '#lib/db/typen.ts';
 
 const R = routen as unknown as Record<string, { km: number; min: number; coords: LngLat[] }[]>;
 const jetzt = Date.now();
@@ -75,25 +75,29 @@ function drive(reise: string, i: number, datum: string, von: string, nach: strin
 function anderes(reise: string, typ: 'outing', titel: string, datum: string, lat: number, lng: number, ort: string, text?: string): Eintrag {
 	return { ...basis('e' + ++n), reise: 'bsp-' + reise, typ, titel, datum, ort: { lat, lng, name: ort }, text };
 }
+/** Ausgaben an einen Beispiel-Eintrag hängen: [Art, Betrag, Währung] */
+function mit(e: Eintrag, ...k: [KostenArt, number, string][]): Eintrag {
+	return { ...e, kosten: k.map(([art, betrag, waehrung], i) => ({ id: `${e.id}-k${i}`, art, betrag, waehrung })) };
+}
 
 const eintraege: Eintrag[] = [
 	stay('no25', 'p1', '2025-07-05', 2, 4, 420, 'NOK', 'Nach der Fähre aus Hirtshals erstmal ankommen.'),
 	drive('no25', 0, '2025-07-07', 'Kristiansand', 'Jørpeland'),
 	stay('no25', 'p2', '2025-07-07', 2, 5, 390, 'NOK'),
-	anderes('no25', 'outing', 'Wanderung Preikestolen', '2025-07-08', 58.9864, 6.1904, 'Preikestolen', 'Um 6 Uhr gestartet, oben fast allein. 4 Stunden hin und zurück.'),
-	drive('no25', 1, '2025-07-09', 'Jørpeland', 'Odda'),
+	mit(anderes('no25', 'outing', 'Wanderung Preikestolen', '2025-07-08', 58.9864, 6.1904, 'Preikestolen', 'Um 6 Uhr gestartet, oben fast allein. 4 Stunden hin und zurück.'), ['sonstig', 300, 'NOK']),
+	mit(drive('no25', 1, '2025-07-09', 'Jørpeland', 'Odda'), ['tanken', 1150, 'NOK'], ['maut', 186, 'NOK']),
 	stay('no25', 'p3', '2025-07-09', 3, 3, 350, 'NOK'),
 	anderes('no25', 'outing', 'Trolltunga', '2025-07-10', 60.124, 6.74, 'Skjeggedal', '27 km, 10 Stunden. Beine am Ende.'),
 	anderes('no25', 'outing', 'Cider-Probe in Hardanger', '2025-07-11', 60.32, 6.66, 'Lofthus'),
-	drive('no25', 2, '2025-07-12', 'Odda', 'Geiranger'),
+	mit(drive('no25', 2, '2025-07-12', 'Odda', 'Geiranger'), ['faehre', 340, 'NOK'], ['maut', 120, 'NOK']),
 	stay('no25', 'p4', '2025-07-12', 4, 5, 410, 'NOK', 'Bester Platz der Reise.', [3, 'Nacht 3: Regen. Um 6 Uhr hupt das Kreuzfahrtschiff – trotzdem schön.']),
 	anderes('no25', 'outing', 'Dalsnibba bei Sonnenaufgang', '2025-07-14', 62.047, 7.272, 'Dalsnibba'),
 	drive('no25', 3, '2025-07-16', 'Geiranger', 'Ålesund'),
 	stay('no25', 'p5', '2025-07-16', 2, 2, 300, 'NOK'),
 
 	stay('br24', 'p6', '2024-05-10', 2, 3, 14, 'EUR'),
-	anderes('br24', 'outing', 'Mont-Saint-Michel', '2024-05-11', 48.636, -1.511, 'Le Mont-Saint-Michel', 'Mit dem Rad über den Damm, die Flut kam pünktlich.'),
-	drive('br24', 0, '2024-05-12', 'Saint-Malo', 'Cap Fréhel'),
+	mit(anderes('br24', 'outing', 'Mont-Saint-Michel', '2024-05-11', 48.636, -1.511, 'Le Mont-Saint-Michel', 'Mit dem Rad über den Damm, die Flut kam pünktlich.'), ['eintritt', 13, 'EUR']),
+	mit(drive('br24', 0, '2024-05-12', 'Saint-Malo', 'Cap Fréhel'), ['tanken', 78.4, 'EUR']),
 	stay('br24', 'p7', '2024-05-12', 3, 4, 28, 'EUR'),
 	drive('br24', 1, '2024-05-15', 'Cap Fréhel', 'Ploumanac’h'),
 	stay('br24', 'p8', '2024-05-15', 2, 5, 0, 'EUR', 'Die Bäuerin hat uns Crêpes gebracht.'),
@@ -104,10 +108,10 @@ const eintraege: Eintrag[] = [
 	stay('br24', 'p10', '2024-05-20', 4, 3, 36, 'EUR'),
 
 	stay('do23', 'p11', '2023-09-14', 3, 5, 52, 'EUR'),
-	anderes('do23', 'outing', 'Drei Zinnen Umrundung', '2023-09-15', 46.6187, 12.3021, 'Auronzo-Hütte'),
+	mit(anderes('do23', 'outing', 'Drei Zinnen Umrundung', '2023-09-15', 46.6187, 12.3021, 'Auronzo-Hütte'), ['maut', 30, 'EUR']),
 	drive('do23', 0, '2023-09-17', 'Toblach', 'Cortina'),
 	stay('do23', 'p12', '2023-09-17', 2, 3, 38, 'EUR'),
-	drive('do23', 1, '2023-09-19', 'Cortina', 'Kastelruth'),
+	mit(drive('do23', 1, '2023-09-19', 'Cortina', 'Kastelruth'), ['tanken', 82, 'EUR']),
 	stay('do23', 'p13', '2023-09-19', 3, 4, 25, 'EUR'),
 	anderes('do23', 'outing', 'Almabtrieb Kastelruth', '2023-09-21', 46.567, 11.56, 'Kastelruth'),
 	drive('do23', 2, '2023-09-22', 'Kastelruth', 'Riva'),
