@@ -53,7 +53,7 @@ Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit
 
 ## Git und Veröffentlichen
 - Repo `Si2Po/reiseblog` (öffentlich), Seite https://si2po.github.io/reiseblog/ – gebaut und veröffentlicht durch `.github/workflows/veroeffentlichen.yml` bei jedem Push auf `main`.
-- Lokal auf `main` committen, **erst pushen, wenn es ausdrücklich gewünscht ist** (Push = Veröffentlichung).
+- Lokal auf `main` committen. **Während der Entwicklung:** kleine Korrekturen (Bugfix, kleine Bedien-Verbesserung) nach Prüfung direkt pushen (Push = Veröffentlichung). Größere Funktionen oder Umbauten erst pushen, wenn es ausdrücklich gewünscht ist. Später werden Änderungen zu Updates gebündelt.
 - Version in `package.json`; der Service Worker erkennt neue Versionen von selbst.
 - Niemals Secret-Keys, `service_role` oder Datenbank-Passwörter einchecken. Der Supabase-Publishable-Key darf in den Code.
 
