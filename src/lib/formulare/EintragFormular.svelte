@@ -32,6 +32,7 @@
 	import { heute, zahl, dauer, notizZeit } from '#lib/datum.ts';
 	import { laufendeReise, reisenSortiert, plaetzeInDerNaehe, letzteUebernachtung, platzBewertung, eintraegeVon } from '#lib/auswertung.ts';
 	import { routeNachtragen, viaEinfuegen } from '#lib/geo/routen.ts';
+	import { offeneFahrt, naechteBis } from '#lib/unterwegs.ts';
 	import { koordText } from '#lib/geo.ts';
 	import { aufraeumen } from '#lib/merkmale.ts';
 	import { TYP_NAME, PLATZ_ART, type Eintrag, type Merkmale, type Notiz, type Ort, type PlatzArt, type Typ } from '#lib/db/typen.ts';
@@ -89,9 +90,11 @@
 
 	const reisen = reisenSortiert();
 	const nahe = $derived(typ === 'stay' && ort ? plaetzeInDerNaehe(ort.lat, ort.lng) : []);
+	// Läuft gerade eine Fahrt („Weiterfahren“)? Dann endet sie hier – keine zweite Fahrt anlegen.
+	const offen = $derived(!alt && typ === 'stay' ? offeneFahrt(reise) : undefined);
 	// Ist die vorige Übernachtung derselbe Platz? Dann keine Fahrt anbieten.
 	const fahrtSinnvoll = $derived(
-		!alt && typ === 'stay' && !!vorige?.ort && !!ort && vorige.platz !== platzId && Math.abs(vorige.ort.lat - ort.lat) + Math.abs(vorige.ort.lng - ort.lng) > 0.005
+		!alt && !offen && typ === 'stay' && !!vorige?.ort && !!ort && vorige.platz !== platzId && Math.abs(vorige.ort.lat - ort.lat) + Math.abs(vorige.ort.lng - ort.lng) > 0.005
 	);
 
 	const autoTitel = $derived(
@@ -139,6 +142,8 @@
 		if (!ok) return;
 		// vor dem Speichern merken – danach ist die neue Übernachtung selbst „die letzte“
 		const start = typ === 'stay' && fahrtSinnvoll && fahrtMit ? vorige : undefined;
+		const voriger = !alt && typ === 'stay' && vorige && vorige.datum < datum ? vorige : undefined;
+		const laufend = offen;
 		// heutige Einträge bekommen die Uhrzeit, damit die Reihenfolge am Tag stimmt
 		// (bei geändertem Datum gilt die alte Uhrzeit nicht mehr)
 		const zeit = alt && alt.datum === datum ? alt.zeit : datum === heute() ? format(new Date(), 'HH:mm:ss') : undefined;
@@ -191,11 +196,25 @@
 			routeNachtragen(f.id);
 		}
 
+		// Offene Fahrt („Weiterfahren“) endet hier
+		if (laufend && ort) {
+			const ziel = ort.name ?? (platzName || 'Ziel');
+			const f = await daten.speichern('eintraege', { ...laufend, nach: ort, titel: laufend.titel.replace(/→ …$/, `→ ${ziel}`), routeOk: false });
+			routeNachtragen(f.id);
+		}
+
+		// Nächte der vorigen Übernachtung automatisch passend setzen (man weiß vorher oft nicht, wie lange man bleibt)
+		const naechteAngepasst = voriger ? await naechteBis(voriger, datum) : false;
+
 		const angepasst = await reisezeitraumAnpassen();
 		zu();
 		ui.markiert = e.id;
 		if (!(page.route.id === '/reise/[id]' && page.params.id === reise)) goto(`#/reise/${reise}`);
-		ui.zeige((alt ? 'Gespeichert' : `${TYP_NAME[typ]} eingetragen`) + (angepasst ? ' · Reisezeitraum angepasst' : ''));
+		const zusatz = [
+			angepasst ? 'Reisezeitraum angepasst' : '',
+			naechteAngepasst ? `${voriger!.titel}: jetzt ${daten.eintrag(voriger!.id)?.naechte} Nächte` : ''
+		].filter(Boolean);
+		ui.zeige([alt ? 'Gespeichert' : `${TYP_NAME[typ]} eingetragen`, ...zusatz].join(' · '));
 	}
 
 	/** Eintrag vor dem Start oder nach dem Ende? Dann die Reise entsprechend verlängern. */
@@ -356,6 +375,9 @@
 					<input type="checkbox" bind:checked={fahrtMit} />
 				</label>
 			{/if}
+			{#if offen}
+				<p class="info">Die Fahrt „{offen.titel}“ endet hier – die Straßenroute wird berechnet.</p>
+			{/if}
 
 			<div class="feld">
 				<span class="name">Notizen</span>
@@ -494,6 +516,14 @@
 		margin: -6px 0 16px;
 		color: var(--text-2);
 		font-size: 14px;
+	}
+	.info {
+		margin: 0 0 14px;
+		padding: 10px 12px;
+		border-radius: var(--radius);
+		background: var(--flaeche-2);
+		font-size: 14px;
+		line-height: 1.4;
 	}
 	.chips.umbruch {
 		flex-wrap: wrap;

@@ -7,7 +7,7 @@ import { fotoUrl, type Motiv } from './bilder.ts';
 import { db } from '#lib/db/db.ts';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { ui } from '#lib/ui.svelte.ts';
-import type { Eintrag, Foto, LngLat, Platz, PlatzArt, Reise, TabellenName } from '#lib/db/typen.ts';
+import type { Eintrag, Foto, LngLat, Platz, PlatzArt, Reise, TabellenName, Ziel, ZielArt } from '#lib/db/typen.ts';
 
 const R = routen as unknown as Record<string, { km: number; min: number; coords: LngLat[] }[]>;
 const jetzt = Date.now();
@@ -149,17 +149,33 @@ const fotos: Foto[] = [
 	foto('f-do-6', 'do23', '2023-09-23T19:50:00', 45.885, 10.842, 'abend')
 ];
 
+// Planung: eine Reise in der Zukunft mit Zielen, dazu Ziele für „irgendwann“
+const geplanteReise: Reise = { ...basis('sc27'), titel: 'Schottland', start: '2027-06-05', ende: '2027-06-26', farbe: 3 };
+function ziel(id: string, name: string, art: ZielArt, lat: number, lng: number, ort: string, reise?: string, notiz?: string): Ziel {
+	return { ...basis(id), name, art, ort: { lat, lng, name: ort }, links: [], reise: reise ? 'bsp-' + reise : undefined, notiz };
+}
+const ziele: Ziel[] = [
+	ziel('z1', 'Edinburgh Castle', 'sehenswert', 55.9486, -3.1999, 'Edinburgh', 'sc27', 'Früh hin, Tickets online.'),
+	ziel('z2', 'Old Man of Storr', 'natur', 57.507, -6.183, 'Isle of Skye', 'sc27'),
+	ziel('z3', 'Glencoe', 'natur', 56.682, -5.103, 'Glencoe', 'sc27'),
+	ziel('z4', 'Glenbrittle Campsite', 'stellplatz', 57.202, -6.29, 'Isle of Skye', 'sc27', 'Am Strand, Cuillin im Rücken.'),
+	ziel('z5', 'Deutsches Museum', 'sehenswert', 48.1299, 11.5834, 'München'),
+	ziel('z6', 'Lofoten', 'natur', 68.209, 13.623, 'Lofoten', undefined, 'Irgendwann im Juni, Mitternachtssonne.'),
+	ziel('z7', 'Trattoria da Gino', 'essen', 45.886, 10.84, 'Riva del Garda', undefined, 'Tipp vom Platznachbarn.')
+];
+
 /** Beispieldaten in die lokale Datenbank schreiben (nicht in die Outbox: sie sollen nie hochgeladen werden) */
 export async function beispielLaden() {
-	await db.transaction('rw', db.reisen, db.eintraege, db.plaetze, db.fotos, async () => {
-		await db.reisen.bulkPut(reisen);
+	await db.transaction('rw', [db.reisen, db.eintraege, db.plaetze, db.fotos, db.ziele], async () => {
+		await db.reisen.bulkPut([...reisen, geplanteReise]);
 		await db.eintraege.bulkPut(eintraege);
 		await db.plaetze.bulkPut(plaetze);
 		await db.fotos.bulkPut(fotos);
+		await db.ziele.bulkPut(ziele);
 	});
 	await daten.laden();
 	ui.zeigeAlles();
-	ui.zeige('Drei Beispielreisen geladen');
+	ui.zeige('Beispielreisen geladen');
 }
 
 export const hatBeispiel = () => daten.reisen.some((r) => r.id.startsWith('bsp-'));
@@ -167,7 +183,7 @@ export const hatBeispiel = () => daten.reisen.some((r) => r.id.startsWith('bsp-'
 /** Entfernt alle Beispieldaten (und alles, was darauf verweist). Mit Rückgängig. */
 export async function beispielEntfernen() {
 	const teile: [TabellenName, string][] = [];
-	for (const t of ['reisen', 'eintraege', 'plaetze', 'fotos'] as const)
+	for (const t of ['reisen', 'eintraege', 'plaetze', 'fotos', 'ziele'] as const)
 		for (const x of daten[t]) if (x.id.startsWith('bsp-') || ('reise' in x && x.reise?.startsWith('bsp-'))) teile.push([t, x.id]);
 	return daten.loeschenAlle(teile);
 }

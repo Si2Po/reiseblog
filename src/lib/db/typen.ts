@@ -122,11 +122,27 @@ export interface Foto extends Basis {
 	vorschau: string;
 }
 
+/** Merkliste / Planung: Orte, an die man (noch) will – Stellplatz, Stadt, Ausflugsziel … */
+export type ZielArt = 'stellplatz' | 'stadt' | 'sehenswert' | 'natur' | 'essen' | 'sonstig';
+
+export interface Ziel extends Basis {
+	name: string;
+	art: ZielArt;
+	ort: Ort;
+	notiz?: string;
+	links: string[];
+	/** für eine bestimmte (geplante) Reise vorgemerkt */
+	reise?: string;
+	/** erledigt: ID des Eintrags, mit dem man dort war */
+	erledigt?: string;
+}
+
 export interface Tabellen {
 	reisen: Reise;
 	eintraege: Eintrag;
 	plaetze: Platz;
 	fotos: Foto;
+	ziele: Ziel;
 }
 export type TabellenName = keyof Tabellen;
 
@@ -135,6 +151,15 @@ export const TYP_NAME: Record<Typ, string> = {
 	drive: 'Fahrt',
 	outing: 'Ausflug',
 	event: 'Event'
+};
+
+export const ZIEL_ART: Record<ZielArt, string> = {
+	stellplatz: 'Stellplatz',
+	stadt: 'Stadt',
+	sehenswert: 'Sehenswürdigkeit',
+	natur: 'Natur & Wandern',
+	essen: 'Essen & Trinken',
+	sonstig: 'Sonstiges'
 };
 
 export const PLATZ_ART: Record<PlatzArt, string> = {

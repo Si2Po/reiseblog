@@ -25,6 +25,7 @@ class Daten {
 	eintraege = $state<Liste<'eintraege'>>([]);
 	plaetze = $state<Liste<'plaetze'>>([]);
 	fotos = $state<Liste<'fotos'>>([]);
+	ziele = $state<Liste<'ziele'>>([]);
 	geladen = $state(false);
 	/** gesetzt, wenn ein geteilter Link angesehen wird (Name der Freigabe) */
 	gast = $state<string | null>(null);
@@ -32,12 +33,13 @@ class Daten {
 	beobachter: (() => void) | null = null;
 
 	async laden() {
-		const [r, e, p, f] = await Promise.all([db.reisen.toArray(), db.eintraege.toArray(), db.plaetze.toArray(), db.fotos.toArray()]);
+		const [r, e, p, f, z] = await Promise.all([db.reisen.toArray(), db.eintraege.toArray(), db.plaetze.toArray(), db.fotos.toArray(), db.ziele.toArray()]);
 		if (this.gast) return; // währenddessen wurde ein geteilter Link geöffnet
 		this.reisen = r.filter((x) => !x.geloescht);
 		this.eintraege = e.filter((x) => !x.geloescht).map((x) => aufbereiten('eintraege', x));
 		this.plaetze = p.filter((x) => !x.geloescht).map((x) => aufbereiten('plaetze', x));
 		this.fotos = f.filter((x) => !x.geloescht);
+		this.ziele = z.filter((x) => !x.geloescht);
 		this.geladen = true;
 	}
 
@@ -98,6 +100,7 @@ class Daten {
 	eintrag = (id: string | undefined) => this.eintraege.find((x) => x.id === id);
 	platz = (id: string | undefined) => this.plaetze.find((x) => x.id === id);
 	foto = (id: string | undefined) => this.fotos.find((x) => x.id === id);
+	ziel = (id: string | undefined) => this.ziele.find((x) => x.id === id);
 }
 
 export const daten = new Daten();

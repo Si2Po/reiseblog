@@ -1,8 +1,9 @@
-<!-- Hauptbereiche (Reisen, Plätze, Suche) plus Zahnrad. Bleibt beim Scrollen oben. -->
+<!-- Hauptbereiche (Reisen, Plätze, Ziele) plus Suche und Zahnrad als Symbole. Bleibt beim Scrollen oben. -->
 <script lang="ts">
 	import { page } from '$app/state';
 	import MapTrifold from 'phosphor-svelte/lib/MapTrifold';
 	import Tent from 'phosphor-svelte/lib/Tent';
+	import Flag from 'phosphor-svelte/lib/Flag';
 	import MagnifyingGlass from 'phosphor-svelte/lib/MagnifyingGlass';
 	import GearSix from 'phosphor-svelte/lib/GearSix';
 	import { ui } from '#lib/ui.svelte.ts';
@@ -13,11 +14,12 @@
 
 <nav class="reiter" aria-label="Bereiche">
 	<div class="gruppe">
-		<a href={daten.gast ? (ui.gastStart ?? '#/') : '#/'} class:aktiv={aktiv === '/' || aktiv === '/teilen/[token]'}><MapTrifold size={18} /> Reisen</a>
+		<a href={daten.gast ? (ui.gastStart ?? '#/') : '#/'} class:aktiv={aktiv === '/' || aktiv === '/teilen/[token]' || aktiv === '/statistik'}><MapTrifold size={18} /> Reisen</a>
 		<a href="#/plaetze" class:aktiv={aktiv === '/plaetze'}><Tent size={18} /> Plätze</a>
-		<a href="#/suche" class:aktiv={aktiv === '/suche'} onclick={() => !ui.breit && (ui.hoehe = 'voll')}><MagnifyingGlass size={18} /> Suche</a>
+		{#if !daten.gast}<a href="#/ziele" class:aktiv={aktiv === '/ziele'}><Flag size={18} /> Ziele</a>{/if}
 	</div>
-	{#if !daten.gast}<a class="zahnrad" href="#/einstellungen" class:aktiv={aktiv === '/einstellungen'} aria-label="Einstellungen"><GearSix size={20} /></a>{/if}
+	<a class="symbol" href="#/suche" class:aktiv={aktiv === '/suche'} onclick={() => !ui.breit && (ui.hoehe = 'voll')} aria-label="Suche"><MagnifyingGlass size={20} /></a>
+	{#if !daten.gast}<a class="symbol" href="#/einstellungen" class:aktiv={aktiv === '/einstellungen'} aria-label="Einstellungen"><GearSix size={20} /></a>{/if}
 </nav>
 
 <style>
@@ -56,21 +58,21 @@
 		color: var(--text);
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	}
-	.zahnrad {
+	.symbol {
 		flex: none;
 		width: 46px;
 		height: 46px;
 		border-radius: calc(var(--radius) + 2px);
 		background: var(--flaeche-2);
 	}
-	.zahnrad.aktiv {
+	.symbol.aktiv {
 		color: var(--text);
 		box-shadow: none;
 		background: var(--linie);
 	}
 	@media (hover: hover) {
 		.gruppe a:not(.aktiv):hover,
-		.zahnrad:hover {
+		.symbol:hover {
 			color: var(--text);
 		}
 	}

@@ -4,7 +4,7 @@
 */
 import type { Hoehe } from '#lib/ui/Sheet.svelte';
 import type { Rand } from '#lib/map/Karte.svelte';
-import type { Eintrag, LngLat } from '#lib/db/typen.ts';
+import type { Eintrag, LngLat, Ziel } from '#lib/db/typen.ts';
 import { koordinaten } from '#lib/auswertung.ts';
 
 export interface KartenApi {
@@ -20,7 +20,8 @@ export type Dialog =
 	| { art: 'hier' }
 	| { art: 'platz'; id: string }
 	| { art: 'freigabe'; token?: string }
-	| { art: 'notiz'; eintrag: string; datum: string };
+	| { art: 'notiz'; eintrag: string; datum: string }
+	| { art: 'ziel'; id?: string; vorlage?: Partial<Ziel> };
 
 interface Hinweis {
 	nr: number;
@@ -54,6 +55,11 @@ class Ui {
 	gastStart = $state<string | null>(null);
 	/** Teilen-Links neu laden (nach Änderung im Dialog) */
 	freigabenStand = $state(0);
+
+	/** Plätze-Seite mit Filter: nur diese Plätze auf der Karte zeigen (null = alle) */
+	sichtbarePlaetze = $state<string[] | null>(null);
+	/** Statistik: besuchte Länder einfärben */
+	laender = $state<{ grenzen: GeoJSON.FeatureCollection; besucht: string[] } | null>(null);
 
 	/** Stecknadel nach langem Drücken auf die Karte */
 	pin = $state<{ lat: number; lng: number; name?: string; land?: string; landCode?: string } | null>(null);
@@ -99,13 +105,13 @@ class Ui {
 	// --- Hinweise ---
 	#nr = 0;
 	#zeit: ReturnType<typeof setTimeout> | undefined;
-	zeige(text: string, rueckgaengig?: () => unknown) {
+	zeige(text: string, rueckgaengig?: () => unknown, dauer?: number) {
 		clearTimeout(this.#zeit);
 		const nr = ++this.#nr;
 		this.hinweis = { nr, text, rueckgaengig };
 		this.#zeit = setTimeout(() => {
 			if (this.hinweis?.nr === nr) this.hinweis = null;
-		}, rueckgaengig ? 6000 : 2600);
+		}, dauer ?? (rueckgaengig ? 6000 : 2600));
 	}
 
 	// --- Ort auf der Karte wählen ---

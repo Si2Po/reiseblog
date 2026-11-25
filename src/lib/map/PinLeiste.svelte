@@ -11,6 +11,7 @@
 	import Van from 'phosphor-svelte/lib/Van';
 	import X from 'phosphor-svelte/lib/X';
 	import Path from 'phosphor-svelte/lib/Path';
+	import Flag from 'phosphor-svelte/lib/Flag';
 	import { fahrtUeber } from '#lib/geo/routen.ts';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { daten } from '#lib/db/daten.svelte.ts';
@@ -44,6 +45,14 @@
 		ui.zeige(`Route wird über ${name} neu berechnet …`);
 		const ok = await fahrtUeber(fahrt.id, { lat: p.lat, lng: p.lng, name: p.name, land: p.land, landCode: p.landCode });
 		ui.zeige(ok ? `Route führt jetzt über ${name}` : 'Route wird berechnet, sobald wieder Netz da ist');
+	}
+
+	function merken() {
+		const p = ui.pin;
+		if (!p) return;
+		ui.pin = null;
+		// auf der Seite einer (geplanten) Reise gleich dieser zuordnen
+		ui.dialog = { art: 'ziel', vorlage: { ort: { lat: p.lat, lng: p.lng, name: p.name, land: p.land, landCode: p.landCode }, reise: ui.auswahl ?? undefined } };
 	}
 
 	function weiter(typ: Typ) {
@@ -87,6 +96,7 @@
 			<button onclick={() => weiter('event')}><Ticket size={22} weight="duotone" /> Event</button>
 			<button onclick={() => weiter('drive')}><Van size={22} weight="duotone" /> Fahrt hierher</button>
 		</div>
+		<button class="merken" onclick={merken}><Flag size={18} weight="duotone" /> Als Ziel merken</button>
 	</div>
 {/if}
 
@@ -167,5 +177,18 @@
 	}
 	.wahl button:active {
 		background: var(--flaeche-2);
+	}
+	.merken {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		width: 100%;
+		height: 42px;
+		margin-top: 6px;
+		border: 0;
+		background: none;
+		color: var(--text);
+		font-weight: 600;
 	}
 </style>

@@ -3,7 +3,7 @@ import { db } from './db.ts';
 import { daten } from './daten.svelte.ts';
 import { format } from 'date-fns';
 
-const TABELLEN = ['reisen', 'eintraege', 'plaetze', 'fotos'] as const;
+const TABELLEN = ['reisen', 'eintraege', 'plaetze', 'fotos', 'ziele'] as const;
 
 export async function sicherungHerunterladen() {
 	const inhalt: Record<string, unknown> = { app: 'reiseblog', version: 1, erstellt: new Date().toISOString() };

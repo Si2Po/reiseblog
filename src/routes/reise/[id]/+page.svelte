@@ -26,10 +26,18 @@
 	import { thema } from '#lib/thema.svelte.ts';
 	import { reiseFarbe } from '#lib/farben.ts';
 	import { naechte, km, plaetzeAnzahl, fotosVon, fotosVonEintrag, tage, reiseEnde, weitereFotos, nachtNotizen } from '#lib/auswertung.ts';
-	import { zeitraum, tagLang, monatJahr, reiseTag, dauer, zahl, preisText, notizZeit } from '#lib/datum.ts';
+	import { zeitraum, tagLang, monatJahr, reiseTag, dauer, zahl, preisText, notizZeit, heute } from '#lib/datum.ts';
 	import { fotosWaehlen } from '#lib/fotos/import.ts';
+	import { aktuelleUebernachtung, weiterfahren } from '#lib/unterwegs.ts';
+	import { zielFarbe } from '#lib/map/zusatz.ts';
+	import Flag from 'phosphor-svelte/lib/Flag';
 	import type { Eintrag, Foto } from '#lib/db/typen.ts';
-	import { TYP_NAME } from '#lib/db/typen.ts';
+	import { TYP_NAME, ZIEL_ART } from '#lib/db/typen.ts';
+
+	async function losfahren(e: Eintrag) {
+		await weiterfahren(e);
+		ui.zeige('Gute Fahrt! Am Ziel einfach „Hier eintragen“ → Übernachtung.');
+	}
 
 	const id = $derived(page.params.id ?? '');
 	const r = $derived(daten.reise(id));
@@ -51,6 +59,9 @@
 			.filter((t) => t.eintraege.length || t.naechte.length || t.fotos.length);
 	});
 	const weitere = $derived(r ? weitereFotos(r.id) : []);
+	const geplant = $derived(daten.ziele.filter((z) => z.reise === id && !z.erledigt));
+	// Reise in der Zukunft ohne Einträge: Planung statt leerer Kennzahlen zeigen
+	const inPlanung = $derived(!!r && r.start > heute() && !alleTage.length && !fs.length);
 	let offen = $state<string | null>(null);
 
 	// Karte auf diese Reise einstellen
@@ -83,6 +94,7 @@
 
 	/** Kurze Zeile unter dem Titel, z. B. „265 km · 4 h 22 min“ oder „2 Nächte · 390 NOK“ */
 	function metaText(e: Eintrag): string {
+		if (e.typ === 'drive' && e.von && !e.nach) return 'unterwegs …';
 		if (e.typ === 'drive') {
 			const teile = [e.km ? `${zahl(e.km)} km` : '', e.minuten ? dauer(e.minuten) : ''].filter(Boolean);
 			if (e.via?.length) teile.push('über ' + e.via.map((o) => o.name ?? 'Zwischenziel').join(', '));
@@ -144,6 +156,7 @@
 			<span class="ueber">{monatJahr(r.start)}</span>
 			<h1>{r.titel}</h1>
 			<p class="zeit">{zeitraum(r.start, r.ende ?? reiseEnde(r))}</p>
+			{#if !inPlanung}
 			<div class="kennzahlen zahl" role="group" aria-label="Zeitleiste filtern">
 				{#each [['naechte', naechte(r.id), 'Nächte'], ['km', zahl(km(r.id)), 'km'], ['plaetze', plaetzeAnzahl(r.id), 'Plätze'], ['fotos', fs.length, 'Fotos']] as [k, wert, name], i (k)}
 					<button class:gelb={i === 0} class:an={filter === k} aria-pressed={filter === k} onclick={() => (filter = filter === k ? null : (k as Filter))}>
@@ -151,6 +164,7 @@
 					</button>
 				{/each}
 			</div>
+			{/if}
 			{#if filter}
 				<button class="filterzeile" onclick={() => (filter = null)}>Gefiltert: {FILTER_NAME[filter]} <X size={14} /></button>
 			{/if}
@@ -164,14 +178,27 @@
 				{/each}
 				{#if !daten.gast}<button class="mehr" onclick={() => fotosWaehlen({ reise: r.id })}><Camera size={22} /><span>Fotos</span></button>{/if}
 			</div>
-		{:else if !daten.gast}
+		{:else if !daten.gast && !inPlanung}
 			<button class="fotos-leer" onclick={() => fotosWaehlen({ reise: r.id })}>
 				<Camera size={20} /> Fotos hinzufügen
 				<span>Ort und Tag kommen aus dem Foto</span>
 			</button>
 		{/if}
 
-		{#if !liste.length}
+		{#if !daten.gast && (geplant.length || r.start > heute())}
+			<section class="geplant">
+				<h4>Geplant</h4>
+				{#each geplant as z (z.id)}
+					<button class="ziel" onclick={() => ((ui.dialog = { art: 'ziel', id: z.id }), ui.zeigeOrt(z.ort, 12))}>
+						<span class="punkt" style:background={zielFarbe(z.art, thema.dunkel)}></span>
+						<span class="z-txt"><b>{z.name}</b><span>{ZIEL_ART[z.art]}{z.ort.name && z.ort.name !== z.name ? ` · ${z.ort.name}` : ''}</span></span>
+					</button>
+				{/each}
+				<button class="ziel-neu" onclick={() => (ui.dialog = { art: 'ziel', vorlage: { reise: r.id } })}><Flag size={16} /> Ziel für diese Reise merken</button>
+			</section>
+		{/if}
+
+		{#if !liste.length && !inPlanung}
 			<p class="leer">{daten.gast ? 'Hier ist nichts freigegeben.' : 'Noch keine Einträge. Füg die erste Übernachtung oder Fahrt hinzu.'}</p>
 		{/if}
 
@@ -229,6 +256,9 @@
 										<button onclick={() => goto(`#/platz/${e.platz}`)}><Tent size={16} /> Platz <CaretRight size={13} /></button>
 									{/if}
 									{#if !daten.gast}
+										{#if e.typ === 'stay' && aktuelleUebernachtung()?.id === e.id}
+											<button class="los" onclick={() => losfahren(e)}><Van size={16} /> Weiterfahren</button>
+										{/if}
 										{#if e.typ === 'stay'}<button onclick={() => notiz(e, e.datum)}><NotePencil size={16} /> Notiz</button>{/if}
 										<button onclick={() => fotosWaehlen({ reise: r.id, eintrag: e.id })}><Plus size={16} /> Fotos</button>
 										<button onclick={() => (ui.dialog = { art: 'eintrag', id: e.id })}><PencilSimple size={16} /> Bearbeiten</button>
@@ -572,9 +602,66 @@
 		font-size: 14px;
 		font-weight: 550;
 	}
+	.aktionen .los {
+		border-color: var(--signal);
+		background: var(--signal);
+		color: var(--signal-text);
+	}
 	.aktionen .weg {
 		margin-left: auto;
 		color: var(--gefahr);
+	}
+	.geplant {
+		margin-top: 14px;
+		padding: 12px 0 4px;
+		border-top: 1px solid var(--linie);
+	}
+	.geplant h4,
+	.weitere h4 {
+		margin: 0 0 6px;
+		font-size: 12px;
+		font-weight: 650;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-2);
+	}
+	.ziel {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		min-height: 52px;
+		padding: 6px 0;
+		border: 0;
+		border-bottom: 1px solid var(--linie);
+		background: none;
+		text-align: left;
+	}
+	.ziel .punkt {
+		flex: none;
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		border: 2px solid var(--signal);
+	}
+	.z-txt {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.z-txt span {
+		font-size: 13px;
+		color: var(--text-2);
+	}
+	.ziel-neu {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 10px 0;
+		border: 0;
+		background: none;
+		color: var(--text);
+		font-weight: 600;
 	}
 	.weitere {
 		margin-top: 18px;

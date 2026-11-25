@@ -4,13 +4,14 @@
 	import { goto } from '$app/navigation';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import Van from 'phosphor-svelte/lib/Van';
+	import ChartBar from 'phosphor-svelte/lib/ChartBar';
 	import Reiter from '#lib/ui/Reiter.svelte';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { thema } from '#lib/thema.svelte.ts';
 	import { reiseFarbe } from '#lib/farben.ts';
 	import { reisenSortiert, naechte, km, fotosVon, reiseEnde, summe } from '#lib/auswertung.ts';
-	import { zeitraum, jahr, zahl } from '#lib/datum.ts';
+	import { zeitraum, jahr, zahl, heute } from '#lib/datum.ts';
 	import { beispielLaden } from '#lib/beispiel/daten.ts';
 
 	const reisen = $derived(reisenSortiert());
@@ -47,17 +48,17 @@
 			<button class="knopf still" onclick={beispielLaden}>Zum Ausprobieren: Beispielreisen laden</button>
 		</div>
 	{:else}
-		<p class="ueber summe zahl">
-			{s.reisen}
-			{s.reisen === 1 ? 'Reise' : 'Reisen'} · {s.naechte} Nächte · {zahl(s.km)} km
-		</p>
+		<a class="summe" href="#/statistik">
+			<span class="ueber zahl">{s.reisen} {s.reisen === 1 ? 'Reise' : 'Reisen'} · {s.naechte} Nächte · {zahl(s.km)} km</span>
+			<span class="statistik"><ChartBar size={15} weight="bold" /> Statistik</span>
+		</a>
 		<div class="reisen">
 			{#each reisen as r (r.id)}
 				{@const bild = titelbild(r.id)}
 				<a class="reise" class:ohne-bild={!bild} href="#/reise/{r.id}" style="--rf:{reiseFarbe(r.farbe, thema.dunkel)}">
 					{#if bild}<img class="cover" alt="" src={bild} />{/if}
 					<span class="r-txt">
-						<span class="jahr zahl">{jahr(r.start)}</span>
+						<span class="jahr zahl">{r.start > heute() ? `Geplant · ${jahr(r.start)}` : jahr(r.start)}</span>
 						<span class="r-titel">{r.titel}</span>
 						<span class="zeit">{zeitraum(r.start, r.ende ?? reiseEnde(r))}</span>
 						<span class="zahlen zahl">
@@ -78,7 +79,26 @@
 		padding: 4px 18px 0;
 	}
 	.summe {
-		margin: 4px 0 12px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		margin: 2px 0 10px;
+		min-height: 36px;
+		text-decoration: none;
+	}
+	.statistik {
+		flex: none;
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		height: 32px;
+		padding: 0 12px;
+		border-radius: 16px;
+		background: var(--flaeche-2);
+		color: var(--text);
+		font-size: 13px;
+		font-weight: 600;
 	}
 	.reisen {
 		display: flex;

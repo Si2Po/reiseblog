@@ -11,7 +11,7 @@
 create table if not exists public.dokumente (
 	id uuid primary key,
 	owner uuid not null default auth.uid() references auth.users (id) on delete cascade,
-	art text not null check (art in ('reise', 'eintrag', 'platz', 'foto')),
+	art text not null check (art in ('reise', 'eintrag', 'platz', 'foto', 'ziel')),
 	inhalt jsonb not null,
 	geloescht boolean not null default false,
 	geaendert_am timestamptz not null default now()

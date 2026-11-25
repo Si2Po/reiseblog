@@ -152,7 +152,10 @@ export function letzteUebernachtung(reise: string, vorDatum: string): Eintrag | 
 /** Alle Koordinaten (für „Karte auf Reise einpassen“) */
 export function koordinaten(reise?: string): LngLat[] {
 	const liste = reise ? eintraegeVon(reise) : daten.eintraege;
-	return liste.flatMap((e) => (e.route?.length ? e.route : e.ort ? [[e.ort.lng, e.ort.lat] as LngLat] : []));
+	const k = liste.flatMap((e) => (e.route?.length ? e.route : e.ort ? [[e.ort.lng, e.ort.lat] as LngLat] : e.von ? [[e.von.lng, e.von.lat] as LngLat] : []));
+	// geplante Ziele einer Reise gehören mit ins Bild
+	if (reise) for (const z of daten.ziele) if (z.reise === reise && !z.erledigt) k.push([z.ort.lng, z.ort.lat]);
+	return k;
 }
 
 export const summe = () => ({

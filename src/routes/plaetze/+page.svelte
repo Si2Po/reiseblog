@@ -7,41 +7,60 @@
 	import { ui } from '#lib/ui.svelte.ts';
 	import { besuche, platzBewertung } from '#lib/auswertung.ts';
 	import { AUSSTATTUNG } from '#lib/merkmale.ts';
-	import { PLATZ_ART } from '#lib/db/typen.ts';
+	import { PLATZ_ART, type Merkmale, type Platz, type PlatzArt } from '#lib/db/typen.ts';
+	import Funnel from 'phosphor-svelte/lib/Funnel';
+	import Dialog from '#lib/ui/Dialog.svelte';
+	import SterneWahl from '#lib/ui/SterneWahl.svelte';
+	import MerkmalFelder from '#lib/formulare/MerkmalFelder.svelte';
+	import { thema } from '#lib/thema.svelte.ts';
+	import { bewertungsFarbe, BEWERTUNG_LEGENDE } from '#lib/map/zusatz.ts';
 	import { abstand, standort } from '#lib/geo.ts';
 	import { zahl } from '#lib/datum.ts';
 
 	onMount(() => {
 		ui.auswahl = null;
 		ui.markiert = null;
+		const k = daten.plaetze.map((p) => [p.ort.lng, p.ort.lat] as [number, number]);
+		if (k.length) setTimeout(() => ui.karte?.zeigeBereich(k, ui.rand(), 12), 100);
+		return () => (ui.sichtbarePlaetze = null);
 	});
 
-	let filter = $state<string[]>([]);
+	// Filter: Schnellwahl + alle Merkmale aus dem Katalog (Dialog „Filter“)
+	let schnell = $state<string[]>([]);
+	let merkmale = $state<Merkmale>({});
+	let arten = $state<PlatzArt[]>([]);
+	let minSterne = $state<number | undefined>();
+	let filterOffen = $state(false);
 	let sortierung = $state<'bewertung' | 'naehe'>('bewertung');
-	const FILTER = [
+	const SCHNELL = [
 		{ key: 'gern', name: 'Gern wieder' },
-		{ key: 'gratis', name: 'Gratis' },
-		{ key: 'strom', name: 'Strom' },
-		{ key: 'hunde', name: 'Hunde' },
-		{ key: 'dusche', name: 'Dusche' },
-		{ key: 'frei', name: 'Frei stehen' }
+		{ key: 'gratis', name: 'Gratis' }
 	];
-	const passt = (p: (typeof daten.plaetze)[number], f: string) =>
-		f === 'gern'
-			? p.wiederkommen
-			: f === 'gratis'
-				? besuche(p.id).some((b) => b.preis === 0)
-				: f === 'frei'
-					? p.art === 'frei'
-					: !!p.merkmale[f];
+	const passtSchnell = (p: Platz, f: string) => (f === 'gern' ? !!p.wiederkommen : besuche(p.id).some((b) => b.preis === 0));
+	const passtMerkmale = (p: Platz) => Object.entries(merkmale).every(([k, w]) => p.merkmale[k] === w);
+	const anzahlFilter = $derived(Object.keys(merkmale).length + arten.length + (minSterne ? 1 : 0));
 
 	const liste = $derived(
 		daten.plaetze
-			.filter((p) => filter.every((f) => passt(p, f)))
+			.filter((p) => schnell.every((f) => passtSchnell(p, f)) && passtMerkmale(p))
+			.filter((p) => !arten.length || arten.includes(p.art))
+			.filter((p) => !minSterne || platzBewertung(p.id) >= minSterne)
 			.map((p) => ({ p, wert: platzBewertung(p.id), weg: ui.ich ? abstand(ui.ich, p.ort) : 0 }))
 			.sort((a, b) => (sortierung === 'naehe' && ui.ich ? a.weg - b.weg : b.wert - a.wert || a.p.name.localeCompare(b.p.name)))
 	);
-	const umschalten = (k: string) => (filter = filter.includes(k) ? filter.filter((f) => f !== k) : [...filter, k]);
+	// Karte zeigt nur die gefilterten Plätze
+	$effect(() => {
+		const gefiltert = schnell.length || anzahlFilter;
+		ui.sichtbarePlaetze = gefiltert ? liste.map((x) => x.p.id) : null;
+	});
+	const umschalten = (k: string) => (schnell = schnell.includes(k) ? schnell.filter((f) => f !== k) : [...schnell, k]);
+	const artUmschalten = (k: PlatzArt) => (arten = arten.includes(k) ? arten.filter((a) => a !== k) : [...arten, k]);
+	function zuruecksetzen() {
+		merkmale = {};
+		arten = [];
+		minSterne = undefined;
+		schnell = [];
+	}
 
 	async function nachNaehe() {
 		if (sortierung === 'naehe') return (sortierung = 'bewertung');
@@ -63,11 +82,40 @@
 <div class="seite">
 	{#if daten.plaetze.length}
 		<div class="chips rand">
+			<button class:an={anzahlFilter > 0} onclick={() => (filterOffen = true)}><Funnel size={15} /> Filter{anzahlFilter ? ` (${anzahlFilter})` : ''}</button>
 			<button class:an={sortierung === 'naehe'} onclick={nachNaehe}>In der Nähe</button>
-			{#each FILTER as f (f.key)}
-				<button class:an={filter.includes(f.key)} onclick={() => umschalten(f.key)}>{f.name}</button>
+			{#each SCHNELL as f (f.key)}
+				<button class:an={schnell.includes(f.key)} onclick={() => umschalten(f.key)}>{f.name}</button>
 			{/each}
 		</div>
+		<div class="legende">
+			{#each BEWERTUNG_LEGENDE as l (l.name)}
+				<span><i style:background={bewertungsFarbe(l.wert, thema.dunkel)}></i>{l.name}</span>
+			{/each}
+			<span class="anzahl zahl">{liste.length} von {daten.plaetze.length}</span>
+		</div>
+	{/if}
+
+	{#if filterOffen}
+		<Dialog titel="Plätze filtern" onschliessen={() => (filterOffen = false)}>
+			<div class="feld">
+				<span class="name">Mindestens</span>
+				<SterneWahl bind:wert={minSterne} name="Mindestbewertung" />
+			</div>
+			<div class="feld">
+				<span class="name">Art</span>
+				<div class="chips umbruch">
+					{#each Object.entries(PLATZ_ART) as [k, n] (k)}
+						<button type="button" class:an={arten.includes(k as PlatzArt)} onclick={() => artUmschalten(k as PlatzArt)}>{n}</button>
+					{/each}
+				</div>
+			</div>
+			<MerkmalFelder bezug="platz" bind:werte={merkmale} />
+			{#snippet fuss()}
+				<button class="knopf zweit" onclick={zuruecksetzen}>Zurücksetzen</button>
+				<button class="knopf" onclick={() => (filterOffen = false)}>{liste.length} {liste.length === 1 ? 'Platz' : 'Plätze'} zeigen</button>
+			{/snippet}
+		</Dialog>
 	{/if}
 	<ul class="plaetze">
 		{#each liste as { p, wert, weg } (p.id)}
@@ -101,6 +149,31 @@
 	.rand {
 		margin: 2px -18px 8px;
 		padding: 0 18px;
+	}
+	.chips.umbruch {
+		flex-wrap: wrap;
+	}
+	.legende {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 12px;
+		margin-bottom: 4px;
+		font-size: 12px;
+		color: var(--text-2);
+	}
+	.legende span {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+	}
+	.legende i {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+	}
+	.legende .anzahl {
+		margin-left: auto;
 	}
 	.plaetze {
 		margin: 0;

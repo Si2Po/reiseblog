@@ -21,6 +21,7 @@
 	import { ortsname } from '#lib/geo/dienste.ts';
 	import { heute } from '#lib/datum.ts';
 	import { fotosWaehlen } from '#lib/fotos/import.ts';
+	import { aktuelleUebernachtung, offeneFahrt, weiterfahren } from '#lib/unterwegs.ts';
 	import type { Ort, Typ } from '#lib/db/typen.ts';
 
 	let ort = $state<Ort | undefined>();
@@ -49,6 +50,17 @@
 			sucht = false;
 		}
 	});
+
+	// Steht man gerade an einem Platz der laufenden Reise? Dann „Weiterfahren“ anbieten.
+	const hierGeschlafen = aktuelleUebernachtung();
+	const unterwegsNach = $derived(offeneFahrt(reise));
+
+	async function losfahren() {
+		if (!hierGeschlafen) return;
+		await weiterfahren(hierGeschlafen);
+		ui.dialog = null;
+		ui.zeige('Gute Fahrt! Am Ziel einfach „Hier eintragen“ → Übernachtung.');
+	}
 
 	function weiter(typ: Typ) {
 		ui.dialog = { art: 'eintrag', vorlage: { reise, typ, datum: heute(), ort, platz: typ === 'stay' ? bekannt?.id : undefined } };
@@ -83,6 +95,15 @@
 				{#each reisen as x (x.id)}<option value={x.id}>{x.titel} ({x.start.slice(0, 4)})</option>{/each}
 			</select>
 		</label>
+
+		{#if unterwegsNach}
+			<p class="unterwegs"><Van size={18} /> Unterwegs: <b>{unterwegsNach.titel}</b> – mit „Übernachtung“ endet die Fahrt hier.</p>
+		{:else if hierGeschlafen}
+			<button class="weiterfahren" onclick={losfahren}>
+				<Van size={22} weight="duotone" />
+				<span><b>Weiterfahren</b><small>„{hierGeschlafen.titel}“ endet heute, die Fahrt beginnt</small></span>
+			</button>
+		{/if}
 
 		<div class="wahl">
 			<button onclick={() => weiter('stay')}><Tent size={30} weight="duotone" /> Übernachtung</button>
@@ -174,6 +195,38 @@
 		border-radius: var(--radius);
 		background: var(--flaeche);
 		font-weight: 600;
+	}
+	.weiterfahren {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		margin-bottom: 8px;
+		padding: 12px 14px;
+		border: 0;
+		border-radius: var(--radius);
+		background: var(--signal);
+		color: var(--signal-text);
+		text-align: left;
+	}
+	.weiterfahren span {
+		display: flex;
+		flex-direction: column;
+	}
+	.weiterfahren small {
+		font-size: 13px;
+		opacity: 0.8;
+	}
+	.unterwegs {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0 0 10px;
+		font-size: 14px;
+		color: var(--text-2);
+	}
+	.unterwegs b {
+		color: var(--text);
 	}
 	.wahl {
 		display: grid;

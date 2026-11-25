@@ -14,8 +14,8 @@ import { db } from './db.ts';
 import { daten } from './daten.svelte.ts';
 import type { Basis, TabellenName } from './typen.ts';
 
-const ART: Record<TabellenName, string> = { reisen: 'reise', eintraege: 'eintrag', plaetze: 'platz', fotos: 'foto' };
-const TABELLE: Record<string, TabellenName> = { reise: 'reisen', eintrag: 'eintraege', platz: 'plaetze', foto: 'fotos' };
+const ART: Record<TabellenName, string> = { reisen: 'reise', eintraege: 'eintrag', plaetze: 'platz', fotos: 'foto', ziele: 'ziel' };
+const TABELLE: Record<string, TabellenName> = { reise: 'reisen', eintrag: 'eintraege', platz: 'plaetze', foto: 'fotos', ziel: 'ziele' };
 const TABELLEN = Object.keys(ART) as TabellenName[];
 
 export interface Umfang {

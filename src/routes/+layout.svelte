@@ -19,6 +19,8 @@
 	import Kartenmenue from '#lib/map/Kartenmenue.svelte';
 	import KartenSuche from '#lib/map/KartenSuche.svelte';
 	import PinLeiste from '#lib/map/PinLeiste.svelte';
+	import { zusatzFuer } from '#lib/map/zusatz.ts';
+	import ZielFormular from '#lib/formulare/ZielFormular.svelte';
 	import Sheet from '#lib/ui/Sheet.svelte';
 	import Hinweis from '#lib/ui/Hinweis.svelte';
 	import Grossansicht from '#lib/ui/Grossansicht.svelte';
@@ -102,6 +104,15 @@
 	});
 	const kartenFotos = $derived(daten.fotos.filter((f) => f.ort).map((f) => ({ id: f.id, lat: f.ort!.lat, lng: f.ort!.lng, url: f.vorschau })));
 
+	// Je nach Seite: Plätze (nach Bewertung), Ziele der Merkliste oder geplante Ziele einer Reise
+	const route = $derived(page.route.id);
+	const extra = $derived(zusatzFuer(route, page.params.id, thema.dunkel, ui.sichtbarePlaetze ? new Set(ui.sichtbarePlaetze) : undefined));
+	const routenBlass = $derived(!!ui.ortWahl || ['/plaetze', '/platz/[id]', '/ziele', '/statistik'].includes(route ?? ''));
+	function extraGetippt(id: string) {
+		if (daten.platz(id)) goto(`#/platz/${id}`);
+		else if (daten.ziel(id)) ui.dialog = { art: 'ziel', id };
+	}
+
 	function punktGetippt(id: string) {
 		const e = daten.eintrag(id);
 		if (!e) return;
@@ -167,8 +178,11 @@
 		onlang={langGedrueckt}
 		onleer={() => (ui.pin = null)}
 		pin={ui.pin}
-		gedimmt={!!ui.ortWahl}
-		onkartenfehler={() => ui.zeige('Die Karte lädt gerade nicht. Internet prüfen – ein Werbeblocker (z. B. Brave Shields) kann sie auch blockieren.')}
+		gedimmt={routenBlass}
+		{extra}
+		onextra={extraGetippt}
+		laender={ui.laender ? { ...ui.laender, farbe: thema.dunkel ? '#ffd23f' : '#1d5c3a' } : null}
+		onkartenfehler={() => ui.zeige('Die Karte wird blockiert. Bei Brave: Löwen-Symbol in der Adresszeile → Shields für diese Seite aus.', undefined, 12000)}
 	/>
 
 	{#if !ui.ortWahl && (ui.breit || ui.hoehe !== 'voll')}
@@ -225,6 +239,8 @@
 		<FreigabeFormular token={ui.dialog.token} />
 	{:else if ui.dialog?.art === 'notiz'}
 		<NotizFormular eintrag={ui.dialog.eintrag} datum={ui.dialog.datum} />
+	{:else if ui.dialog?.art === 'ziel'}
+		<ZielFormular id={ui.dialog.id} vorlage={ui.dialog.vorlage} />
 	{/if}
 
 	<PinLeiste />

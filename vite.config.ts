@@ -42,7 +42,7 @@ export default defineConfig({
 					]
 				},
 				generateSW: {
-					globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
+					globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest,json}'],
 					navigateFallback: `${base}/index.html`,
 					cleanupOutdatedCaches: true,
 					runtimeCaching: [

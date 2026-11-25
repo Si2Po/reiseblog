@@ -47,7 +47,10 @@
 		onleer,
 		pin = null,
 		gedimmt = false,
-		onkartenfehler
+		onkartenfehler,
+		extra = { type: 'FeatureCollection', features: [] },
+		onextra,
+		laender = null
 	}: {
 		farben: KartenFarben;
 		halo: string;
@@ -72,6 +75,11 @@
 		gedimmt?: boolean;
 		/** Kacheln laden auch nach dem Neuladen nicht */
 		onkartenfehler?: () => void;
+		/** Zusatz-Punkte (Plätze, Ziele): properties { id, name, farbe, ring? } */
+		extra?: FC;
+		onextra?: (id: string) => void;
+		/** Länder einfärben (Statistik): Ländergrenzen + Codes der besuchten Länder */
+		laender?: { grenzen: FC; besucht: string[]; farbe: string } | null;
 	} = $props();
 
 	let box: HTMLDivElement;
@@ -176,6 +184,35 @@
 				'circle-stroke-width': ['case', ['==', ['get', 'typ'], 'stay'], 2.5, 2]
 			}
 		});
+		// Zusatz-Ebene: Plätze (nach Bewertung gefärbt) bzw. Ziele der Merkliste, mit Namen
+		map.addSource('extra', { type: 'geojson', data: extra });
+		map.addLayer({
+			id: 'extra',
+			type: 'circle',
+			source: 'extra',
+			paint: {
+				'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 5, 10, 9, 14, 11],
+				'circle-color': ['get', 'farbe'],
+				'circle-stroke-color': ['case', ['to-boolean', ['get', 'ring']], ['get', 'ring'], halo],
+				'circle-stroke-width': ['case', ['to-boolean', ['get', 'ring']], 3.5, 2.5]
+			}
+		});
+		map.addLayer({
+			id: 'extra-name',
+			type: 'symbol',
+			source: 'extra',
+			minzoom: 7,
+			layout: {
+				'text-field': ['get', 'name'],
+				'text-font': ['Noto Sans Bold'],
+				'text-size': 12,
+				'text-offset': [0, 1.3],
+				'text-anchor': 'top',
+				'text-max-width': 9,
+				'text-optional': true
+			},
+			paint: { 'text-color': farben.textStark, 'text-halo-color': halo, 'text-halo-width': 1.6 }
+		});
 		bereit = true;
 		hervorheben();
 		onbereit?.();
@@ -242,9 +279,11 @@
 	// Karten-Zwischenspeicher leeren und den Stil einmal frisch laden.
 	let fehlerZahl = 0;
 	let geheilt = false;
-	async function kachelFehler(e: maplibregl.ErrorEvent & { sourceId?: string }) {
+	async function kachelFehler(e: maplibregl.ErrorEvent & { sourceId?: string; tile?: unknown }) {
 		if (e.sourceId !== 'openmaptiles' || !navigator.onLine) return;
-		if (++fehlerZahl < 4) return;
+		// Einzelne Kachel: erst nach mehreren Fehlern eingreifen. Kachel-Übersicht (kein `tile`): sofort –
+		// so sieht es aus, wenn ein Blocker (z. B. Brave Shields) die Karte sperrt.
+		if (e.tile && ++fehlerZahl < 4) return;
 		fehlerZahl = 0;
 		if (geheilt) return onkartenfehler?.();
 		geheilt = true;
@@ -282,7 +321,11 @@
 				const r = e.features?.[0]?.properties?.reise;
 				if (r) onreise?.(r);
 			});
-			for (const id of ['punkte', 'linien', 'linien-gerade']) {
+			map.on('click', 'extra', (e) => {
+				const id = e.features?.[0]?.properties?.id;
+				if (id) onextra?.(id);
+			});
+			for (const id of ['punkte', 'linien', 'linien-gerade', 'extra']) {
 				map.on('mouseenter', id, () => map && (map.getCanvas().style.cursor = 'pointer'));
 				map.on('mouseleave', id, () => map && (map.getCanvas().style.cursor = ''));
 			}
@@ -297,7 +340,7 @@
 			// Tipp ins Leere (nicht auf Route/Punkt)
 			map.on('click', (e) => {
 				if (!map) return;
-				const da = map.queryRenderedFeatures(e.point, { layers: ['punkte', 'linien', 'linien-gerade'].filter((l) => map!.getLayer(l)) });
+				const da = map.queryRenderedFeatures(e.point, { layers: ['punkte', 'linien', 'linien-gerade', 'extra'].filter((l) => map!.getLayer(l)) });
 				if (!da.length) onleer?.();
 			});
 		});
@@ -325,6 +368,33 @@
 		if (!map || !bereit) return;
 		(map.getSource('linien') as GeoJSONSource)?.setData(l);
 		(map.getSource('punkte') as GeoJSONSource)?.setData(p);
+	});
+	$effect(() => {
+		const x = extra;
+		if (!map || !bereit) return;
+		(map.getSource('extra') as GeoJSONSource)?.setData(x);
+	});
+	// Statistik: besuchte Länder einfärben (Ebene liegt unter den Routen)
+	$effect(() => {
+		const l = laender;
+		if (!map || !bereit) return;
+		if (!l) {
+			if (map.getLayer('laender')) map.setLayoutProperty('laender', 'visibility', 'none');
+			if (map.getLayer('laender-rand')) map.setLayoutProperty('laender-rand', 'visibility', 'none');
+			return;
+		}
+		if (!map.getSource('laender')) {
+			map.addSource('laender', { type: 'geojson', data: l.grenzen });
+			map.addLayer({ id: 'laender', type: 'fill', source: 'laender', paint: { 'fill-color': l.farbe, 'fill-opacity': 0.45 } }, 'linien-halo');
+			map.addLayer({ id: 'laender-rand', type: 'line', source: 'laender', paint: { 'line-color': l.farbe, 'line-width': 1.2 } }, 'linien-halo');
+		}
+		const filter: maplibregl.FilterSpecification = ['in', ['get', 'c'], ['literal', l.besucht]];
+		map.setFilter('laender', filter);
+		map.setFilter('laender-rand', filter);
+		map.setPaintProperty('laender', 'fill-color', l.farbe);
+		map.setPaintProperty('laender-rand', 'line-color', l.farbe);
+		map.setLayoutProperty('laender', 'visibility', 'visible');
+		map.setLayoutProperty('laender-rand', 'visibility', 'visible');
 	});
 	$effect(() => {
 		void auswahl;

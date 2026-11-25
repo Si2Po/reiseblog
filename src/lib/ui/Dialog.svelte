@@ -23,29 +23,40 @@
 		/** während „Ort auf der Karte wählen“ ausgeblendet, aber nicht verworfen */
 		versteckt?: boolean;
 	} = $props();
+
+	function zumBody(el: HTMLElement) {
+		document.body.append(el);
+		return () => el.remove();
+	}
 </script>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && !versteckt && onschliessen()} />
 
-<div class="dimmer" class:versteckt onclick={onschliessen} role="presentation" transition:fade={{ duration: 180 }}></div>
-<div
-	class="dialog"
-	class:breit={ui.breit}
-	class:versteckt
-	role="dialog"
-	aria-modal="true"
-	aria-label={titel}
-	transition:fly={ui.breit ? { y: 24, duration: 220, easing: cubicOut } : { y: 400, duration: 320, easing: cubicOut }}
->
-	<header>
-		<h2>{titel}</h2>
-		<button class="rund" onclick={onschliessen} aria-label="Schließen"><X size={18} /></button>
-	</header>
-	<div class="inhalt">{@render children()}</div>
-	{#if fuss}<footer>{@render fuss()}</footer>{/if}
+<!-- An den <body> gehängt: sonst würde ein verschobenes Sheet (transform) „fixed“ verfälschen -->
+<div class="portal" {@attach zumBody}>
+	<div class="dimmer" class:versteckt onclick={onschliessen} role="presentation" transition:fade={{ duration: 180 }}></div>
+	<div
+		class="dialog"
+		class:breit={ui.breit}
+		class:versteckt
+		role="dialog"
+		aria-modal="true"
+		aria-label={titel}
+		transition:fly={ui.breit ? { y: 24, duration: 220, easing: cubicOut } : { y: 400, duration: 320, easing: cubicOut }}
+	>
+		<header>
+			<h2>{titel}</h2>
+			<button class="rund" onclick={onschliessen} aria-label="Schließen"><X size={18} /></button>
+		</header>
+		<div class="inhalt">{@render children()}</div>
+		{#if fuss}<footer>{@render fuss()}</footer>{/if}
+	</div>
 </div>
 
 <style>
+	.portal {
+		display: contents;
+	}
 	.dimmer {
 		position: fixed;
 		inset: 0;
