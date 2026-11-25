@@ -39,6 +39,9 @@ Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit
 - `node tools/abgleich-test.mjs`: Abgleich und Teilen gegen eine nachgebaute Supabase (zwei Geräte + Gast). Braucht einen zweiten Dev-Server: `VITE_TEST_SUPABASE_URL=https://test.supabase.example npx vite dev --port 5174`.
 - `node tools/icons.mjs`: PNG-Icons aus `static/icons/icon.svg` neu erzeugen.
 
+## Zusammenarbeit
+- Nach größeren Änderungen die App **wie ein Mensch benutzen** (Rundgang mit den Testskripten und gedanklich: vor, während und nach einer Reise, am iPhone und am PC) und dem Nutzer daraus **Vorschläge für nette oder erwartbare Funktionen** machen – kurz, priorisiert, ohne sie ungefragt zu bauen.
+
 ## Git und Veröffentlichen
 - Repo `Si2Po/reiseblog` (öffentlich), Seite https://si2po.github.io/reiseblog/ – gebaut und veröffentlicht durch `.github/workflows/veroeffentlichen.yml` bei jedem Push auf `main`.
 - Lokal auf `main` committen, **erst pushen, wenn es ausdrücklich gewünscht ist** (Push = Veröffentlichung).
