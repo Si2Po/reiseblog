@@ -49,7 +49,7 @@
 		{ k: 'unterwegs', name: 'Fahrten und Ausflüge', info: 'die Route auf der Karte' },
 		{ k: 'fotos', name: 'Fotos', info: 'Fotos der freigegebenen Reisen' },
 		{ k: 'texte', name: 'Texte und Notizen', info: 'Notizen von unterwegs, zu Reisen und Plätzen' },
-		{ k: 'preise', name: 'Preise', info: 'was eine Nacht gekostet hat' }
+		{ k: 'preise', name: 'Preise und Ausgaben', info: 'Übernachtungspreise, Tanken, Maut, Fähre …' }
 	];
 
 	const ok = $derived(name.trim().length > 0 && (alleReisen || reisen.length > 0) && (u.plaetze || u.unterwegs));

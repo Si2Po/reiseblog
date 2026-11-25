@@ -114,7 +114,7 @@ begin
 			case when coalesce((u ->> 'texte')::boolean, false) then inhalt else inhalt - 'notiz' end) from reisen), '[]'::jsonb),
 		'eintraege', coalesce((select jsonb_agg(
 			(case when coalesce((u ->> 'texte')::boolean, false) then inhalt else inhalt - array['text', 'notizen'] end)
-			- (case when coalesce((u ->> 'preise')::boolean, false) then '{}'::text[] else array['preis', 'waehrung'] end)
+			- (case when coalesce((u ->> 'preise')::boolean, false) then '{}'::text[] else array['preis', 'waehrung', 'kosten'] end)
 			#- (case when coalesce((u ->> 'preise')::boolean, false) then '{}'::text[] else '{merkmale,stromkosten}'::text[] end)
 			#- (case when coalesce((u ->> 'preise')::boolean, false) then '{}'::text[] else '{merkmale,kurtaxe}'::text[] end)
 		) from eintraege), '[]'::jsonb),

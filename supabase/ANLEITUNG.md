@@ -39,4 +39,5 @@ Neue Funktionen bringen manchmal eine kleine SQL-Datei in `supabase/schritte/` m
 
 | Datei | Inhalt | ausgeführt |
 |---|---|---|
-| `komplett.sql` | Grundausstattung (Dokumente, Freigaben, Fotospeicher, Wecker) | ☐ |
+| `komplett.sql` | Grundausstattung (Dokumente, Freigaben, Fotospeicher, Wecker) | ☑ |
+| `schritte/01_kosten_nicht_teilen.sql` | Teilen-Links ohne „Preise“ zeigen auch keine Ausgaben | ☐ |
