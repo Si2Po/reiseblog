@@ -3,8 +3,8 @@
   Warum keine Druckansicht: window.print() geht in der Home-Bildschirm-App auf dem iPhone nicht
   verlässlich. Eine echte Datei lässt sich dagegen über das Teilen-Menü verschicken oder sichern.
 
-  Aufbau: Titel, Kennzahlen, Titelbild, Routenskizze (ohne Kartenhintergrund, nur die Linien der
-  Reise), dann Tag für Tag die Einträge wie in der Zeitleiste, am Ende die Kosten.
+  Aufbau: Titel, Kennzahlen, Titelbild, Karte mit Route (ohne Internet: Skizze nur aus den Linien
+  der Reise, siehe karte.ts), dann Tag für Tag die Einträge wie in der Zeitleiste, am Ende die Kosten.
   Was hinein kommt, wählt man vorher: Fotos, Texte/Notizen, Kosten (Standard: aus).
   Schrift: Helvetica (in jedem PDF-Leser eingebaut, kann nur Zeichen aus „WinAnsi“ – deshalb `t()`).
 */
@@ -16,6 +16,7 @@ import { reiseKosten, summe, nurEuro, wechselkurse, type Betraege } from '#lib/k
 import { wetterArt, tagesWetter } from '#lib/wetter.ts';
 import { reiseFarbe } from '#lib/farben.ts';
 import { vollbild } from '#lib/fotos/bild.ts';
+import { kartenBild, KARTE_QUELLE } from './karte.ts';
 import { KOSTEN_ART, type Eintrag, type Foto, type LngLat, type Notiz, type Reise } from '#lib/db/typen.ts';
 
 export interface PdfWahl {
@@ -118,7 +119,7 @@ class Bau {
 }
 
 /** Erstellt das PDF. `fortschritt` meldet geladene Fotos. */
-export async function reisePdf(r: Reise, wahl: PdfWahl, fortschritt?: (n: number, von: number) => void): Promise<File> {
+export async function reisePdf(r: Reise, wahl: PdfWahl, fortschritt?: (n: number, von: number, text?: string) => void): Promise<File> {
 	const { jsPDF } = await import('jspdf');
 	const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
 	doc.setProperties({ title: t(r.titel), creator: 'Reiseblog' });
@@ -175,10 +176,10 @@ export async function reisePdf(r: Reise, wahl: PdfWahl, fortschritt?: (n: number
 		}
 	}
 
-	// Routenskizze
+	// Karte (mit Internet) bzw. Routenskizze auf Papiergrund (ohne)
 	const sk = skizzeDaten(r.id);
 	const punkte = [...sk.linien.flat(), ...sk.naechtePunkte, ...sk.ausfluege];
-	if (punkte.length > 1) {
+	if (punkte.length) {
 		const merc = ([lng, lat]: LngLat): [number, number] => [lng, -Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) * (180 / Math.PI)];
 		const p = punkte.map(merc);
 		const minX = Math.min(...p.map((q) => q[0])),
@@ -189,27 +190,47 @@ export async function reisePdf(r: Reise, wahl: PdfWahl, fortschritt?: (n: number
 			spanY = Math.max(maxY - minY, 0.01);
 		const innen = 8;
 		// so hoch wie die Reise es braucht, aber möglichst noch auf die erste Seite
-		const rest = UNTEN - b.y - 4;
-		const h = Math.min(Math.max((INNEN - 2 * innen) * (spanY / spanX) + 2 * innen, 55), rest >= 55 ? Math.min(rest, 110) : 110);
-		b.platz(h + 4);
-		const m = Math.min((INNEN - 2 * innen) / spanX, (h - 2 * innen) / spanY);
-		const ox = RAND + (INNEN - spanX * m) / 2,
-			oy = b.y + (h - spanY * m) / 2;
-		const xy = (q: LngLat): [number, number] => {
-			const [x, y] = merc(q);
-			return [ox + (x - minX) * m, oy + (y - minY) * m];
-		};
-		doc.setFillColor(PAPIER);
-		doc.roundedRect(RAND, b.y, INNEN, h, 2, 2, 'F');
-		doc.setDrawColor(farbe);
-		doc.setLineWidth(0.7);
+		const rest = UNTEN - b.y - 8;
+		const h = Math.min(Math.max((INNEN - 2 * innen) * (spanY / spanX) + 2 * innen, 70), rest >= 60 ? Math.min(rest, 115) : 115);
+		b.platz(h + 8);
+		const oben = b.y;
+
+		fortschritt?.(0, 0, 'Karte wird geladen …');
+		// 720 px Breite: Ortsnamen erscheinen im Druck gut lesbar (etwa 8 pt)
+		const karte = await kartenBild(punkte, 720, Math.round((720 * h) / INNEN));
+		let xy: (q: LngLat) => [number, number];
+		if (karte) {
+			doc.addImage(karte.bild, 'JPEG', RAND, oben, INNEN, h, undefined, 'FAST');
+			xy = (q) => {
+				const [x, y] = karte.xy(q);
+				return [RAND + x * INNEN, oben + y * h];
+			};
+		} else {
+			const m = Math.min((INNEN - 2 * innen) / spanX, (h - 2 * innen) / spanY);
+			const ox = RAND + (INNEN - spanX * m) / 2,
+				oy = oben + (h - spanY * m) / 2;
+			xy = (q) => {
+				const [x, y] = merc(q);
+				return [ox + (x - minX) * m, oy + (y - minY) * m];
+			};
+			doc.setFillColor(PAPIER);
+			doc.roundedRect(RAND, oben, INNEN, h, 2, 2, 'F');
+		}
 		doc.setLineJoin('round');
 		doc.setLineCap('round');
-		for (const l of sk.linien) {
-			const q = l.map(xy);
-			for (let i = 1; i < q.length; i++) doc.line(q[i - 1][0], q[i - 1][1], q[i][0], q[i][1]);
-		}
+		// Route: auf der Karte mit hellem Rand, damit sie sich vom Hintergrund abhebt
+		const strecke = (breite: number, farbeLinie: string) => {
+			doc.setDrawColor(farbeLinie);
+			doc.setLineWidth(breite);
+			for (const l of sk.linien) {
+				const q = l.map(xy);
+				for (let i = 1; i < q.length; i++) doc.line(q[i - 1][0], q[i - 1][1], q[i][0], q[i][1]);
+			}
+		};
+		if (karte) strecke(1.5, '#ffffff');
+		strecke(0.75, farbe);
 		doc.setLineWidth(0.4);
+		doc.setDrawColor(farbe);
 		for (const a of sk.ausfluege) {
 			const [x, y] = xy(a);
 			doc.setFillColor('#ffffff');
@@ -218,11 +239,17 @@ export async function reisePdf(r: Reise, wahl: PdfWahl, fortschritt?: (n: number
 		for (const n of sk.naechtePunkte) {
 			const [x, y] = xy(n);
 			doc.setFillColor('#ffffff');
-			doc.circle(x, y, 1.7, 'F');
+			doc.circle(x, y, 1.8, 'F');
 			doc.setFillColor(farbe);
-			doc.circle(x, y, 1.2, 'F');
+			doc.circle(x, y, 1.25, 'F');
 		}
-		b.y += h + 8;
+		karte?.weg();
+		b.y = oben + h;
+		if (karte) {
+			b.schrift(6.5, 'normal', GRAU);
+			doc.text(t(KARTE_QUELLE), RAND + INNEN, b.y + 3.2, { align: 'right' });
+		}
+		b.y += 8;
 	}
 
 	if (r.notiz && wahl.texte) {
@@ -304,12 +331,15 @@ export async function reisePdf(r: Reise, wahl: PdfWahl, fortschritt?: (n: number
 		b.y += 4;
 	};
 
+	// Trennlinie zu den Tagen – nicht, wenn die Tage ohnehin auf einer neuen Seite beginnen
 	if (liste.length) {
 		b.platz(40);
-		doc.setDrawColor(LINIE);
-		doc.setLineWidth(0.3);
-		doc.line(RAND, b.y, RAND + INNEN, b.y);
-		b.y += 8;
+		if (b.y > RAND) {
+			doc.setDrawColor(LINIE);
+			doc.setLineWidth(0.3);
+			doc.line(RAND, b.y, RAND + INNEN, b.y);
+			b.y += 8;
+		}
 	}
 	for (const tag of liste) {
 		// Tageskopf nicht allein unten auf der Seite stehen lassen

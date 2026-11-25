@@ -50,7 +50,7 @@
 		}
 		try {
 			const { reisePdf } = await import('#lib/pdf/reisePdf.ts');
-			datei = await reisePdf(r, $state.snapshot(wahl), (n, von) => (stand = `Fotos ${n} von ${von} …`));
+			datei = await reisePdf(r, $state.snapshot(wahl), (n, von, text) => (stand = text ?? `Fotos ${n} von ${von} …`));
 		} catch (e) {
 			fehler = 'Das PDF konnte nicht erstellt werden: ' + (e as Error).message;
 		} finally {
@@ -76,7 +76,7 @@
 			<p class="grau">Fertig. Über „Teilen“ kannst du es verschicken oder z. B. in „Dateien“ sichern.</p>
 		</div>
 	{:else}
-		<p class="einleitung">„{r?.titel}“ als PDF zum Verschicken oder Ausdrucken: Tag für Tag mit Routenskizze.</p>
+		<p class="einleitung">„{r?.titel}“ als PDF zum Verschicken oder Ausdrucken: Tag für Tag, mit Karte der Route.</p>
 		{#if anzahlFotos}
 			<label class="schalter">
 				<span>Fotos<small>{anzahlFotos} {anzahlFotos === 1 ? 'Foto' : 'Fotos'} – größere Datei</small></span>

@@ -10,6 +10,6 @@
 - [ ] Statistik erweitern: Durchschnittspreis pro Nacht, Anteil mit Strom … (aus dem Merkmal-Katalog).
 - [ ] Zwischenziele per Ziehen in der Reihenfolge ändern.
 - [ ] Fotos per Ziehen einem anderen Eintrag/Tag zuordnen.
-- [ ] PDF: eigene Schrift (Instrument Sans als TTF einbetten), Kartenhintergrund in der Routenskizze, Fotobuch-Layout (große Bilder).
+- [ ] PDF: eigene Schrift (Instrument Sans als TTF einbetten), Fotobuch-Layout (große Bilder).
 - [ ] DEV-Stand unter /reiseblog/dev/ mit eigener lokaler Datenbank (wenn gewünscht).
 - [ ] Passwort vergessen: Vorlage `supabase/passwort_setzen.sql` (wie bei der Einkaufsroute).

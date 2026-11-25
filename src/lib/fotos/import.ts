@@ -71,7 +71,7 @@ export async function fotosHinzufuegen(dateien: File[], ziel: Ziel = {}) {
 		teile.push(`${n === ok ? (n === 1 ? 'passt' : 'alle passen') : n} zu „${daten.eintrag(eid)?.titel}“`);
 	} else if (einsortiert.size) teile.push(`${[...einsortiert.values()].reduce((a, b) => a + b)} bei ${einsortiert.size} Ausflügen einsortiert`);
 	if (ok < bilder.length) teile.push(`${bilder.length - ok} ließen sich nicht lesen`);
-	if (ohneReise) teile.push(`${ohneReise} passen zu keiner Reise`);
+	if (ohneReise) teile.push(`${ohneReise} ohne Reise – auf der Karte und im Fotoalbum`);
 	else if (ausserhalb) teile.push(`${ausserhalb} außerhalb des Reisezeitraums – unter „Weitere Fotos“`);
 	else if (ohneOrt && !eintrag) teile.push(`${ohneOrt} ohne Ort – in der Fotoauswahl unter „Optionen“ den Standort einschalten`);
 	ui.zeige(teile.join(' · '));

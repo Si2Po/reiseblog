@@ -63,7 +63,8 @@
 		ich?: { lat: number; lng: number; genau: number } | null;
 		onpunkt?: (id: string) => void;
 		onreise?: (id: string) => void;
-		onfoto?: (id: string) => void;
+		/** Tipp auf ein Foto bzw. auf einen Stapel, der sich nicht weiter auffächern lässt (alle IDs) */
+		onfoto?: (ids: string[], i: number) => void;
 		onbereit?: () => void;
 		/** langes Drücken (iPhone) bzw. Rechtsklick (PC) auf einen beliebigen Punkt */
 		onlang?: (o: { lat: number; lng: number }) => void;
@@ -231,7 +232,8 @@
 	// --- Foto-Stapel ---
 	let index: Supercluster | null = null;
 	function fotosNeu() {
-		index = new Supercluster({ radius: 60, maxZoom: 17 });
+		// maxZoom über dem Karten-Höchstzoom: Fotos vom selben Ort bleiben immer ein Stapel mit Anzahl
+		index = new Supercluster({ radius: 60, maxZoom: 24 });
 		index.load(
 			fotos.map((f) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [f.lng, f.lat] }, properties: { id: f.id, url: f.url } }))
 		);
@@ -256,14 +258,18 @@
 				el.onclick = (e) => {
 					e.stopPropagation();
 					const zoom = index!.getClusterExpansionZoom(p.cluster_id!);
-					map!.easeTo({ center: [lng, lat], zoom: Math.min(zoom, 17), duration: 700 });
+					// lässt sich nicht mehr sinnvoll auffächern (gleicher Ort) → alle Fotos des Stapels ansehen
+					if (zoom > 17 || map!.getZoom() >= 16.5) {
+						const ids = index!.getLeaves(p.cluster_id!, Infinity).map((x) => (x.properties as { id: string }).id);
+						onfoto?.(ids, 0);
+					} else map!.easeTo({ center: [lng, lat], zoom, duration: 700 });
 				};
 			} else {
 				el.innerHTML = `<img alt="" src="${p.url}">`;
 				el.setAttribute('aria-label', 'Foto ansehen');
 				el.onclick = (e) => {
 					e.stopPropagation();
-					onfoto?.(p.id!);
+					onfoto?.([p.id!], 0);
 				};
 			}
 			// Hülle, weil MapLibre die Position per transform setzt (die Einblend-Animation braucht ein eigenes Element)

@@ -124,10 +124,19 @@
 		ui.oeffnen();
 	}
 
-	function fotoGetippt(id: string) {
-		const f = daten.foto(id);
-		const ids = f?.reise ? daten.fotos.filter((x) => x.reise === f.reise && x.ort).sort((a, b) => a.aufgenommen.localeCompare(b.aufgenommen)).map((x) => x.id) : [id];
-		ui.gross = { ids, i: Math.max(0, ids.indexOf(id)) };
+	function fotoGetippt(ids: string[], i: number) {
+		// Einzelnes Foto: in der Großansicht durch die Fotos seiner Reise (bzw. alle ohne Reise) blättern
+		if (ids.length === 1) {
+			const f = daten.foto(ids[0]);
+			const liste = daten.fotos
+				.filter((x) => x.ort && x.reise === f?.reise)
+				.sort((a, b) => a.aufgenommen.localeCompare(b.aufgenommen))
+				.map((x) => x.id);
+			ui.gross = { ids: liste.length ? liste : ids, i: Math.max(0, liste.indexOf(ids[0])) };
+		} else {
+			const zeit = (id: string) => daten.foto(id)?.aufgenommen ?? '';
+			ui.gross = { ids: [...ids].sort((a, b) => zeit(a).localeCompare(zeit(b))), i };
+		}
 	}
 
 	// Fadenkreuz für „Ort auf der Karte wählen“: Mitte zwischen Suchfeld oben und Leiste unten

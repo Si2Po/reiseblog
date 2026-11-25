@@ -7,6 +7,9 @@
 	import MapPin from 'phosphor-svelte/lib/MapPin';
 	import Image from 'phosphor-svelte/lib/Image';
 	import Trash from 'phosphor-svelte/lib/Trash';
+	import Van from 'phosphor-svelte/lib/Van';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import CaretLeft from 'phosphor-svelte/lib/CaretLeft';
 	import CaretRight from 'phosphor-svelte/lib/CaretRight';
 	import { ui } from '#lib/ui.svelte.ts';
@@ -113,7 +116,7 @@
 			<button class="blatt rechts" onclick={() => blaettern(1)} aria-label="Nächstes Foto"><CaretRight size={26} /></button>
 		{/if}
 		<div class="unterschrift">
-			<b>{eintrag?.titel ?? reise?.titel ?? 'Foto'}</b>
+			<b>{eintrag?.titel ?? reise?.titel ?? foto.ort?.name ?? 'Foto'}</b>
 			<span class="zahl">{tagLang(foto.aufgenommen.slice(0, 10))}{g.ids.length > 1 ? ` · ${g.i + 1} von ${g.ids.length}` : ''}</span>
 			<div class="knoepfe">
 				{#if foto.ort}
@@ -124,6 +127,18 @@
 							ui.fotosAn = true;
 							ui.zeigeOrt(o, 14);
 						}}><MapPin size={14} weight="fill" /> Auf der Karte</button
+					>
+				{/if}
+				{#if reise && page.params.id !== reise.id}
+					<button
+						onclick={() => {
+							// erst merken: nach zu() gibt es kein Foto (und damit keine Reise) mehr
+							const ziel = `#/reise/${reise.id}`;
+							const e = eintrag?.id;
+							zu();
+							ui.markiert = e ?? null;
+							goto(ziel);
+						}}><Van size={14} weight="fill" /> Zur Reise</button
 					>
 				{/if}
 				{#if reise && reise.titelbild !== foto.id}

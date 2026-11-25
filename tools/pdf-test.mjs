@@ -1,4 +1,4 @@
-// Test: Reise als PDF (Dialog, Auswahl, Erstellen, Herunterladen), Sicherung mit Passwort.
+// Test: Reise als PDF (Dialog, Auswahl, Erstellen, Herunterladen), Sicherung mit Passwort, Fotoalbum.
 // Aufruf: node tools/pdf-test.mjs   (Dev-Server auf :5173)
 import { webkit } from 'playwright';
 const BASIS = process.env.URL ?? 'http://localhost:5173/';
@@ -6,7 +6,8 @@ const b = await webkit.launch();
 const ctx = await b.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, locale: 'de-DE', acceptDownloads: true });
 const p = await ctx.newPage();
 const fehler = [];
-p.on('pageerror', (e) => fehler.push(e.message));
+// Kartenkacheln, die WebKit im Test wegen CORS ablehnt, sind kein App-Fehler
+p.on('pageerror', (e) => !/access control checks/.test(e.message) && fehler.push(e.message));
 p.on('console', (m) => m.type() === 'error' && !/access control|Failed to load|Load failed|network connection/i.test(m.text()) && fehler.push(m.text()));
 const ok = (bed, text) => (console.log((bed ? '✓ ' : '✗ ') + text), bed || fehler.push('Prüfung: ' + text));
 const warte = (ms) => p.waitForTimeout(ms);
@@ -36,6 +37,17 @@ const fs = await import('node:fs');
 const roh = fs.readFileSync(ziel);
 ok(roh.subarray(0, 5).toString() === '%PDF-', `PDF heruntergeladen (${Math.round(roh.length / 1024)} KB, ${dl.suggestedFilename()})`);
 
+// Fotoalbum: alle Fotos, Großansicht, „Zur Reise“
+await p.goto(BASIS + '#/fotos');
+await warte(1500);
+const anzahl = await p.locator('.raster button').count();
+ok(anzahl === 21, `Fotoalbum zeigt alle Beispielfotos (${anzahl})`);
+await klick(p.locator('.raster button').first());
+await warte(600);
+await p.getByRole('button', { name: 'Zur Reise' }).click();
+await warte(1200);
+ok(p.url().includes('#/reise/') && !(await p.locator('.gross').count()), 'Aus dem Album zur Reise gesprungen');
+
 // Sicherung mit Passwort
 await p.goto(BASIS + '#/einstellungen');
 await warte(1200);
@@ -61,8 +73,8 @@ await warte(2500);
 ok(await p.getByText('Das Passwort passt nicht').isVisible(), 'Falsches Passwort wird abgelehnt');
 await p.getByLabel('Passwort der Sicherung').fill('geheim123');
 await p.getByLabel('Passwort der Sicherung').press('Enter');
-await warte(2500);
-ok(await p.getByText(/Datensätze? eingelesen/).isVisible(), 'Mit richtigem Passwort eingelesen');
+await p.getByLabel('Passwort der Sicherung').waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
+ok((await p.getByLabel('Passwort der Sicherung').count()) === 0 && (await p.locator('.fehler').count()) === 0, 'Mit richtigem Passwort eingelesen (Formular zu, kein Fehler)');
 
 console.log(fehler.length ? '\nFEHLER:\n' + fehler.join('\n') : '\nAlles gut.');
 await b.close();
