@@ -19,8 +19,6 @@
 	const s = $derived(summe());
 
 	onMount(() => {
-		// Gast-Ansicht: „Reisen“ ist die geteilte Übersicht
-		if (daten.gast && ui.gastStart) return goto(ui.gastStart);
 		ui.auswahl = null;
 		ui.markiert = null;
 		if (daten.geladen) ui.zeigeAlles();

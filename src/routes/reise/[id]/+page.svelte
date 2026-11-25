@@ -64,7 +64,7 @@
 	});
 	const weitere = $derived(r ? weitereFotos(r.id) : []);
 	// Während der Reise: gemerkte Ziele in der Nähe (GPS oder aktuelle Übernachtung)
-	const nahe = $derived(!daten.gast && r && laufendeReise()?.id === r.id ? zieleInDerNaehe().slice(0, 5) : []);
+	const nahe = $derived(r && laufendeReise()?.id === r.id ? zieleInDerNaehe().slice(0, 5) : []);
 	const geplant = $derived(daten.ziele.filter((z) => z.reise === id && !z.erledigt && !nahe.some((n) => n.ziel.id === z.id)));
 	const posten = $derived(r ? reiseKosten(r.id) : []);
 	const gesamt = $derived(summe(posten));
@@ -84,7 +84,7 @@
 	});
 	// Wetter vergangener Tage nachtragen, Wechselkurse für die Kosten holen
 	$effect(() => {
-		if (!r || !daten.geladen || daten.gast) return;
+		if (!r || !daten.geladen) return;
 		const reise = r.id;
 		const fremd = posten.some((p) => !nurEuro(p.betraege));
 		untrack(() => {
@@ -201,9 +201,9 @@
 				{#each fs as f, i (f.id)}
 					<button onclick={() => grossAb(fs, i)} aria-label="Foto ansehen"><img alt="" src={f.vorschau} /></button>
 				{/each}
-				{#if !daten.gast}<button class="mehr" onclick={() => fotosWaehlen({ reise: r.id })}><Camera size={22} /><span>Fotos</span></button>{/if}
+				<button class="mehr" onclick={() => fotosWaehlen({ reise: r.id })}><Camera size={22} /><span>Fotos</span></button>
 			</div>
-		{:else if !daten.gast && !inPlanung}
+		{:else if !inPlanung}
 			<button class="fotos-leer" onclick={() => fotosWaehlen({ reise: r.id })}>
 				<Camera size={20} /> Fotos hinzufügen
 				<span>Ort und Tag kommen aus dem Foto</span>
@@ -223,7 +223,7 @@
 			</section>
 		{/if}
 
-		{#if !daten.gast && (geplant.length || r.start > heute())}
+		{#if geplant.length || r.start > heute()}
 			<section class="geplant">
 				<h4>Geplant</h4>
 				{#each geplant as z (z.id)}
@@ -237,7 +237,7 @@
 		{/if}
 
 		{#if !liste.length && !inPlanung}
-			<p class="leer">{daten.gast ? 'Hier ist nichts freigegeben.' : 'Noch keine Einträge. Füg die erste Übernachtung oder Fahrt hinzu.'}</p>
+			<p class="leer">Noch keine Einträge. Füg die erste Übernachtung oder Fahrt hinzu.</p>
 		{/if}
 
 		<ol class="zeitleiste">
@@ -269,7 +269,7 @@
 								</span>
 							</button>
 							{@render notizen(e, tag.datum)}
-							{#if offen === schluessel && !daten.gast}
+							{#if offen === schluessel}
 								<div class="aktionen" transition:slide={{ duration: 180 }}>
 									<button onclick={() => notiz(e, tag.datum)}><NotePencil size={16} /> Notiz</button>
 									{#if e.platz}<button onclick={() => goto(`#/platz/${e.platz}`)}><Tent size={16} /> Platz <CaretRight size={13} /></button>{/if}
@@ -300,15 +300,13 @@
 									{#if e.typ === 'stay' && e.platz}
 										<button onclick={() => goto(`#/platz/${e.platz}`)}><Tent size={16} /> Platz <CaretRight size={13} /></button>
 									{/if}
-									{#if !daten.gast}
-										{#if e.typ === 'stay' && aktuelleUebernachtung()?.id === e.id}
-											<button class="los" onclick={() => losfahren(e)}><Van size={16} /> Weiterfahren</button>
-										{/if}
-										{#if e.typ === 'stay'}<button onclick={() => notiz(e, e.datum)}><NotePencil size={16} /> Notiz</button>{/if}
-										<button onclick={() => fotosWaehlen({ reise: r.id, eintrag: e.id })}><Plus size={16} /> Fotos</button>
-										<button onclick={() => (ui.dialog = { art: 'eintrag', id: e.id })}><PencilSimple size={16} /> Bearbeiten</button>
-										<button class="weg" onclick={() => loeschen(e)} aria-label="Löschen"><Trash size={16} /></button>
+									{#if e.typ === 'stay' && aktuelleUebernachtung()?.id === e.id}
+										<button class="los" onclick={() => losfahren(e)}><Van size={16} /> Weiterfahren</button>
 									{/if}
+									{#if e.typ === 'stay'}<button onclick={() => notiz(e, e.datum)}><NotePencil size={16} /> Notiz</button>{/if}
+									<button onclick={() => fotosWaehlen({ reise: r.id, eintrag: e.id })}><Plus size={16} /> Fotos</button>
+									<button onclick={() => (ui.dialog = { art: 'eintrag', id: e.id })}><PencilSimple size={16} /> Bearbeiten</button>
+									<button class="weg" onclick={() => loeschen(e)} aria-label="Löschen"><Trash size={16} /></button>
 								</div>
 							{/if}
 						</div>
@@ -345,7 +343,7 @@
 			</section>
 		{/if}
 
-		{#if !daten.gast}<button class="knopf neu" onclick={neuerEintrag}><Plus size={18} weight="bold" /> Eintrag hinzufügen</button>{/if}
+		<button class="knopf neu" onclick={neuerEintrag}><Plus size={18} weight="bold" /> Eintrag hinzufügen</button>
 	</article>
 {:else if daten.geladen}
 	<Kopf />

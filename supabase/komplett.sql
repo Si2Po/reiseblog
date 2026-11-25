@@ -5,7 +5,8 @@
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- 1. Dokumente: Reisen, Einträge, Plätze, Fotos (Inhalt als JSON)
+-- 1. Dokumente: Reisen, Einträge, Plätze, Fotos, Ziele
+--    inhalt = verschlüsselt ({v, iv, d}), der Server kann ihn nicht lesen.
 --    Jede Person sieht und ändert nur ihre eigenen Dokumente.
 -- ---------------------------------------------------------------------
 create table if not exists public.dokumente (
@@ -45,96 +46,34 @@ create policy "eigene ändern" on public.dokumente for update to authenticated u
 -- Kein Löschen: gelöscht wird „weich“ (geloescht = true), siehe aufraeumen()
 
 -- ---------------------------------------------------------------------
--- 2. Freigaben (Teilen-Links) mit Umfang
---    umfang = { reisen: 'alle' | [ids], plaetze, unterwegs, texte, preise, fotos }
+-- 2. Tresor: der Tagebuch-Schlüssel, eingepackt mit dem Tagebuch-Passwort
+--    und mit dem Notfall-Code (beides nur auf dem Gerät bekannt). Eine Zeile pro Konto.
 -- ---------------------------------------------------------------------
-create table if not exists public.freigaben (
-	token text primary key default replace(gen_random_uuid()::text, '-', ''),
-	owner uuid not null default auth.uid() references auth.users (id) on delete cascade,
-	name text not null,
-	umfang jsonb not null,
-	widerrufen boolean not null default false,
-	erstellt_am timestamptz not null default now()
+create table if not exists public.tresor (
+	owner uuid primary key default auth.uid() references auth.users (id) on delete cascade,
+	salz text not null,
+	pw jsonb not null,
+	code_salz text not null,
+	code jsonb not null,
+	geaendert_am timestamptz not null default now()
 );
-
-alter table public.freigaben enable row level security;
-grant select, insert, update, delete on public.freigaben to authenticated;
-
-drop policy if exists "eigene freigaben" on public.freigaben;
-create policy "eigene freigaben" on public.freigaben for all to authenticated
+alter table public.tresor enable row level security;
+grant select, insert, update on public.tresor to authenticated;
+drop policy if exists "eigener tresor" on public.tresor;
+create policy "eigener tresor" on public.tresor for all to authenticated
 	using (owner = auth.uid()) with check (owner = auth.uid());
 
--- Gast-Ansicht: liefert nur das Freigegebene. Nicht Freigegebenes wird schon HIER entfernt,
--- es kommt also nie beim Gast an.
-create or replace function public.freigabe_lesen(p_token text) returns jsonb
-language plpgsql security definer set search_path = public stable as $$
-declare
-	f public.freigaben;
-	u jsonb;
-	alle_reisen boolean;
-	ergebnis jsonb;
-begin
-	select * into f from public.freigaben where token = p_token and not widerrufen;
-	if not found then
-		return null;
-	end if;
-	u := f.umfang;
-	alle_reisen := coalesce(u ->> 'reisen', '') = 'alle';
-
-	with reisen as (
-		select d.id, d.inhalt from public.dokumente d
-		where d.owner = f.owner and d.art = 'reise' and not d.geloescht
-			and (alle_reisen or d.id::text in (select jsonb_array_elements_text(u -> 'reisen')))
-	),
-	eintraege as (
-		select d.id, d.inhalt from public.dokumente d
-		where d.owner = f.owner and d.art = 'eintrag' and not d.geloescht
-			and (d.inhalt ->> 'reise') in (select id::text from reisen)
-			and (
-				((d.inhalt ->> 'typ') = 'stay' and coalesce((u ->> 'plaetze')::boolean, false))
-				or ((d.inhalt ->> 'typ') <> 'stay' and coalesce((u ->> 'unterwegs')::boolean, false))
-			)
-	),
-	plaetze as (
-		select d.id, d.inhalt from public.dokumente d
-		where d.owner = f.owner and d.art = 'platz' and not d.geloescht
-			and d.id::text in (select inhalt ->> 'platz' from eintraege where inhalt ? 'platz')
-	),
-	fotos as (
-		select d.id, d.inhalt from public.dokumente d
-		where coalesce((u ->> 'fotos')::boolean, false)
-			and d.owner = f.owner and d.art = 'foto' and not d.geloescht
-			and (d.inhalt ->> 'reise') in (select id::text from reisen)
-			and (not (d.inhalt ? 'eintrag') or (d.inhalt ->> 'eintrag') in (select id::text from eintraege))
-	)
-	select jsonb_build_object(
-		'name', f.name,
-		'umfang', u,
-		'reisen', coalesce((select jsonb_agg(
-			case when coalesce((u ->> 'texte')::boolean, false) then inhalt else inhalt - 'notiz' end) from reisen), '[]'::jsonb),
-		'eintraege', coalesce((select jsonb_agg(
-			(case when coalesce((u ->> 'texte')::boolean, false) then inhalt else inhalt - array['text', 'notizen'] end)
-			- (case when coalesce((u ->> 'preise')::boolean, false) then '{}'::text[] else array['preis', 'waehrung', 'kosten'] end)
-			#- (case when coalesce((u ->> 'preise')::boolean, false) then '{}'::text[] else '{merkmale,stromkosten}'::text[] end)
-			#- (case when coalesce((u ->> 'preise')::boolean, false) then '{}'::text[] else '{merkmale,kurtaxe}'::text[] end)
-		) from eintraege), '[]'::jsonb),
-		'plaetze', coalesce((select jsonb_agg(
-			case when coalesce((u ->> 'texte')::boolean, false) then inhalt else inhalt - 'notiz' end) from plaetze), '[]'::jsonb),
-		'fotos', coalesce((select jsonb_agg(inhalt) from fotos), '[]'::jsonb)
-	) into ergebnis;
-	return ergebnis;
-end $$;
-
-revoke all on function public.freigabe_lesen(text) from public;
-grant execute on function public.freigabe_lesen(text) to anon, authenticated;
-
 -- ---------------------------------------------------------------------
--- 3. Fotospeicher: Eimer „fotos“, öffentlich lesbar über zufällige Dateinamen,
---    hochladen/ändern nur in den eigenen Ordner (<user-id>/…)
+-- 3. Fotospeicher: privater Eimer „fotos“, Dateien verschlüsselt (<user-id>/<foto-id>.bin).
+--    Lesen, hochladen, ändern, löschen nur im eigenen Ordner.
 -- ---------------------------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('fotos', 'fotos', true, 5242880, array['image/jpeg'])
-on conflict (id) do nothing;
+values ('fotos', 'fotos', false, 5242880, array['application/octet-stream'])
+on conflict (id) do update set public = false, allowed_mime_types = array['application/octet-stream'];
+
+drop policy if exists "fotos lesen" on storage.objects;
+create policy "fotos lesen" on storage.objects for select to authenticated
+	using (bucket_id = 'fotos' and (storage.foldername(name))[1] = auth.uid()::text);
 
 drop policy if exists "fotos hochladen" on storage.objects;
 create policy "fotos hochladen" on storage.objects for insert to authenticated

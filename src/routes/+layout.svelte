@@ -29,7 +29,6 @@
 	import EintragFormular from '#lib/formulare/EintragFormular.svelte';
 	import HierEintragen from '#lib/formulare/HierEintragen.svelte';
 	import PlatzFormular from '#lib/formulare/PlatzFormular.svelte';
-	import FreigabeFormular from '#lib/formulare/FreigabeFormular.svelte';
 	import NotizFormular from '#lib/formulare/NotizFormular.svelte';
 	import { abgleich } from '#lib/db/abgleich.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
@@ -48,16 +47,13 @@
 	$effect(() => thema.anwenden());
 
 	onMount(() => {
-		// Geteilter Link: keine eigenen Daten laden, nichts abgleichen
-		if (!location.hash.startsWith('#/teilen/')) {
-			// offline Eingetragenes vervollständigen: erst Ortsnamen (für die Titel), dann Straßenrouten
-			const nachtragen = () => ortsnamenNachtragen().then(offeneRoutenNachtragen);
-			daten.laden().then(() => {
-				nachtragen();
-				abgleich.starten();
-			});
-			addEventListener('online', nachtragen);
-		}
+		// offline Eingetragenes vervollständigen: erst Ortsnamen (für die Titel), dann Straßenrouten
+		const nachtragen = () => ortsnamenNachtragen().then(offeneRoutenNachtragen);
+		daten.laden().then(() => {
+			nachtragen();
+			abgleich.starten();
+		});
+		addEventListener('online', nachtragen);
 		const breit = matchMedia('(min-width: 900px)');
 		ui.breit = breit.matches;
 		breit.addEventListener('change', (e) => (ui.breit = e.matches));
@@ -66,14 +62,13 @@
 	// Fotos per Drag & Drop (PC): Zuordnung zu Reise und Tag nach Aufnahmedatum
 	let ziehtDatei = $state(false);
 	function dragover(e: DragEvent) {
-		if (!e.dataTransfer?.types.includes('Files') || daten.gast) return;
+		if (!e.dataTransfer?.types.includes('Files')) return;
 		e.preventDefault();
 		ziehtDatei = true;
 	}
 	function drop(e: DragEvent) {
 		e.preventDefault();
 		ziehtDatei = false;
-		if (daten.gast) return;
 		const dateien = [...(e.dataTransfer?.files ?? [])];
 		const reise = page.route.id === '/reise/[id]' ? page.params.id : undefined;
 		if (dateien.length) fotosHinzufuegen(dateien, { reise });
@@ -144,7 +139,7 @@
 		ui.ortWahl?.fertig(o);
 	}
 	function langGedrueckt(o: { lat: number; lng: number }) {
-		if (ui.ortWahl || ui.dialog || daten.gast) return;
+		if (ui.ortWahl || ui.dialog) return;
 		ui.pin = o;
 	}
 
@@ -216,7 +211,7 @@
 				<button class="knopf" onclick={ortUebernehmen}>Übernehmen</button>
 			</div>
 		</div>
-	{:else if !dialogOffen && !daten.gast && !ui.pin && (ui.breit || ui.hoehe !== 'voll')}
+	{:else if !dialogOffen && !ui.pin && (ui.breit || ui.hoehe !== 'voll')}
 		<button
 			class="hier"
 			class:breit={ui.breit}
@@ -237,8 +232,6 @@
 		<HierEintragen />
 	{:else if ui.dialog?.art === 'platz'}
 		<PlatzFormular id={ui.dialog.id} />
-	{:else if ui.dialog?.art === 'freigabe'}
-		<FreigabeFormular token={ui.dialog.token} />
 	{:else if ui.dialog?.art === 'notiz'}
 		<NotizFormular eintrag={ui.dialog.eintrag} datum={ui.dialog.datum} />
 	{:else if ui.dialog?.art === 'ziel'}

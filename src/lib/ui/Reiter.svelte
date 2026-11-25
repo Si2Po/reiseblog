@@ -14,12 +14,12 @@
 
 <nav class="reiter" aria-label="Bereiche">
 	<div class="gruppe">
-		<a href={daten.gast ? (ui.gastStart ?? '#/') : '#/'} class:aktiv={aktiv === '/' || aktiv === '/teilen/[token]' || aktiv === '/statistik'}><MapTrifold size={18} /> Reisen</a>
+		<a href="#/" class:aktiv={aktiv === '/' || aktiv === '/statistik'}><MapTrifold size={18} /> Reisen</a>
 		<a href="#/plaetze" class:aktiv={aktiv === '/plaetze'}><Tent size={18} /> Plätze</a>
-		{#if !daten.gast}<a href="#/ziele" class:aktiv={aktiv === '/ziele'}><Flag size={18} /> Ziele</a>{/if}
+		<a href="#/ziele" class:aktiv={aktiv === '/ziele'}><Flag size={18} /> Ziele</a>
 	</div>
 	<a class="symbol" href="#/suche" class:aktiv={aktiv === '/suche'} onclick={() => !ui.breit && (ui.hoehe = 'voll')} aria-label="Suche"><MagnifyingGlass size={20} /></a>
-	{#if !daten.gast}<a class="symbol" href="#/einstellungen" class:aktiv={aktiv === '/einstellungen'} aria-label="Einstellungen"><GearSix size={20} /></a>{/if}
+	<a class="symbol" href="#/einstellungen" class:aktiv={aktiv === '/einstellungen'} aria-label="Einstellungen"><GearSix size={20} /></a>
 </nav>
 
 <style>

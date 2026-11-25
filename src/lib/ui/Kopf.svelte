@@ -6,7 +6,7 @@
 	import { ui } from '#lib/ui.svelte.ts';
 
 	let { zurueck, rechts }: { zurueck?: string; rechts?: Snippet } = $props();
-	const ziel = $derived(zurueck ?? (daten.gast ? (ui.gastStart ?? '#/') : '#/'));
+	const ziel = $derived(zurueck ?? '#/');
 
 	function weg(e: MouseEvent) {
 		// Wenn es eine Seite davor in der App gibt, dorthin zurück (behält Scrollposition)
@@ -19,7 +19,7 @@
 
 <div class="kopf">
 	<a class="zurueck" href={ziel} onclick={weg}><CaretLeft size={18} weight="bold" /> Zurück</a>
-	{#if rechts && !daten.gast}<div class="rechts">{@render rechts()}</div>{/if}
+	{#if rechts}<div class="rechts">{@render rechts()}</div>{/if}
 </div>
 
 <style>

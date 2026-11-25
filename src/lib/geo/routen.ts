@@ -65,7 +65,7 @@ export async function offeneRoutenNachtragen() {
  * Namen nachtragen und Ersatztitel („Ausflug“, „Start → Ziel“, Platz „Platz“) durch den Ortsnamen ersetzen.
  */
 export async function ortsnamenNachtragen() {
-	if (!navigator.onLine || daten.gast) return;
+	if (!navigator.onLine) return;
 	const offen = daten.eintraege.filter((e) => !e.id.startsWith('bsp-') && [e.ort, e.von, e.nach].some((o) => o && !o.name));
 	const merk = new Map<string, Partial<Ort>>();
 	const benennen = async (o: Ort | undefined): Promise<Ort | undefined> => {

@@ -1,6 +1,6 @@
 # Supabase einrichten (einmalig, ca. 10 Minuten)
 
-Supabase speichert deine Reisen und Fotos online, damit iPhone und PC dasselbe zeigen und du Reisen teilen kannst. Der kostenlose Tarif reicht: 500 MB Daten und 1 GB Fotos (etwa 3.000 Fotos in der verkleinerten Größe der App).
+Supabase speichert deine Reisen und Fotos online, damit iPhone und PC dasselbe zeigen. Alles ist Ende-zu-Ende verschlüsselt: Supabase sieht nur Datensalat. Der kostenlose Tarif reicht: 500 MB Daten und 1 GB Fotos (etwa 3.000 Fotos in der verkleinerten Größe der App).
 
 ## 1. Projekt anlegen
 1. Auf https://supabase.com anmelden (mit GitHub geht es am schnellsten).
@@ -28,8 +28,12 @@ Supabase speichert deine Reisen und Fotos online, damit iPhone und PC dasselbe z
 
 **Niemals** den `service_role`- bzw. Secret-Key oder das Datenbank-Passwort in die App oder ins Repo schreiben. Der Publishable-Key ist dafür gedacht, öffentlich im Code zu stehen.
 
-## 5. Konto anlegen
-In der App → Zahnrad → **Konto** → E-Mail und Passwort → **Konto anlegen**. Deine Partnerin meldet sich mit denselben Daten an und sieht dann alles mit.
+## 5. Konto anlegen und Verschlüsselung einrichten
+1. In der App → Zahnrad → **Konto** → E-Mail und Passwort → **Konto anlegen**.
+2. Danach fragt die App nach einem **Tagebuch-Passwort** (nicht dasselbe wie das Anmelde-Passwort). Damit wird alles verschlüsselt.
+3. Die App zeigt einmal einen **Notfall-Code**. Sicher aufbewahren (Passwort-Manager oder Ausdruck): Er ist der einzige Weg zurück, falls das Tagebuch-Passwort vergessen wird. Ohne Passwort und Code sind die Daten auf dem Server verloren.
+4. Jedes weitere Gerät (z. B. das deiner Partnerin): mit demselben Konto anmelden und einmal das Tagebuch-Passwort eingeben.
+5. Danach in Supabase **Authentication → Sign In / Providers** „**Allow new users to sign up**“ ausschalten. Dann kann niemand sonst ein Konto in deinem Projekt anlegen.
 
 ## 6. Wecker einschalten
 Kostenlose Supabase-Projekte schlafen nach 7 Tagen ohne Nutzung ein. Der GitHub-Ablauf `wecker.yml` ruft die Datenbank deshalb jeden Tag einmal kurz an. Er nimmt Adresse und Schlüssel automatisch aus `src/lib/config.ts`; du musst nichts weiter tun. Prüfen kannst du ihn auf GitHub unter **Actions → Wecker**.
@@ -40,4 +44,4 @@ Neue Funktionen bringen manchmal eine kleine SQL-Datei in `supabase/schritte/` m
 | Datei | Inhalt | ausgeführt |
 |---|---|---|
 | `komplett.sql` | Grundausstattung (Dokumente, Freigaben, Fotospeicher, Wecker) | ☑ |
-| `schritte/01_kosten_nicht_teilen.sql` | Teilen-Links ohne „Preise“ zeigen auch keine Ausgaben | ☐ |
+| `schritte/01_verschluesselung.sql` | Verschlüsselung (Tresor, privater Fotospeicher), Teilen entfernt | ☐ |

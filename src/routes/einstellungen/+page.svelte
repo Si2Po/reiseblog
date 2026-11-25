@@ -1,8 +1,7 @@
-<!-- Einstellungen: Darstellung, Konto, Teilen, Sicherung, Beispieldaten. -->
+<!-- Einstellungen: Darstellung, Konto, Sicherung, Beispieldaten. -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Konto from '#lib/einstellungen/Konto.svelte';
-	import Teilen from '#lib/einstellungen/Teilen.svelte';
 	import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
 	import Kopf from '#lib/ui/Kopf.svelte';
@@ -52,7 +51,6 @@
 	</section>
 
 	<Konto />
-	<Teilen />
 
 	<section>
 		<h4>Sicherung</h4>

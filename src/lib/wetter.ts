@@ -46,7 +46,7 @@ const erledigt = new Set<string>();
 
 /** Fehlendes Wetter vergangener Tage einer Reise nachtragen (still, einmal pro Sitzung und Reise) */
 export async function wetterNachtragen(reise: string) {
-	if (daten.gast || erledigt.has(reise) || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+	if (erledigt.has(reise) || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
 	erledigt.add(reise);
 	const h = heute();
 	// je Eintrag die Tage ohne Wetter sammeln

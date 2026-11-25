@@ -19,7 +19,6 @@ export type Dialog =
 	| { art: 'eintrag'; id?: string; vorlage?: Partial<Eintrag> }
 	| { art: 'hier' }
 	| { art: 'platz'; id: string }
-	| { art: 'freigabe'; token?: string }
 	| { art: 'notiz'; eintrag: string; datum: string }
 	| { art: 'ziel'; id?: string; vorlage?: Partial<Ziel> };
 
@@ -51,10 +50,6 @@ class Ui {
 	/** „Ort auf der Karte wählen“ läuft */
 	ortWahl = $state<{ fertig: (o: { lat: number; lng: number } | null) => void } | null>(null);
 
-	/** Gast-Ansicht: Startseite des geteilten Links (#/teilen/…) */
-	gastStart = $state<string | null>(null);
-	/** Teilen-Links neu laden (nach Änderung im Dialog) */
-	freigabenStand = $state(0);
 
 	/** Plätze-Seite mit Filter: nur diese Plätze auf der Karte zeigen (null = alle) */
 	sichtbarePlaetze = $state<string[] | null>(null);

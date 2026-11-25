@@ -1,4 +1,4 @@
-// Test des Abgleichs gegen eine nachgebaute Supabase (im Testskript, keine echte Datenbank).
+// Test des verschlüsselten Abgleichs gegen eine nachgebaute Supabase (im Testskript, keine echte Datenbank).
 // Voraussetzung: zweiter Dev-Server mit Test-Adresse:
 //   VITE_TEST_SUPABASE_URL=https://test.supabase.example npx vite dev --port 5174 --strictPort
 // Aufruf: node tools/abgleich-test.mjs
@@ -9,47 +9,50 @@ const SB = 'https://test.supabase.example';
 
 // ---------- nachgebaute Supabase ----------
 const docs = new Map();
-const freigaben = new Map();
+const dateien = new Map();
+let tresor = null;
 let uhr = Date.parse('2026-01-01T00:00:00Z');
 const user = { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated', email: 'test@beispiel.de', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' };
 const sitzung = () => ({ access_token: 'tok', token_type: 'bearer', expires_in: 360000, expires_at: Math.floor(Date.now() / 1000) + 360000, refresh_token: 'ref', user });
-
-function freigabeLesen(token) {
-	const f = freigaben.get(token);
-	if (!f || f.widerrufen) return null;
-	const u = f.umfang;
-	const alle = [...docs.values()].filter((d) => !d.geloescht);
-	const reisen = alle.filter((d) => d.art === 'reise' && (u.reisen === 'alle' || u.reisen.includes(d.id)));
-	const rids = new Set(reisen.map((d) => d.id));
-	const eintraege = alle.filter((d) => d.art === 'eintrag' && rids.has(d.inhalt.reise) && (d.inhalt.typ === 'stay' ? u.plaetze : u.unterwegs));
-	const pids = new Set(eintraege.map((d) => d.inhalt.platz).filter(Boolean));
-	const ohne = (o, felder) => Object.fromEntries(Object.entries(o).filter(([k]) => !felder.includes(k)));
-	return {
-		name: f.name,
-		umfang: u,
-		reisen: reisen.map((d) => (u.texte ? d.inhalt : ohne(d.inhalt, ['notiz']))),
-		eintraege: eintraege.map((d) => ohne(d.inhalt, [...(u.texte ? [] : ['text', 'notizen']), ...(u.preise ? [] : ['preis', 'waehrung'])])),
-		plaetze: alle.filter((d) => d.art === 'platz' && pids.has(d.id)).map((d) => (u.texte ? d.inhalt : ohne(d.inhalt, ['notiz']))),
-		fotos: u.fotos ? alle.filter((d) => d.art === 'foto' && rids.has(d.inhalt.reise)).map((d) => d.inhalt) : []
-	};
-}
 
 async function supabase(route) {
 	const req = route.request();
 	const url = new URL(req.url());
 	const p = url.pathname;
 	const m = req.method();
+	if (process.env.DBG && p.includes('storage')) console.log('  [speicher]', m, p);
 	const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 	const body = () => (req.postData() ? JSON.parse(req.postData()) : null);
 
 	if (p.startsWith('/auth/v1/token') || p.startsWith('/auth/v1/signup')) return json(sitzung());
 	if (p === '/auth/v1/user') return json(user);
 	if (p === '/auth/v1/logout') return route.fulfill({ status: 204 });
-	if (p.startsWith('/storage/v1/object/fotos/')) return json({ Key: p.replace('/storage/v1/object/', '') });
+	// Fotospeicher (privat): hochladen und authentifiziert herunterladen
+	if (p.startsWith('/storage/v1/object/fotos/') && m === 'POST') {
+		dateien.set(p.replace('/storage/v1/object/fotos/', ''), req.postDataBuffer());
+		return json({ Key: p.replace('/storage/v1/object/', '') });
+	}
+	if (p.startsWith('/storage/v1/object/authenticated/fotos/') || (p.startsWith('/storage/v1/object/fotos/') && m === 'GET')) {
+		const k = p.replace(/^\/storage\/v1\/object\/(authenticated\/)?fotos\//, '');
+		const d = dateien.get(k);
+		return d ? route.fulfill({ status: 200, contentType: 'application/octet-stream', body: d }) : json({ error: 'not found' }, 404);
+	}
 	if (p === '/rest/v1/rpc/aufraeumen') return json(0);
 	if (p === '/rest/v1/rpc/ping') return json('wach');
-	if (p === '/rest/v1/rpc/freigabe_lesen') return json(freigabeLesen(body().p_token));
 
+	if (p === '/rest/v1/tresor') {
+		const einzeln = (req.headers()['accept'] ?? '').includes('vnd.pgrst.object');
+		if (m === 'GET') return einzeln ? (tresor ? json(tresor) : json(null, 406)) : json(tresor ? [tresor] : []);
+		if (m === 'POST') {
+			if (tresor) return json({ code: '23505', message: 'duplicate key' }, 409);
+			tresor = body();
+			return route.fulfill({ status: 201, body: '' });
+		}
+		if (m === 'PATCH') {
+			Object.assign(tresor, body());
+			return route.fulfill({ status: 204, body: '' });
+		}
+	}
 	if (p === '/rest/v1/dokumente' && m === 'POST') {
 		for (const z of [].concat(body())) docs.set(z.id, { ...z, geaendert_am: new Date((uhr += 1000)).toISOString() });
 		return route.fulfill({ status: 201, body: '' });
@@ -59,21 +62,6 @@ async function supabase(route) {
 		const lim = +(url.searchParams.get('limit') ?? 1000);
 		const liste = [...docs.values()].filter((d) => d.geaendert_am > gt).sort((a, b) => a.geaendert_am.localeCompare(b.geaendert_am)).slice(0, lim);
 		return json(liste);
-	}
-	if (p === '/rest/v1/freigaben') {
-		const einzeln = (req.headers()['accept'] ?? '').includes('vnd.pgrst.object');
-		if (m === 'GET') return json([...freigaben.values()]);
-		if (m === 'POST') {
-			const f = { token: 'tok' + (freigaben.size + 1) + 'abcdef', widerrufen: false, erstellt_am: new Date().toISOString(), ...body() };
-			freigaben.set(f.token, f);
-			return json(einzeln ? f : [f], 201);
-		}
-		if (m === 'PATCH') {
-			const t = (url.searchParams.get('token') ?? '').replace('eq.', '');
-			Object.assign(freigaben.get(t), body());
-			return json(einzeln ? freigaben.get(t) : [freigaben.get(t)]);
-		}
-		if (m === 'DELETE') return route.fulfill({ status: 204 });
 	}
 	console.log('  ?? unbekannte Anfrage', m, p);
 	return route.fulfill({ status: 404, body: '' });
@@ -111,10 +99,11 @@ async function anmelden(p) {
 	await p.locator('input[type="email"]').fill('test@beispiel.de');
 	await p.locator('input[type="password"]').fill('geheim123');
 	await p.getByRole('button', { name: 'Anmelden' }).click();
-	await p.waitForTimeout(3000);
+	await p.waitForTimeout(2000);
 }
+const klartext = () => JSON.stringify([...docs.values()]);
 
-// Gerät A: Reise + Übernachtung anlegen, dann anmelden → hochladen
+// Gerät A: Reise + Übernachtung + Foto anlegen, dann anmelden → Verschlüsselung einrichten → hochladen
 const a = await geraet('A');
 await a.getByRole('button', { name: 'Neue Reise' }).first().click();
 await a.locator('input[placeholder^="z. B. Norwegen"]').fill('Schwarzwald');
@@ -128,30 +117,87 @@ await a.locator('input[placeholder="0 = gratis"]').fill('22');
 await a.locator('textarea').fill('Ruhiger Platz am Waldrand.');
 await a.getByRole('button', { name: 'Eintragen' }).click();
 await a.waitForTimeout(800);
-await anmelden(a);
-const arten = [...docs.values()].map((d) => d.art).sort().join(',');
-ok(arten === 'eintrag,platz,reise', `A hat hochgeladen: ${arten}`);
-ok((await a.getByText('test@beispiel.de').count()) > 0, 'A ist angemeldet');
+const bild = await a.evaluate(() => {
+	const c = document.createElement('canvas');
+	c.width = 800;
+	c.height = 600;
+	const g = c.getContext('2d');
+	g.fillStyle = '#c0392b';
+	g.fillRect(0, 0, 800, 600);
+	return c.toDataURL('image/jpeg', 0.9).split(',')[1];
+});
+await voll(a);
+const [wahl] = await Promise.all([a.waitForEvent('filechooser'), a.locator('.fotos-leer, .streifen .mehr').first().click()]);
+await wahl.setFiles({ name: 'rot.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(bild, 'base64') });
+await a.waitForTimeout(3000);
 
-// Gerät B: anmelden → bekommt die Reise
+await anmelden(a);
+ok((await a.getByText('Verschlüsselung einrichten').count()) > 0, 'A: Verschlüsselung wird angeboten');
+ok(docs.size === 0, 'Vor dem Einrichten wird nichts hochgeladen');
+await a.locator('input[autocomplete="new-password"]').nth(0).fill('Unser Reisetagebuch 2026');
+await a.locator('input[autocomplete="new-password"]').nth(1).fill('Unser Reisetagebuch 2026');
+await a.getByRole('button', { name: 'Verschlüsselung einrichten' }).click();
+await a.waitForTimeout(4000);
+const code = (await a.locator('.code-box code').innerText()).trim();
+ok(/^[A-Z2-9]{5}(-[A-Z2-9]{5}){4}$/.test(code), `Notfall-Code angezeigt: ${code}`);
+await a.screenshot({ path: 'tools/bilder/abgleich-code.png' });
+await a.locator('.code-box input[type="checkbox"]').check();
+await a.getByRole('button', { name: 'Fertig' }).click();
+await a.waitForTimeout(3500);
+const arten = [...docs.values()].map((d) => d.art).sort().join(',');
+ok(arten === 'eintrag,foto,platz,reise', `A hat hochgeladen: ${arten}`);
+ok(!/Schwarzwald|Waldrand|"preis"|titel|vorschau/.test(klartext()), 'Auf dem Server steht nichts Lesbares');
+ok(!!tresor && !JSON.stringify(tresor).includes('Reisetagebuch'), 'Tresor liegt auf dem Server, ohne Passwort');
+const datei = [...dateien.values()][0];
+ok(dateien.size === 1 && !(datei[0] === 0xff && datei[1] === 0xd8), 'Foto liegt verschlüsselt im Speicher (kein JPEG)');
+await a.screenshot({ path: 'tools/bilder/abgleich-a.png' });
+
+// Gerät B: anmelden → entsperren → bekommt Reise und Foto
 const bb = await geraet('B');
 await anmelden(bb);
+ok((await bb.getByText('Tagebuch entsperren').count()) > 0, 'B: muss entsperren');
+await bb.locator('input[autocomplete="current-password"]').last().fill('falsch falsch');
+await bb.getByRole('button', { name: 'Entsperren' }).click();
+await bb.waitForTimeout(4000);
+ok((await bb.getByText('Das passt nicht').count()) > 0, 'Falsches Passwort wird abgelehnt');
+await bb.locator('input[autocomplete="current-password"]').last().fill('Unser Reisetagebuch 2026');
+await bb.getByRole('button', { name: 'Entsperren' }).click();
+await bb.waitForTimeout(5000);
+ok((await bb.getByText('Ende-zu-Ende verschlüsselt').count()) > 0, 'B ist entsperrt');
 await bb.goto(BASIS + '#/');
 await bb.waitForTimeout(1200);
 ok((await bb.getByText('Schwarzwald').count()) > 0, 'B sieht die Reise von A');
-
-// B ergänzt einen Ausflug → A holt ihn ab
 const reiseId = [...docs.values()].find((d) => d.art === 'reise').id;
 await bb.goto(BASIS + '#/reise/' + reiseId);
-await bb.waitForTimeout(1000);
+await bb.waitForTimeout(1200);
+await voll(bb);
+ok((await bb.getByText('Ruhiger Platz am Waldrand').count()) > 0, 'B sieht die Notiz (entschlüsselt)');
+await bb.locator('.streifen button').first().click();
+await bb.waitForTimeout(2500);
+const farbe = await bb.evaluate(async () => {
+	const img = [...document.querySelectorAll('img')].find((i) => i.src.startsWith('blob:'));
+	if (!img) return null;
+	await img.decode();
+	const c = document.createElement('canvas');
+	c.width = c.height = 4;
+	const g = c.getContext('2d');
+	g.drawImage(img, 0, 0, 4, 4);
+	return [...g.getImageData(1, 1, 1, 1).data.slice(0, 3)];
+});
+ok(!!farbe && farbe[0] > 150 && farbe[1] < 100, `B sieht das Foto in voller Größe (entschlüsselt, Farbe ${farbe})`);
+await bb.keyboard.press('Escape');
+
+// B ergänzt einen Ausflug → A holt ihn ab
+await bb.goto(BASIS + '#/reise/' + reiseId);
+await bb.waitForTimeout(800);
 await voll(bb);
 await bb.getByRole('button', { name: 'Eintrag hinzufügen' }).click();
 await bb.waitForTimeout(500);
 await bb.getByRole('radio', { name: 'Ausflug' }).click();
 await bb.locator('input[placeholder^="z. B. Wanderung"]').fill('Wanderung zum Feldberg');
 await bb.getByRole('button', { name: 'Eintragen' }).click();
-await bb.waitForTimeout(4500); // Abgleich nach 2,5 s
-ok([...docs.values()].some((d) => d.inhalt.titel === 'Wanderung zum Feldberg'), 'B hat den Ausflug hochgeladen');
+await bb.waitForTimeout(4500);
+ok([...docs.values()].filter((d) => d.art === 'eintrag').length === 2 && !klartext().includes('Feldberg'), 'B hat den Ausflug verschlüsselt hochgeladen');
 await a.goto(BASIS + '#/einstellungen');
 await a.waitForTimeout(500);
 await voll(a);
@@ -166,7 +212,7 @@ await voll(a);
 await a.getByText('Wanderung zum Feldberg').click();
 await a.getByRole('button', { name: 'Löschen' }).click();
 await a.waitForTimeout(4500);
-ok([...docs.values()].some((d) => d.inhalt.titel === 'Wanderung zum Feldberg' && d.geloescht), 'Löschung liegt auf dem Server');
+ok([...docs.values()].some((d) => d.art === 'eintrag' && d.geloescht), 'Löschung liegt auf dem Server');
 await bb.goto(BASIS + '#/einstellungen');
 await voll(bb);
 await bb.getByRole('button', { name: 'Abgleichen' }).click();
@@ -175,42 +221,38 @@ await bb.goto(BASIS + '#/reise/' + reiseId);
 await bb.waitForTimeout(1000);
 ok((await bb.getByText('Wanderung zum Feldberg').count()) === 0, 'B hat die Löschung übernommen');
 
-// Ausflug wieder anlegen (für den Teilen-Test), dann Link „Nur Stellplätze“
+// Gerät C: mit Notfall-Code entsperren → neues Passwort festlegen
+const cc = await geraet('C');
+await anmelden(cc);
+await cc.locator('input[autocomplete="current-password"]').last().fill(code.toLowerCase().replaceAll('-', ' '));
+await cc.getByRole('button', { name: 'Entsperren' }).click();
+await cc.waitForTimeout(5000);
+ok((await cc.getByText('Neues Tagebuch-Passwort').count()) > 0, 'C: mit Notfall-Code entsperrt, neues Passwort wird verlangt');
+await cc.locator('input[autocomplete="new-password"]').nth(0).fill('Neues Passwort 2027');
+await cc.locator('input[autocomplete="new-password"]').nth(1).fill('Neues Passwort 2027');
+await cc.getByRole('button', { name: 'Passwort speichern' }).click();
+await cc.waitForTimeout(4000);
+ok((await cc.getByText('Ende-zu-Ende verschlüsselt').count()) > 0, 'C: neues Passwort gesetzt');
+await cc.goto(BASIS + '#/');
+await cc.waitForTimeout(1500);
+ok((await cc.getByText('Schwarzwald').count()) > 0, 'C sieht die Reise');
+
+// Abmelden entfernt den Schlüssel vom Gerät
+await bb.goto(BASIS + '#/einstellungen');
 await voll(bb);
-await bb.getByRole('button', { name: 'Eintrag hinzufügen' }).click();
-await bb.waitForTimeout(500);
-await bb.getByRole('radio', { name: 'Ausflug' }).click();
-await bb.locator('input[placeholder^="z. B. Wanderung"]').fill('Titisee');
-await bb.getByRole('button', { name: 'Eintragen' }).click();
-await bb.waitForTimeout(4500);
-
-await a.goto(BASIS + '#/einstellungen');
-await voll(a);
-await a.getByRole('button', { name: 'Neuer Teilen-Link' }).click();
-await a.locator('input[placeholder^="z. B. Max"]').fill('Kollegen');
-await a.getByRole('button', { name: 'Nur Stellplätze' }).click();
-await a.getByRole('button', { name: 'Link erstellen' }).click();
-await a.waitForTimeout(800);
-const link = await a.locator('.link').innerText().catch(() => '');
-ok(/#\/teilen\//.test(link), 'Teilen-Link erstellt: ' + link);
-await a.screenshot({ path: 'tools/bilder/abgleich-link.png' });
-
-// Gast öffnet den Link
-const gast = await (await b.newContext({ viewport: { width: 375, height: 812 }, locale: 'de-DE' })).newPage();
-await gast.context().route(SB + '/**', supabase);
-gast.on('pageerror', (e) => fehler.push(`Gast: ${e.message}`));
-await gast.goto(link.replace('http://localhost:5174/', BASIS));
-await gast.waitForTimeout(2500);
-ok((await gast.getByText('Schwarzwald').count()) > 0, 'Gast sieht die geteilte Reise');
-await gast.screenshot({ path: 'tools/bilder/abgleich-gast.png' });
-await gast.locator('.reise').first().click();
-await gast.waitForTimeout(1500);
-ok((await gast.locator('.typ-stay').count()) === 1, 'Gast sieht die Übernachtung');
-ok((await gast.getByText('Titisee').count()) === 0, 'Gast sieht den Ausflug NICHT (nur Stellplätze)');
-ok((await gast.getByText('Ruhiger Platz am Waldrand').count()) === 0, 'Gast sieht den Text NICHT');
-ok((await gast.getByText('22').count()) === 0, 'Gast sieht den Preis NICHT');
-ok((await gast.getByRole('button', { name: 'Bearbeiten' }).count()) === 0, 'Gast kann nichts bearbeiten');
-await gast.screenshot({ path: 'tools/bilder/abgleich-gast-reise.png' });
+await bb.getByRole('button', { name: 'Abmelden' }).click();
+await bb.waitForTimeout(800);
+const schluesselWeg = await bb.evaluate(
+	() =>
+		new Promise((fertig) => {
+			const r = indexedDB.open('reiseblog');
+			r.onsuccess = () => {
+				const g = r.result.transaction('meta').objectStore('meta').get('tresor');
+				g.onsuccess = () => fertig(!g.result);
+			};
+		})
+);
+ok(schluesselWeg, 'Nach dem Abmelden ist der Schlüssel vom Gerät entfernt');
 
 await b.close();
 console.log(fehler.length ? 'FEHLER:\n' + [...new Set(fehler)].join('\n') : 'Alles in Ordnung');

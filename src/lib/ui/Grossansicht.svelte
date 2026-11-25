@@ -126,12 +126,10 @@
 						}}><MapPin size={14} weight="fill" /> Auf der Karte</button
 					>
 				{/if}
-				{#if !daten.gast}
-					{#if reise && reise.titelbild !== foto.id}
-						<button onclick={alsTitelbild}><Image size={14} weight="fill" /> Als Titelbild</button>
-					{/if}
-					<button class="weg" onclick={loeschen} aria-label="Foto löschen"><Trash size={16} /></button>
+				{#if reise && reise.titelbild !== foto.id}
+					<button onclick={alsTitelbild}><Image size={14} weight="fill" /> Als Titelbild</button>
 				{/if}
+				<button class="weg" onclick={loeschen} aria-label="Foto löschen"><Trash size={16} /></button>
 			</div>
 		</div>
 	</div>

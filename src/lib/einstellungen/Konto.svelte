@@ -1,9 +1,11 @@
-<!-- Konto: anmelden / Konto anlegen / Abgleich-Status. -->
+<!-- Konto: anmelden / Konto anlegen / Abgleich-Status / Verschlüsselung (Tresor). -->
 <script lang="ts">
 	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise';
 	import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
 	import WarningCircle from 'phosphor-svelte/lib/WarningCircle';
 	import { abgleich } from '#lib/db/abgleich.svelte.ts';
+	import { tresor } from '#lib/db/tresor.svelte.ts';
+	import Tresor from './Tresor.svelte';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { formatDistanceToNow } from 'date-fns';
 	import { de } from 'date-fns/locale';
@@ -19,7 +21,7 @@
 		try {
 			await abgleich.anmelden(email.trim(), passwort, neu);
 			passwort = '';
-			ui.zeige(neu ? 'Konto angelegt – alles wird abgeglichen' : 'Angemeldet – alles wird abgeglichen');
+			ui.zeige(neu ? 'Konto angelegt' : 'Angemeldet');
 		} catch (e) {
 			fehler = (e as Error).message;
 		} finally {
@@ -45,20 +47,22 @@
 			<span class="txt">
 				<b>{abgleich.email}</b>
 				<span>
-					{#if abgleich.laeuft}Wird abgeglichen …
+					{#if !tresor.offen}Wartet auf die Verschlüsselung
+					{:else if abgleich.laeuft}Wird abgeglichen …
 					{:else if abgleich.fehler}{abgleich.fehler}
 					{:else if abgleich.zuletzt}Abgeglichen {formatDistanceToNow(abgleich.zuletzt, { locale: de, addSuffix: true })}
 					{:else}Noch nicht abgeglichen{/if}
 				</span>
 			</span>
 		</div>
+		<Tresor />
 		<div class="zeile">
-			<button class="knopf zweit" onclick={() => abgleich.jetzt()} disabled={abgleich.laeuft}>
+			<button class="knopf zweit" onclick={() => abgleich.jetzt()} disabled={abgleich.laeuft || !tresor.offen}>
 				<ArrowsClockwise size={18} /> Abgleichen
 			</button>
 			<button class="knopf still" onclick={() => abgleich.abmelden()}>Abmelden</button>
 		</div>
-		<p class="hilfe">Wer sich mit demselben Konto anmeldet (z. B. deine Partnerin), sieht und bearbeitet dieselben Reisen.</p>
+		<p class="hilfe">Wer sich mit demselben Konto anmeldet und das Tagebuch-Passwort kennt (z. B. deine Partnerin), sieht und bearbeitet dieselben Reisen. Beim Abmelden wird der Schlüssel von diesem Gerät entfernt; die Reisen bleiben hier.</p>
 	{:else}
 		<form
 			onsubmit={(e) => {
@@ -76,7 +80,7 @@
 				<button class="knopf zweit" type="button" disabled={!ok || laeuft} onclick={() => los(true)}>Konto anlegen</button>
 			</div>
 		</form>
-		<p class="hilfe">Mit Konto sind deine Reisen auf iPhone und PC gleich, Fotos werden online gesichert und du kannst Reisen teilen.</p>
+		<p class="hilfe">Mit Konto sind deine Reisen auf iPhone und PC gleich und Fotos werden online gesichert – Ende-zu-Ende verschlüsselt, nur du kannst sie lesen.</p>
 	{/if}
 </section>
 

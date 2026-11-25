@@ -4,7 +4,6 @@
   Umrechnung in Euro mit aktuellen EZB-Kursen (Frankfurter, ohne Schlüssel), 1× am Tag geholt
   und im Browser gemerkt – also „ungefähr“, nicht zum Kurs des Reisetags.
 */
-import { daten } from '#lib/db/daten.svelte.ts';
 import { eintraegeVon } from '#lib/auswertung.ts';
 import { heute } from '#lib/datum.ts';
 import { KOSTEN_ART, type Eintrag, type KostenArt } from '#lib/db/typen.ts';
@@ -77,7 +76,7 @@ class Wechselkurse {
 
 	/** Holt die Kurse höchstens einmal am Tag (still – ohne Netz bleibt es bei den gemerkten) */
 	async holen() {
-		if (this.#laeuft || daten.gast) return;
+		if (this.#laeuft) return;
 		try {
 			const s = JSON.parse(localStorage.getItem(SPEICHER) ?? 'null');
 			if (s?.tag === heute()) return;
