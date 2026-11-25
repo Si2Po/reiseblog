@@ -1,6 +1,6 @@
 # Reiseblog – Hinweise für Claude
 
-Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit Übernachtungen, Fahrten, Ausflügen und Events, Stellplätze mit Bewertung, Fotos auf der Karte, Suche nach Ort und Datum. **Alle Texte in der App und alle Erklärungen auf Deutsch**, einfach und ohne Fachchinesisch. Zielgeräte: iPhone (auch 13 mini, 375 px) und PC (ab 900 px Seitenleiste statt Sheet).
+Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit Übernachtungen, Fahrten und Ausflügen, Stellplätze mit Bewertung, Fotos auf der Karte, Suche nach Ort und Datum. **Alle Texte in der App und alle Erklärungen auf Deutsch**, einfach und ohne Fachchinesisch. Zielgeräte: iPhone (auch 13 mini, 375 px) und PC (ab 900 px Seitenleiste statt Sheet).
 
 ## Technik
 - **SvelteKit 3 + Svelte 5 (Runes) + TypeScript**, `adapter-static` als SPA mit **Hash-Router** (`#/reise/…`), Konfiguration komplett in `vite.config.ts` (kein `svelte.config.js`). Seitenoptionen wie `export const ssr` sind beim Hash-Router verboten.

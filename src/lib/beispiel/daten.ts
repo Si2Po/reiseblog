@@ -72,7 +72,7 @@ function drive(reise: string, i: number, datum: string, von: string, nach: strin
 		routeOk: true
 	};
 }
-function anderes(reise: string, typ: 'outing' | 'event', titel: string, datum: string, lat: number, lng: number, ort: string, text?: string): Eintrag {
+function anderes(reise: string, typ: 'outing', titel: string, datum: string, lat: number, lng: number, ort: string, text?: string): Eintrag {
 	return { ...basis('e' + ++n), reise: 'bsp-' + reise, typ, titel, datum, ort: { lat, lng, name: ort }, text };
 }
 
@@ -84,7 +84,7 @@ const eintraege: Eintrag[] = [
 	drive('no25', 1, '2025-07-09', 'Jørpeland', 'Odda'),
 	stay('no25', 'p3', '2025-07-09', 3, 3, 350, 'NOK'),
 	anderes('no25', 'outing', 'Trolltunga', '2025-07-10', 60.124, 6.74, 'Skjeggedal', '27 km, 10 Stunden. Beine am Ende.'),
-	anderes('no25', 'event', 'Cider-Probe in Hardanger', '2025-07-11', 60.32, 6.66, 'Lofthus'),
+	anderes('no25', 'outing', 'Cider-Probe in Hardanger', '2025-07-11', 60.32, 6.66, 'Lofthus'),
 	drive('no25', 2, '2025-07-12', 'Odda', 'Geiranger'),
 	stay('no25', 'p4', '2025-07-12', 4, 5, 410, 'NOK', 'Bester Platz der Reise.', [3, 'Nacht 3: Regen. Um 6 Uhr hupt das Kreuzfahrtschiff – trotzdem schön.']),
 	anderes('no25', 'outing', 'Dalsnibba bei Sonnenaufgang', '2025-07-14', 62.047, 7.272, 'Dalsnibba'),
@@ -99,7 +99,7 @@ const eintraege: Eintrag[] = [
 	stay('br24', 'p8', '2024-05-15', 2, 5, 0, 'EUR', 'Die Bäuerin hat uns Crêpes gebracht.'),
 	drive('br24', 2, '2024-05-17', 'Ploumanac’h', 'Crozon'),
 	stay('br24', 'p9', '2024-05-17', 3, 5, 0, 'EUR'),
-	anderes('br24', 'event', 'Fest-Noz in Crozon', '2024-05-18', 48.247, -4.49, 'Crozon', 'Bretonischer Tanzabend, alle Generationen.'),
+	anderes('br24', 'outing', 'Fest-Noz in Crozon', '2024-05-18', 48.247, -4.49, 'Crozon', 'Bretonischer Tanzabend, alle Generationen.'),
 	drive('br24', 3, '2024-05-20', 'Crozon', 'Carnac'),
 	stay('br24', 'p10', '2024-05-20', 4, 3, 36, 'EUR'),
 
@@ -109,7 +109,7 @@ const eintraege: Eintrag[] = [
 	stay('do23', 'p12', '2023-09-17', 2, 3, 38, 'EUR'),
 	drive('do23', 1, '2023-09-19', 'Cortina', 'Kastelruth'),
 	stay('do23', 'p13', '2023-09-19', 3, 4, 25, 'EUR'),
-	anderes('do23', 'event', 'Almabtrieb Kastelruth', '2023-09-21', 46.567, 11.56, 'Kastelruth'),
+	anderes('do23', 'outing', 'Almabtrieb Kastelruth', '2023-09-21', 46.567, 11.56, 'Kastelruth'),
 	drive('do23', 2, '2023-09-22', 'Kastelruth', 'Riva'),
 	stay('do23', 'p14', '2023-09-22', 2, 4, 44, 'EUR')
 ];

@@ -46,7 +46,7 @@
 
 	const PUNKTE: { k: keyof typeof u; name: string; info: string }[] = [
 		{ k: 'plaetze', name: 'Übernachtungen und Plätze', info: 'mit Bewertung und Ausstattung' },
-		{ k: 'unterwegs', name: 'Fahrten, Ausflüge, Events', info: 'die Route auf der Karte' },
+		{ k: 'unterwegs', name: 'Fahrten und Ausflüge', info: 'die Route auf der Karte' },
 		{ k: 'fotos', name: 'Fotos', info: 'Fotos der freigegebenen Reisen' },
 		{ k: 'texte', name: 'Texte und Notizen', info: 'Notizen von unterwegs, zu Reisen und Plätzen' },
 		{ k: 'preise', name: 'Preise', info: 'was eine Nacht gekostet hat' }

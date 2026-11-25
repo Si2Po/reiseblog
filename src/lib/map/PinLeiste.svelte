@@ -1,13 +1,12 @@
 <!--
   Leiste unter der Stecknadel nach langem Drücken auf die Karte:
-  Ortsname + „Übernachtung · Ausflug · Event · Fahrt hierher“ → passendes Formular, schon ausgefüllt.
+  Ortsname + „Übernachtung · Ausflug · Fahrt hierher“ → passendes Formular, schon ausgefüllt.
 -->
 <script lang="ts">
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import Tent from 'phosphor-svelte/lib/Tent';
 	import Footprints from 'phosphor-svelte/lib/Footprints';
-	import Ticket from 'phosphor-svelte/lib/Ticket';
 	import Van from 'phosphor-svelte/lib/Van';
 	import X from 'phosphor-svelte/lib/X';
 	import Path from 'phosphor-svelte/lib/Path';
@@ -17,7 +16,7 @@
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { koordText } from '#lib/geo.ts';
 	import { ortsname } from '#lib/geo/dienste.ts';
-	import { laufendeReise, reisenSortiert, reiseBis, letzteUebernachtung, plaetzeInDerNaehe } from '#lib/auswertung.ts';
+	import { vorschlagReise, reiseBis, letzteUebernachtung, plaetzeInDerNaehe } from '#lib/auswertung.ts';
 	import { heute } from '#lib/datum.ts';
 	import type { Typ } from '#lib/db/typen.ts';
 
@@ -59,7 +58,7 @@
 		const p = ui.pin;
 		if (!p) return;
 		// Reise: die gerade angezeigte, sonst die laufende, sonst die neueste
-		const r = daten.reise(ui.auswahl ?? undefined) ?? laufendeReise() ?? reisenSortiert()[0];
+		const r = daten.reise(ui.auswahl ?? undefined) ?? vorschlagReise();
 		if (!r) {
 			ui.pin = null;
 			ui.dialog = { art: 'reise' };
@@ -93,7 +92,6 @@
 		<div class="wahl">
 			<button onclick={() => weiter('stay')}><Tent size={22} weight="duotone" /> Übernachtung</button>
 			<button onclick={() => weiter('outing')}><Footprints size={22} weight="duotone" /> Ausflug</button>
-			<button onclick={() => weiter('event')}><Ticket size={22} weight="duotone" /> Event</button>
 			<button onclick={() => weiter('drive')}><Van size={22} weight="duotone" /> Fahrt hierher</button>
 		</div>
 		<button class="merken" onclick={merken}><Flag size={18} weight="duotone" /> Als Ziel merken</button>
@@ -156,7 +154,7 @@
 	}
 	.wahl {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(3, 1fr);
 		gap: 6px;
 	}
 	.wahl button {

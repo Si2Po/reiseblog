@@ -10,7 +10,6 @@
 	import Tent from 'phosphor-svelte/lib/Tent';
 	import Van from 'phosphor-svelte/lib/Van';
 	import Footprints from 'phosphor-svelte/lib/Footprints';
-	import Ticket from 'phosphor-svelte/lib/Ticket';
 	import Moon from 'phosphor-svelte/lib/Moon';
 	import X from 'phosphor-svelte/lib/X';
 	import Camera from 'phosphor-svelte/lib/Camera';
@@ -75,7 +74,7 @@
 		if (ui.markiert) offen = ui.markiert;
 	});
 
-	const SYMBOL = { stay: Tent, drive: Van, outing: Footprints, event: Ticket };
+	const SYMBOL = { stay: Tent, drive: Van, outing: Footprints };
 
 	function getippt(e: Eintrag, schluessel = e.id) {
 		offen = offen === schluessel ? null : schluessel;

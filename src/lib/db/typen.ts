@@ -1,6 +1,6 @@
 /*
   Datenmodell – bewusst nur vier Sorten von Objekten:
-    Reise · Eintrag (Art: Übernachtung, Fahrt, Ausflug, Event) · Platz · Foto
+    Reise · Eintrag (Art: Übernachtung, Fahrt, Ausflug) · Platz · Foto
   Zusätzliche, auswertbare Eigenschaften stehen NICHT als eigene Felder im Code, sondern als
   `merkmale` (Schlüssel → Wert). Welche Merkmale es gibt, beschreibt der Katalog in src/lib/merkmale.ts.
   Neues Merkmal = eine Zeile im Katalog, alte Daten bleiben gültig.
@@ -58,7 +58,7 @@ export interface Reise extends Basis {
 	notiz?: string;
 }
 
-export type Typ = 'stay' | 'drive' | 'outing' | 'event';
+export type Typ = 'stay' | 'drive' | 'outing';
 
 export interface Eintrag extends Basis {
 	reise: string;
@@ -68,7 +68,7 @@ export interface Eintrag extends Basis {
 	/** Uhrzeit HH:MM:SS (nur für die Reihenfolge am Tag, wird nicht angezeigt) */
 	zeit?: string;
 	ort?: Ort;
-	/** Freitext (Ausflug, Event, Fahrt) */
+	/** Freitext (Ausflug, Fahrt) */
 	text?: string;
 	/** Notizen mit Zeitpunkt (Übernachtung: pro Nacht) */
 	notizen?: Notiz[];
@@ -149,8 +149,7 @@ export type TabellenName = keyof Tabellen;
 export const TYP_NAME: Record<Typ, string> = {
 	stay: 'Übernachtung',
 	drive: 'Fahrt',
-	outing: 'Ausflug',
-	event: 'Event'
+	outing: 'Ausflug'
 };
 
 export const ZIEL_ART: Record<ZielArt, string> = {

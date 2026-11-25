@@ -25,9 +25,12 @@ function platz(p: Platz & Alt): Platz {
 }
 
 function eintrag(e: Eintrag & Alt): Eintrag {
-	if (!('privat' in e) && !(e.typ === 'stay' && e.text)) return e;
+	// „Event“ gibt es nicht mehr: zählt jetzt als Ausflug
+	const event = (e.typ as string) === 'event';
+	if (!('privat' in e) && !(e.typ === 'stay' && e.text) && !event) return e;
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const { privat, ...rest } = e;
+	if (event) rest.typ = 'outing';
 	if (rest.typ === 'stay' && rest.text) {
 		rest.notizen = [...(rest.notizen ?? []), { id: crypto.randomUUID(), zeit: `${rest.datum}T20:00`, text: rest.text }];
 		delete rest.text;

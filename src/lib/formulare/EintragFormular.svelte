@@ -3,7 +3,7 @@
   - Übernachtung: Ort, Platz (bekannte Plätze in der Nähe werden vorgeschlagen), Nächte, Preis, Bewertung,
     Notizen mit Zeitpunkt (eine pro Erlebnis/Nacht)
   - Fahrt: von → nach, Straßenroute wird im Hintergrund berechnet
-  - Ausflug / Event: Ort und Text
+  - Ausflug: Ort und Text
   Selten Gebrauchtes (Merkmale aus dem Katalog, Links, eigener Titel) ist unter „Mehr“.
   Liegt das Datum außerhalb der Reise, wird der Reisezeitraum automatisch erweitert.
 -->
@@ -15,7 +15,6 @@
 	import Tent from 'phosphor-svelte/lib/Tent';
 	import Van from 'phosphor-svelte/lib/Van';
 	import Footprints from 'phosphor-svelte/lib/Footprints';
-	import Ticket from 'phosphor-svelte/lib/Ticket';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import X from 'phosphor-svelte/lib/X';
 	import CaretDown from 'phosphor-svelte/lib/CaretDown';
@@ -30,7 +29,7 @@
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { heute, zahl, dauer, notizZeit } from '#lib/datum.ts';
-	import { laufendeReise, reisenSortiert, plaetzeInDerNaehe, letzteUebernachtung, platzBewertung, eintraegeVon } from '#lib/auswertung.ts';
+	import { vorschlagReise, reisenSortiert, plaetzeInDerNaehe, letzteUebernachtung, platzBewertung, eintraegeVon } from '#lib/auswertung.ts';
 	import { routeNachtragen, viaEinfuegen } from '#lib/geo/routen.ts';
 	import { offeneFahrt, naechteBis } from '#lib/unterwegs.ts';
 	import { koordText } from '#lib/geo.ts';
@@ -45,7 +44,7 @@
 	const v: Partial<Eintrag> = { ...(vorlage ?? {}), ...(alt ?? {}) };
 	const altPlatz = daten.platz(v.platz);
 
-	let reise = $state(v.reise ?? laufendeReise()?.id ?? reisenSortiert()[0]?.id ?? '');
+	let reise = $state(v.reise ?? vorschlagReise()?.id ?? '');
 	let typ = $state<Typ>(v.typ ?? 'stay');
 	let titel = $state(v.titel ?? '');
 	let datum = $state(v.datum ?? heute());
@@ -239,8 +238,7 @@
 	const TYPEN: { t: Typ; icon: typeof Tent }[] = [
 		{ t: 'stay', icon: Tent },
 		{ t: 'drive', icon: Van },
-		{ t: 'outing', icon: Footprints },
-		{ t: 'event', icon: Ticket }
+		{ t: 'outing', icon: Footprints }
 	];
 	const WAEHRUNGEN = ['EUR', 'CHF', 'NOK', 'SEK', 'DKK', 'GBP', 'CZK', 'PLN', 'HUF'];
 </script>
@@ -330,7 +328,7 @@
 		{:else}
 			<label class="feld">
 				<span class="name">Titel</span>
-				<input bind:value={titel} placeholder={autoTitel || (typ === 'outing' ? 'z. B. Wanderung zum Gipfel' : typ === 'event' ? 'z. B. Weinfest' : 'z. B. Über den Pass')} maxlength="100" />
+				<input bind:value={titel} placeholder={autoTitel || (typ === 'outing' ? 'z. B. Wanderung, Stadtbummel, Weinfest' : 'z. B. Über den Pass')} maxlength="100" />
 			</label>
 		{/if}
 

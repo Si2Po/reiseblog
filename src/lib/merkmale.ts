@@ -26,7 +26,7 @@ import SwimmingPool from 'phosphor-svelte/lib/SwimmingPool';
 import Sun from 'phosphor-svelte/lib/Sun';
 import type { Merkmale, Wert } from '#lib/db/typen.ts';
 
-export type Bezug = 'platz' | 'stay' | 'drive' | 'outing' | 'event';
+export type Bezug = 'platz' | 'stay' | 'drive' | 'outing';
 export type Gruppe = 'ausstattung' | 'umgebung' | 'kosten' | 'eindruck';
 
 export interface Merkmal {

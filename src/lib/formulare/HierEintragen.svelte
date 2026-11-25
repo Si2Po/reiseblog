@@ -6,7 +6,6 @@
 	import { onMount } from 'svelte';
 	import Tent from 'phosphor-svelte/lib/Tent';
 	import Footprints from 'phosphor-svelte/lib/Footprints';
-	import Ticket from 'phosphor-svelte/lib/Ticket';
 	import Van from 'phosphor-svelte/lib/Van';
 	import Camera from 'phosphor-svelte/lib/Camera';
 	import Crosshair from 'phosphor-svelte/lib/Crosshair';
@@ -16,7 +15,7 @@
 	import { ui } from '#lib/ui.svelte.ts';
 	import { thema } from '#lib/thema.svelte.ts';
 	import { reiseFarbe } from '#lib/farben.ts';
-	import { laufendeReise, reisenSortiert, plaetzeInDerNaehe } from '#lib/auswertung.ts';
+	import { vorschlagReise, reisenSortiert, plaetzeInDerNaehe } from '#lib/auswertung.ts';
 	import { standort, koordText } from '#lib/geo.ts';
 	import { ortsname } from '#lib/geo/dienste.ts';
 	import { heute } from '#lib/datum.ts';
@@ -30,7 +29,7 @@
 	let sucht = $state(true);
 
 	const reisen = reisenSortiert();
-	let reise = $state(laufendeReise()?.id ?? reisen[0]?.id ?? '');
+	let reise = $state(vorschlagReise()?.id ?? '');
 	const r = $derived(daten.reise(reise));
 	const bekannt = $derived(ort ? plaetzeInDerNaehe(ort.lat, ort.lng)[0] : undefined);
 
@@ -108,7 +107,6 @@
 		<div class="wahl">
 			<button onclick={() => weiter('stay')}><Tent size={30} weight="duotone" /> Übernachtung</button>
 			<button onclick={() => weiter('outing')}><Footprints size={30} weight="duotone" /> Ausflug</button>
-			<button onclick={() => weiter('event')}><Ticket size={30} weight="duotone" /> Event</button>
 		</div>
 		<div class="unten">
 			<button class="knopf still" onclick={() => weiter('drive')}><Van size={20} /> Fahrt</button>
@@ -230,7 +228,7 @@
 	}
 	.wahl {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(2, 1fr);
 		gap: 8px;
 	}
 	.wahl button {

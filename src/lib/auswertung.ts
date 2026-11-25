@@ -5,10 +5,10 @@ import { plusTage } from '#lib/datum.ts';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { abstand } from '#lib/geo.ts';
 
-const TYP_FOLGE = { drive: 0, outing: 1, event: 2, stay: 3 };
+const TYP_FOLGE = { drive: 0, outing: 1, stay: 2 };
 
 /**
- * Reihenfolge am Tag: Die Übernachtung schließt den Tag ab (steht immer nach Fahrt, Ausflug, Event).
+ * Reihenfolge am Tag: Die Übernachtung schließt den Tag ab (steht immer nach Fahrt und Ausflug).
  * Die Uhrzeit ordnet nur innerhalb gleicher Gruppe.
  */
 export function eintragFolge(a: Eintrag, b: Eintrag): number {
@@ -41,6 +41,12 @@ export function reiseEnde(r: Reise): string {
 /** Reise, die heute läuft (Enddatum offen und zuletzt aktiv, oder heute im Zeitraum) */
 export function laufendeReise(heute = format(new Date(), 'yyyy-MM-dd')): Reise | undefined {
 	return reisenSortiert().find((r) => r.start <= heute && reiseBis(r) >= heute);
+}
+
+/** Vorgeschlagene Reise für einen neuen Eintrag: die laufende, sonst die letzte schon begonnene (geplante nur, wenn es nichts anderes gibt). */
+export function vorschlagReise(heute = format(new Date(), 'yyyy-MM-dd')): Reise | undefined {
+	const alle = reisenSortiert();
+	return laufendeReise(heute) ?? alle.find((r) => r.start <= heute) ?? alle[0];
 }
 
 /**

@@ -20,6 +20,10 @@ describe('aufbereiten', () => {
 		expect(neu.text).toBeUndefined();
 		expect('privat' in neu).toBe(false);
 	});
+	it('macht aus einem Event einen Ausflug und behält den Text', () => {
+		const neu = aufbereiten('eintraege', { id: 'e', geaendert: 1, reise: 'r', typ: 'event', titel: 'Weinfest', datum: '2025-07-05', text: 'lustig' } as unknown as Eintrag);
+		expect(neu).toMatchObject({ typ: 'outing', titel: 'Weinfest', text: 'lustig' });
+	});
 	it('lässt aktuelle Daten unverändert (gleiches Objekt)', () => {
 		const p = { id: 'p', geaendert: 1, name: 'X', art: 'camping', ort: { lat: 1, lng: 2 }, merkmale: {}, links: [] } as unknown as Platz;
 		expect(aufbereiten('plaetze', p)).toBe(p);

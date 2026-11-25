@@ -6,7 +6,6 @@
 	import Tent from 'phosphor-svelte/lib/Tent';
 	import Van from 'phosphor-svelte/lib/Van';
 	import Footprints from 'phosphor-svelte/lib/Footprints';
-	import Ticket from 'phosphor-svelte/lib/Ticket';
 	import MapTrifold from 'phosphor-svelte/lib/MapTrifold';
 	import Reiter from '#lib/ui/Reiter.svelte';
 	import { daten } from '#lib/db/daten.svelte.ts';
@@ -64,7 +63,7 @@
 		if (!ui.breit) ui.hoehe = 'halb';
 	}
 
-	const SYMBOL = { stay: Tent, drive: Van, outing: Footprints, event: Ticket };
+	const SYMBOL = { stay: Tent, drive: Van, outing: Footprints };
 	const umschalten = (t: Typ) => (typen = typen.includes(t) ? typen.filter((x) => x !== t) : [...typen, t]);
 </script>
 
