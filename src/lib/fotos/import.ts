@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { db } from '#lib/db/db.ts';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { ui } from '#lib/ui.svelte.ts';
-import { reiseEnde, eintraegeVon } from '#lib/auswertung.ts';
+import { reiseBis, eintraegeVon } from '#lib/auswertung.ts';
 import type { Foto, Ort } from '#lib/db/typen.ts';
 
 const GROSS = 1600;
@@ -23,13 +23,19 @@ interface Ziel {
 
 /** Öffnet die Fotoauswahl (iPhone: Mediathek oder Kamera) */
 export function fotosWaehlen(ziel: Ziel = {}) {
+	// Das Feld muss im Dokument hängen – sonst meldet iOS die Auswahl manchmal nicht zurück
 	const input = document.createElement('input');
 	input.type = 'file';
 	input.accept = 'image/*';
 	input.multiple = true;
-	input.onchange = () => {
+	input.style.cssText = 'position:fixed;left:-1000px;top:0;opacity:0';
+	document.body.append(input);
+	const weg = () => setTimeout(() => input.remove(), 1000);
+	input.addEventListener('change', () => {
 		if (input.files?.length) fotosHinzufuegen([...input.files], ziel);
-	};
+		weg();
+	});
+	input.addEventListener('cancel', weg);
 	input.click();
 }
 
@@ -37,25 +43,36 @@ export function fotosWaehlen(ziel: Ziel = {}) {
 export async function fotosHinzufuegen(dateien: File[], ziel: Ziel = {}) {
 	const bilder = dateien.filter((f) => f.type.startsWith('image/') || /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
 	if (!bilder.length) return;
-	ui.zeige(bilder.length === 1 ? 'Foto wird hinzugefügt …' : `${bilder.length} Fotos werden hinzugefügt …`);
 	let ok = 0,
 		ohneOrt = 0,
-		ohneReise = 0;
-	for (const datei of bilder) {
+		ohneReise = 0,
+		ausserhalb = 0;
+	for (const [i, datei] of bilder.entries()) {
+		ui.zeige(bilder.length === 1 ? 'Foto wird hinzugefügt …' : `Foto ${i + 1} von ${bilder.length} …`);
 		try {
 			const f = await einFoto(datei, ziel);
 			ok++;
 			if (!f.ort) ohneOrt++;
 			if (!f.reise) ohneReise++;
+			else if (!f.eintrag && ausserhalbDerReise(f)) ausserhalb++;
 		} catch (e) {
 			console.error('Foto ging nicht:', datei.name, (e as Error)?.name, (e as Error)?.message);
 		}
 	}
-	const teile = [ok === 1 ? '1 Foto hinzugefügt' : `${ok} Fotos hinzugefügt`];
+	const eintrag = daten.eintrag(ziel.eintrag);
+	const fotos = ok === 1 ? '1 Foto' : `${ok} Fotos`;
+	const teile = [eintrag ? `${fotos} zu „${eintrag.titel}“ hinzugefügt` : `${fotos} hinzugefügt`];
 	if (ok < bilder.length) teile.push(`${bilder.length - ok} ließen sich nicht lesen`);
 	if (ohneReise) teile.push(`${ohneReise} passen zu keiner Reise`);
-	else if (ohneOrt) teile.push(`${ohneOrt} ohne Ort – in der Fotoauswahl unter „Optionen“ den Standort einschalten`);
+	else if (ausserhalb) teile.push(`${ausserhalb} außerhalb des Reisezeitraums – unter „Weitere Fotos“`);
+	else if (ohneOrt && !eintrag) teile.push(`${ohneOrt} ohne Ort – in der Fotoauswahl unter „Optionen“ den Standort einschalten`);
 	ui.zeige(teile.join(' · '));
+}
+
+function ausserhalbDerReise(f: Foto): boolean {
+	const r = daten.reise(f.reise);
+	const d = f.aufgenommen.slice(0, 10);
+	return !!r && (d < r.start || d > reiseBis(r));
 }
 
 async function einFoto(datei: File, ziel: Ziel): Promise<Foto> {
@@ -96,7 +113,7 @@ async function einFoto(datei: File, ziel: Ziel): Promise<Foto> {
 
 /** Reise, in deren Zeitraum das Datum fällt */
 function reiseAm(tag: string): string | undefined {
-	return daten.reisen.find((r) => r.start <= tag && reiseEnde(r) >= tag)?.id;
+	return daten.reisen.find((r) => r.start <= tag && reiseBis(r) >= tag)?.id;
 }
 
 /** Ort eines Eintrags am selben Tag (sonst die letzte Übernachtung davor) */

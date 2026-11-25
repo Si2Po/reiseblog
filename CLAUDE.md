@@ -12,6 +12,10 @@ Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit
 
 ## Daten
 - Datenmodell im Kopfkommentar von `src/lib/db/typen.ts` (Reise, Eintrag, Platz, Foto; jede mit `id`, `geaendert`, `geloescht`).
+- **Merkmal-Katalog** `src/lib/merkmale.ts`: alle zusätzlichen, auswertbaren Eigenschaften (Ausstattung, Lage, Untergrund, Kosten, Eindruck …) stehen als `merkmale` (Schlüssel → Wert) an Platz bzw. Eintrag. **Neues Merkmal = eine Zeile im Katalog**, Formulare (`MerkmalFelder.svelte`) und Anzeige entstehen daraus. Schlüssel nie umbenennen. Werte auswertbar speichern (Zahl, ja/nein, fester Auswahl-Schlüssel), Länder zusätzlich als `landCode`.
+- Ältere Datensätze bringt `src/lib/db/aufbereiten.ts` beim Laden in die aktuelle Form (z. B. `ausstattung` → `merkmale`, `url` → `links`, Übernachtungs-Text → erste Notiz).
+- Übernachtungen: `notizen` mit Zeitpunkt; in der Zeitleiste erscheint jede Nacht (Folgenächte), Notizen vor 12 Uhr zählen zur Nacht davor (`nachtNotizen` in `auswertung.ts`). Fahrten: `via` = Zwischenziele, `viaEinfuegen` setzt neue an die Stelle mit dem kleinsten Umweg.
+- Liegt ein Eintrag außerhalb der Reise, wird der Reisezeitraum beim Speichern erweitert. Fotos eines Eintrags stehen direkt beim Eintrag, Fotos außerhalb des Zeitraums unter „Weitere Fotos“.
 - Lokal: Dexie (`src/lib/db/db.ts`). Zentraler reaktiver Speicher `daten` (`src/lib/db/daten.svelte.ts`): **alle Änderungen über `daten.speichern()` / `daten.loeschen()`** – die schreiben IndexedDB und die Outbox (für den späteren Abgleich). Löschen ist weich und gibt eine Rückgängig-Funktion zurück → `ui.zeige(text, rueckgaengig)`.
 - Abgeleitete Werte (Nächte, km, Tage, laufende Reise, Plätze in der Nähe) in `src/lib/auswertung.ts`.
 - Beispieldaten (`src/lib/beispiel/`): IDs beginnen mit `bsp-`, gehen nicht in die Outbox und dürfen nie hochgeladen werden.
@@ -31,6 +35,7 @@ Camper-Reisetagebuch als Web-App (GitHub Pages) und PWA fürs iPhone: Reisen mit
 - `npm run dev` (Port 5173, im WLAN erreichbar) · `npm run check` · `npm test` (Vitest) · Build: `BASE_PATH=/reiseblog npm run build` (in Git Bash wird `/reiseblog` umgeschrieben → in PowerShell bauen).
 - `node tools/bilder.mjs [handy|pc]` (optional `DUNKEL=1`): spielt die App mit WebKit durch und legt Bildschirmfotos in `tools/bilder/` (nicht im Git). Nach Oberflächen-Änderungen laufen lassen und die Bilder ansehen.
 - `node tools/ablauf.mjs`: Funktionstest der Hauptabläufe (Reise, Hier eintragen, automatische Fahrt mit Route, Foto, Löschen/Rückgängig).
+- `node tools/neu-test.mjs`: Folgenächte/Notizen, Währung, Reisezeitraum, Ort-Wahl mit Suche, langes Drücken (Stecknadel), „Fahrt über hier“, Fotos am Eintrag, Links/Merkmale am Platz.
 - `node tools/abgleich-test.mjs`: Abgleich und Teilen gegen eine nachgebaute Supabase (zwei Geräte + Gast). Braucht einen zweiten Dev-Server: `VITE_TEST_SUPABASE_URL=https://test.supabase.example npx vite dev --port 5174`.
 - `node tools/icons.mjs`: PNG-Icons aus `static/icons/icon.svg` neu erzeugen.
 

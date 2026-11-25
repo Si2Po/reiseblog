@@ -1,13 +1,15 @@
 <!--
   Eintrag anlegen/bearbeiten. Je nach Art andere Felder:
-  - Übernachtung: Ort, Platz (bekannte Plätze in der Nähe werden vorgeschlagen), Nächte, Preis, Bewertung
+  - Übernachtung: Ort, Platz (bekannte Plätze in der Nähe werden vorgeschlagen), Nächte, Preis, Bewertung,
+    Notizen mit Zeitpunkt (eine pro Erlebnis/Nacht)
   - Fahrt: von → nach, Straßenroute wird im Hintergrund berechnet
   - Ausflug / Event: Ort und Text
-  Selten Gebrauchtes (Ausstattung, privat) ist eingeklappt.
+  Selten Gebrauchtes (Merkmale aus dem Katalog, Links, eigener Titel) ist unter „Mehr“.
+  Liegt das Datum außerhalb der Reise, wird der Reisezeitraum automatisch erweitert.
 -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { format } from 'date-fns';
+	import { format, addDays, parseISO } from 'date-fns';
 	import { page } from '$app/state';
 	import { slide } from 'svelte/transition';
 	import Tent from 'phosphor-svelte/lib/Tent';
@@ -15,6 +17,7 @@
 	import Footprints from 'phosphor-svelte/lib/Footprints';
 	import Ticket from 'phosphor-svelte/lib/Ticket';
 	import Trash from 'phosphor-svelte/lib/Trash';
+	import X from 'phosphor-svelte/lib/X';
 	import CaretDown from 'phosphor-svelte/lib/CaretDown';
 	import Minus from 'phosphor-svelte/lib/Minus';
 	import Plus from 'phosphor-svelte/lib/Plus';
@@ -22,13 +25,16 @@
 	import Dialog from '#lib/ui/Dialog.svelte';
 	import SterneWahl from '#lib/ui/SterneWahl.svelte';
 	import OrtFeld from './OrtFeld.svelte';
+	import MerkmalFelder from './MerkmalFelder.svelte';
+	import LinkFeld from './LinkFeld.svelte';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
-	import { heute, zahl, dauer } from '#lib/datum.ts';
-	import { laufendeReise, reisenSortiert, plaetzeInDerNaehe, letzteUebernachtung, platzBewertung } from '#lib/auswertung.ts';
-	import { routeNachtragen } from '#lib/geo/routen.ts';
-	import { AUSSTATTUNG } from '#lib/ausstattung.ts';
-	import { TYP_NAME, PLATZ_ART, type Eintrag, type Ort, type PlatzArt, type Typ } from '#lib/db/typen.ts';
+	import { heute, zahl, dauer, notizZeit } from '#lib/datum.ts';
+	import { laufendeReise, reisenSortiert, plaetzeInDerNaehe, letzteUebernachtung, platzBewertung, eintraegeVon } from '#lib/auswertung.ts';
+	import { routeNachtragen, viaEinfuegen } from '#lib/geo/routen.ts';
+	import { koordText } from '#lib/geo.ts';
+	import { aufraeumen } from '#lib/merkmale.ts';
+	import { TYP_NAME, PLATZ_ART, type Eintrag, type Merkmale, type Notiz, type Ort, type PlatzArt, type Typ } from '#lib/db/typen.ts';
 
 	let { id, vorlage }: { id?: string; vorlage?: Partial<Eintrag> } = $props();
 
@@ -37,7 +43,6 @@
 	// svelte-ignore state_referenced_locally
 	const v: Partial<Eintrag> = { ...(vorlage ?? {}), ...(alt ?? {}) };
 	const altPlatz = daten.platz(v.platz);
-	const letzteWaehrung = [...daten.eintraege].reverse().find((e) => e.waehrung)?.waehrung;
 
 	let reise = $state(v.reise ?? laufendeReise()?.id ?? reisenSortiert()[0]?.id ?? '');
 	let typ = $state<Typ>(v.typ ?? 'stay');
@@ -45,24 +50,41 @@
 	let datum = $state(v.datum ?? heute());
 	let ort = $state<Ort | undefined>(v.ort);
 	let text = $state(v.text ?? '');
-	let privat = $state(v.privat ?? false);
+	let merkmale = $state<Merkmale>({ ...(v.merkmale ?? {}) });
 
 	// Übernachtung
 	let platzId = $state<string | undefined>(v.platz);
 	let platzName = $state(altPlatz?.name ?? '');
 	let platzArt = $state<PlatzArt>(altPlatz?.art ?? 'camping');
-	let ausstattung = $state<string[]>(altPlatz?.ausstattung ? [...altPlatz.ausstattung] : []);
+	let platzMerkmale = $state<Merkmale>({ ...(altPlatz?.merkmale ?? {}) });
+	let platzLinks = $state<string[]>([...(altPlatz?.links ?? [])]);
 	let wiederkommen = $state(altPlatz?.wiederkommen ?? false);
 	let naechte = $state(v.naechte ?? 1);
 	let preis = $state<number | null>(v.preis ?? null);
-	let waehrung = $state(v.waehrung ?? letzteWaehrung ?? 'EUR');
+	// Währung: zuletzt benutzte in DIESER Reise, sonst Euro (Beispieldaten zählen nicht)
+	const waehrungDerReise = (r: string) =>
+		[...eintraegeVon(r)].reverse().find((e) => e.waehrung && !e.id.startsWith('bsp-'))?.waehrung;
+	let waehrung = $state(v.waehrung ?? waehrungDerReise(v.reise ?? '') ?? 'EUR');
 	let bewertung = $state(v.bewertung);
+	let notizen = $state<Notiz[]>([...(v.notizen ?? [])]);
+	let neueNotiz = $state('');
 	let mehr = $state(false);
 
 	// Fahrt
 	const vorige = $derived(letzteUebernachtung(reise, datum));
 	let von = $state<Ort | undefined>(v.von ?? (v.typ === 'drive' ? letzteUebernachtung(v.reise ?? '', v.datum ?? heute())?.ort : undefined));
 	let nach = $state<Ort | undefined>(v.nach);
+	// Zwischenziele („über Ravensburg“) – werden an der Stelle mit dem kleinsten Umweg eingefügt
+	let via = $state<Ort[]>([...(v.via ?? [])]);
+	let neuVia = $state<Ort | undefined>();
+	let viaOffen = $state(false);
+	function viaHinzu(o: Ort) {
+		const i = via.findIndex((x) => x.lat === o.lat && x.lng === o.lng);
+		if (i >= 0) via[i] = o; // Ortsname kam nach
+		else via = von && nach ? viaEinfuegen(von, via, nach, o) : [...via, o];
+		neuVia = undefined;
+		viaOffen = false;
+	}
 	let fahrtMit = $state(!alt);
 
 	const reisen = reisenSortiert();
@@ -91,7 +113,8 @@
 		if (p) {
 			platzName = p.name;
 			platzArt = p.art;
-			ausstattung = [...p.ausstattung];
+			platzMerkmale = { ...p.merkmale };
+			platzLinks = [...p.links];
 			wiederkommen = !!p.wiederkommen;
 		}
 	}
@@ -104,7 +127,13 @@
 		}
 	}
 
-	const umschalten = (k: string) => (ausstattung = ausstattung.includes(k) ? ausstattung.filter((x) => x !== k) : [...ausstattung, k]);
+	/** Zeitpunkt für eine neue Notiz: jetzt, wenn heute zur Übernachtung gehört, sonst Abend des ersten Tages */
+	function notizZeitpunkt(): string {
+		const jetzt = new Date();
+		const tag = format(jetzt, 'yyyy-MM-dd');
+		const bis = format(addDays(parseISO(datum), naechte), 'yyyy-MM-dd');
+		return tag >= datum && tag <= bis ? format(jetzt, "yyyy-MM-dd'T'HH:mm") : `${datum}T20:00`;
+	}
 
 	async function speichern() {
 		if (!ok) return;
@@ -116,32 +145,31 @@
 		if (typ === 'stay') {
 			const p = daten.platz(platzId);
 			const name = platzName.trim() || ort?.name || 'Platz';
+			const pm = aufraeumen(platzMerkmale) ?? {};
 			if (p) {
-				const geaendert = p.name !== name || p.art !== platzArt || p.wiederkommen !== wiederkommen || p.ausstattung.join() !== ausstattung.join();
-				if (geaendert) await daten.speichern('plaetze', { ...p, name, art: platzArt, ausstattung, wiederkommen });
+				const neu = { ...p, name, art: platzArt, wiederkommen, merkmale: pm, links: platzLinks };
+				if (JSON.stringify([p.name, p.art, !!p.wiederkommen, p.merkmale, p.links]) !== JSON.stringify([name, platzArt, wiederkommen, pm, platzLinks]))
+					await daten.speichern('plaetze', neu);
 				platz = p.id;
 			} else if (ort) {
-				platz = (await daten.speichern('plaetze', { name, art: platzArt, ort, ausstattung, wiederkommen })).id;
+				platz = (await daten.speichern('plaetze', { name, art: platzArt, ort, merkmale: pm, links: platzLinks, wiederkommen })).id;
 			}
 		}
 
-		const gemeinsam = {
-			reise,
-			typ,
-			titel: titel.trim() || autoTitel || TYP_NAME[typ],
-			datum,
-			zeit,
-			text: text.trim() || undefined,
-			privat: privat || undefined
-		};
+		const gemeinsam = { reise, typ, titel: titel.trim() || autoTitel || TYP_NAME[typ], datum, zeit, merkmale: aufraeumen(merkmale) };
 		let neu: Omit<Eintrag, 'id' | 'geaendert'> & { id?: string };
-		if (typ === 'stay') neu = { ...gemeinsam, ort, platz, naechte, preis: preis ?? undefined, waehrung, bewertung };
-		else if (typ === 'drive') {
-			const gleich = alt?.von && alt?.nach && von && nach && alt.von.lat === von.lat && alt.von.lng === von.lng && alt.nach.lat === nach.lat && alt.nach.lng === nach.lng;
+		if (typ === 'stay') {
+			const alle = neueNotiz.trim() ? [...notizen, { id: crypto.randomUUID(), zeit: notizZeitpunkt(), text: neueNotiz.trim() }] : notizen;
+			neu = { ...gemeinsam, ort, platz, naechte, preis: preis ?? undefined, waehrung, bewertung, notizen: alle.length ? alle : undefined };
+		} else if (typ === 'drive') {
+			// Strecke unverändert (gleiche Punkte)? Dann die berechnete Route behalten.
+			const punkte = (liste: (Ort | undefined)[]) => JSON.stringify(liste.map((o) => (o ? [o.lat, o.lng] : null)));
+			const gleich = !!alt?.von && !!alt?.nach && punkte([alt.von, ...(alt.via ?? []), alt.nach]) === punkte([von, ...via, nach]);
+			const zw = via.length ? via : undefined;
 			neu = gleich
-				? { ...gemeinsam, von, nach, via: alt!.via, route: alt!.route, km: alt!.km, minuten: alt!.minuten, routeOk: alt!.routeOk }
-				: { ...gemeinsam, von, nach, routeOk: von && nach ? false : undefined };
-		} else neu = { ...gemeinsam, ort };
+				? { ...gemeinsam, text: text.trim() || undefined, von, nach, via: zw, route: alt!.route, km: alt!.km, minuten: alt!.minuten, routeOk: alt!.routeOk }
+				: { ...gemeinsam, text: text.trim() || undefined, von, nach, via: zw, routeOk: von && nach ? false : undefined };
+		} else neu = { ...gemeinsam, text: text.trim() || undefined, ort };
 		if (alt) neu.id = alt.id;
 
 		const e = await daten.speichern('eintraege', neu);
@@ -162,10 +190,23 @@
 			routeNachtragen(f.id);
 		}
 
+		const angepasst = await reisezeitraumAnpassen();
 		zu();
 		ui.markiert = e.id;
 		if (!(page.route.id === '/reise/[id]' && page.params.id === reise)) goto(`#/reise/${reise}`);
-		ui.zeige(alt ? 'Gespeichert' : `${TYP_NAME[typ]} eingetragen`);
+		ui.zeige((alt ? 'Gespeichert' : `${TYP_NAME[typ]} eingetragen`) + (angepasst ? ' · Reisezeitraum angepasst' : ''));
+	}
+
+	/** Eintrag vor dem Start oder nach dem Ende? Dann die Reise entsprechend verlängern. */
+	async function reisezeitraumAnpassen(): Promise<boolean> {
+		const r = daten.reise(reise);
+		if (!r) return false;
+		const letzter = typ === 'stay' ? format(addDays(parseISO(datum), naechte), 'yyyy-MM-dd') : datum;
+		const start = datum < r.start ? datum : r.start;
+		const ende = r.ende && letzter > r.ende ? letzter : r.ende;
+		if (start === r.start && ende === r.ende) return false;
+		await daten.speichern('reisen', { ...r, start, ende });
+		return true;
 	}
 
 	async function loeschen() {
@@ -215,12 +256,32 @@
 			<button
 				type="button"
 				class="tauschen"
-				onclick={() => ([von, nach] = [nach, von])}
+				onclick={() => {
+					[von, nach] = [nach, von];
+					via = [...via].reverse();
+				}}
 				aria-label="Start und Ziel tauschen"
 				disabled={!von && !nach}><ArrowsDownUp size={18} /></button
 			>
+			{#if via.length}
+				<div class="feld">
+					<span class="name">Über</span>
+					{#each via as o, i (o.lat + ',' + o.lng)}
+						<div class="via">
+							<span class="via-nr zahl">{i + 1}</span>
+							<span class="via-txt"><b>{o.name ?? 'Punkt auf der Karte'}</b><span class="zahl">{koordText(o)}</span></span>
+							<button type="button" class="rund" onclick={() => (via = via.filter((_, j) => j !== i))} aria-label="Zwischenziel entfernen"><X size={14} /></button>
+						</div>
+					{/each}
+				</div>
+			{/if}
+			{#if viaOffen}
+				<OrtFeld bind:ort={neuVia} name="Über … (Zwischenziel)" onwahl={viaHinzu} />
+			{:else}
+				<button type="button" class="via-neu" onclick={() => (viaOffen = true)}><Plus size={16} /> Über … (Zwischenziel)</button>
+			{/if}
 			<OrtFeld bind:ort={nach} name="Nach" />
-			{#if alt?.km && alt.von === von && alt.nach === nach}
+			{#if alt?.km && alt.von === von && alt.nach === nach && JSON.stringify(alt.via ?? []) === JSON.stringify(via)}
 				<p class="route zahl">Straßenroute: {zahl(alt.km)} km · {dauer(alt.minuten ?? 0)}</p>
 			{:else if von && nach}
 				<p class="route">Die Straßenroute wird nach dem Speichern berechnet.</p>
@@ -254,14 +315,14 @@
 		{/if}
 
 		<div class="feldreihe">
-			<label class="feld"><span class="name">Datum</span><input type="date" bind:value={datum} required /></label>
+			<label class="feld"><span class="name">{typ === 'stay' ? 'Erste Nacht' : 'Datum'}</span><input type="date" bind:value={datum} required /></label>
 			{#if typ === 'stay'}
 				<div class="feld">
 					<span class="name">Nächte</span>
 					<div class="zaehler">
-						<button type="button" onclick={() => (naechte = Math.max(1, naechte - 1))} aria-label="Weniger"><Minus size={16} /></button>
+						<button type="button" onclick={() => (naechte = Math.max(1, naechte - 1))} aria-label="Eine Nacht weniger"><Minus size={16} /></button>
 						<span class="zahl">{naechte}</span>
-						<button type="button" onclick={() => naechte++} aria-label="Mehr"><Plus size={16} /></button>
+						<button type="button" onclick={() => naechte++} aria-label="Eine Nacht mehr"><Plus size={16} /></button>
 					</div>
 				</div>
 			{/if}
@@ -294,12 +355,23 @@
 					<input type="checkbox" bind:checked={fahrtMit} />
 				</label>
 			{/if}
-		{/if}
 
-		<label class="feld">
-			<span class="name">{typ === 'stay' ? 'Wie war’s?' : 'Notiz'}</span>
-			<textarea bind:value={text} placeholder={typ === 'stay' ? 'Lage, Nachbarn, Tipps …' : 'Was habt ihr erlebt?'}></textarea>
-		</label>
+			<div class="feld">
+				<span class="name">Notizen</span>
+				{#each notizen as n (n.id)}
+					<div class="notiz">
+						<span class="ntxt"><small>{notizZeit(n.zeit)}</small>{n.text}</span>
+						<button type="button" class="rund" onclick={() => (notizen = notizen.filter((x) => x.id !== n.id))} aria-label="Notiz löschen"><X size={14} /></button>
+					</div>
+				{/each}
+				<textarea bind:value={neueNotiz} placeholder={notizen.length ? 'Neue Notiz, z. B. zur zweiten Nacht …' : 'Wie war’s? Lage, Nachbarn, Tipps …'}></textarea>
+			</div>
+		{:else}
+			<label class="feld">
+				<span class="name">Notiz</span>
+				<textarea bind:value={text} placeholder="Was habt ihr erlebt?"></textarea>
+			</label>
+		{/if}
 
 		<button type="button" class="aufklapp" onclick={() => (mehr = !mehr)} aria-expanded={mehr}>
 			<CaretDown size={16} style="transform: rotate({mehr ? 180 : 0}deg); transition: transform .2s" /> Mehr
@@ -307,6 +379,7 @@
 		{#if mehr}
 			<div transition:slide={{ duration: 180 }}>
 				{#if typ === 'stay'}
+					<MerkmalFelder bezug="stay" bind:werte={merkmale} />
 					<div class="feld">
 						<span class="name">Art des Platzes</span>
 						<div class="chips umbruch">
@@ -315,24 +388,15 @@
 							{/each}
 						</div>
 					</div>
-					<div class="feld">
-						<span class="name">Ausstattung</span>
-						<div class="chips umbruch">
-							{#each AUSSTATTUNG as a (a.key)}
-								<button type="button" class:an={ausstattung.includes(a.key)} onclick={() => umschalten(a.key)}><a.icon size={16} /> {a.name}</button>
-							{/each}
-						</div>
-					</div>
-				{/if}
-				<label class="schalter">
-					<span>Privat<small>Wird nie geteilt, auch nicht mit Freunden</small></span>
-					<input type="checkbox" bind:checked={privat} />
-				</label>
-				{#if typ === 'stay'}
+					<MerkmalFelder bezug="platz" bind:werte={platzMerkmale} />
+					<LinkFeld bind:links={platzLinks} />
 					<label class="feld">
 						<span class="name">Eigener Titel</span>
 						<input bind:value={titel} placeholder={autoTitel || 'sonst der Name des Platzes'} maxlength="100" />
 					</label>
+				{:else}
+					<MerkmalFelder bezug={typ} bind:werte={merkmale} />
+					<p class="leer klein">Hier gibt es noch keine weiteren Merkmale.</p>
 				{/if}
 			</div>
 		{/if}
@@ -340,7 +404,7 @@
 
 	{#snippet fuss()}
 		{#if alt}
-			<button class="knopf gefahr fuss-links" onclick={loeschen} aria-label="Löschen"><Trash size={18} /></button>
+			<button class="knopf gefahr fuss-links" onclick={loeschen} aria-label="Löschen"><Trash size={20} /></button>
 		{/if}
 		<button class="knopf zweit" onclick={zu}>Abbrechen</button>
 		<button class="knopf" type="submit" form="eintragform" disabled={!ok}>{alt ? 'Speichern' : 'Eintragen'}</button>
@@ -381,6 +445,50 @@
 		border-radius: 16px;
 		background: var(--flaeche);
 	}
+	.via {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 8px 8px 10px;
+		border-radius: var(--radius);
+		background: var(--flaeche-2);
+	}
+	.via-nr {
+		display: grid;
+		place-items: center;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		background: var(--signal);
+		color: var(--signal-text);
+		font-size: 13px;
+		font-weight: 700;
+	}
+	.via-txt {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.via-txt span {
+		color: var(--text-2);
+		font-size: 12px;
+	}
+	.via .rund {
+		width: 30px;
+		height: 30px;
+	}
+	.via-neu {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin: -6px 0 14px;
+		padding: 6px 0;
+		border: 0;
+		background: none;
+		color: var(--text);
+		font-weight: 600;
+	}
 	.route {
 		margin: -6px 0 16px;
 		color: var(--text-2);
@@ -388,5 +496,36 @@
 	}
 	.chips.umbruch {
 		flex-wrap: wrap;
+	}
+	.notiz {
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		padding: 10px 8px 10px 12px;
+		border-radius: var(--radius);
+		background: var(--flaeche-2);
+	}
+	.ntxt {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		white-space: pre-line;
+		line-height: 1.4;
+	}
+	.ntxt small {
+		color: var(--text-2);
+		font-size: 12px;
+		font-weight: 600;
+	}
+	.notiz .rund {
+		flex: none;
+		width: 30px;
+		height: 30px;
+	}
+	.leer.klein {
+		padding: 4px 0 12px;
+		text-align: left;
+		font-size: 14px;
 	}
 </style>

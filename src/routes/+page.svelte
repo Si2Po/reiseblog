@@ -55,7 +55,7 @@
 			{#each reisen as r (r.id)}
 				{@const bild = titelbild(r.id)}
 				<a class="reise" class:ohne-bild={!bild} href="#/reise/{r.id}" style="--rf:{reiseFarbe(r.farbe, thema.dunkel)}">
-					{#if bild}<img class="cover" alt="" src={bild} loading="lazy" />{/if}
+					{#if bild}<img class="cover" alt="" src={bild} />{/if}
 					<span class="r-txt">
 						<span class="jahr zahl">{jahr(r.start)}</span>
 						<span class="r-titel">{r.titel}</span>

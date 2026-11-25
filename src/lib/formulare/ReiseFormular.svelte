@@ -96,7 +96,7 @@
 				<div class="titelbilder">
 					{#each fotos as f (f.id)}
 						<button type="button" class:an={titelbild === f.id} onclick={() => (titelbild = titelbild === f.id ? undefined : f.id)} aria-label="Als Titelbild">
-							<img alt="" src={f.vorschau} loading="lazy" />
+							<img alt="" src={f.vorschau} />
 						</button>
 					{/each}
 				</div>
@@ -111,7 +111,7 @@
 
 	{#snippet fuss()}
 		{#if alt}
-			<button class="knopf gefahr fuss-links" onclick={loeschen}><Trash size={18} /> Löschen</button>
+			<button class="knopf gefahr fuss-links" onclick={loeschen} aria-label="Reise löschen"><Trash size={20} /></button>
 		{/if}
 		<button class="knopf zweit" onclick={zu}>Abbrechen</button>
 		<button class="knopf" type="submit" form="reiseform" disabled={!ok}>{alt ? 'Speichern' : 'Anlegen'}</button>

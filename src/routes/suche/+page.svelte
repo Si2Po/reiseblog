@@ -52,7 +52,7 @@
 				if (!woerter.length) return true;
 				const p = daten.platz(e.platz);
 				const r = daten.reise(e.reise);
-				const heu = [e.titel, e.text, e.ort?.name, e.ort?.land, p?.name, p?.notiz, r?.titel].map(klein).join(' ');
+				const heu = [e.titel, e.text, e.ort?.name, e.ort?.land, p?.name, p?.notiz, r?.titel, ...(e.notizen ?? []).map((n) => n.text)].map(klein).join(' ');
 				return woerter.every((w) => heu.includes(w));
 			})
 			.sort((a, b) => -eintragFolge(a, b));

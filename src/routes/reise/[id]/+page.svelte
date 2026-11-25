@@ -1,4 +1,8 @@
-<!-- Eine Reise: Kennzahlen, Fotos, Zeitleiste nach Tagen. -->
+<!--
+  Eine Reise: Kennzahlen, Fotos, Zeitleiste nach Tagen.
+  Mehrtägige Übernachtungen erscheinen an jedem Tag (Folgenacht), Notizen bei ihrer Nacht.
+  Fotos eines Eintrags stehen direkt beim Eintrag; Fotos außerhalb des Zeitraums unter „Weitere Fotos“.
+-->
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -7,28 +11,30 @@
 	import Van from 'phosphor-svelte/lib/Van';
 	import Footprints from 'phosphor-svelte/lib/Footprints';
 	import Ticket from 'phosphor-svelte/lib/Ticket';
+	import Moon from 'phosphor-svelte/lib/Moon';
 	import Camera from 'phosphor-svelte/lib/Camera';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+	import NotePencil from 'phosphor-svelte/lib/NotePencil';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import CaretRight from 'phosphor-svelte/lib/CaretRight';
-	import Lock from 'phosphor-svelte/lib/Lock';
 	import Kopf from '#lib/ui/Kopf.svelte';
 	import Sterne from '#lib/ui/Sterne.svelte';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { thema } from '#lib/thema.svelte.ts';
 	import { reiseFarbe } from '#lib/farben.ts';
-	import { naechte, km, plaetzeAnzahl, fotosVon, fotosVonEintrag, tage, reiseEnde } from '#lib/auswertung.ts';
-	import { zeitraum, tagLang, monatJahr, reiseTag, dauer, zahl, preisText } from '#lib/datum.ts';
+	import { naechte, km, plaetzeAnzahl, fotosVon, fotosVonEintrag, tage, reiseEnde, weitereFotos, nachtNotizen } from '#lib/auswertung.ts';
+	import { zeitraum, tagLang, monatJahr, reiseTag, dauer, zahl, preisText, notizZeit } from '#lib/datum.ts';
 	import { fotosWaehlen } from '#lib/fotos/import.ts';
-	import type { Eintrag } from '#lib/db/typen.ts';
+	import type { Eintrag, Foto } from '#lib/db/typen.ts';
 	import { TYP_NAME } from '#lib/db/typen.ts';
 
 	const id = $derived(page.params.id ?? '');
 	const r = $derived(daten.reise(id));
 	const fs = $derived(r ? fotosVon(r.id) : []);
 	const liste = $derived(r ? tage(r.id) : []);
+	const weitere = $derived(r ? weitereFotos(r.id) : []);
 	let offen = $state<string | null>(null);
 
 	// Karte auf diese Reise einstellen
@@ -44,9 +50,10 @@
 
 	const SYMBOL = { stay: Tent, drive: Van, outing: Footprints, event: Ticket };
 
-	function getippt(e: Eintrag) {
-		offen = offen === e.id ? null : e.id;
-		ui.markiert = offen;
+	function getippt(e: Eintrag, schluessel = e.id) {
+		offen = offen === schluessel ? null : schluessel;
+		// Folgenächte nicht als Markierung setzen – sonst springt die Auswahl auf die erste Nacht
+		ui.markiert = offen && schluessel === e.id ? e.id : null;
 		if (offen) {
 			if (e.route?.length) ui.zeigeLinie(e.route);
 			else if (e.ort) ui.zeigeOrt(e.ort, 13);
@@ -62,6 +69,7 @@
 	function metaText(e: Eintrag): string {
 		if (e.typ === 'drive') {
 			const teile = [e.km ? `${zahl(e.km)} km` : '', e.minuten ? dauer(e.minuten) : ''].filter(Boolean);
+			if (e.via?.length) teile.push('über ' + e.via.map((o) => o.name ?? 'Zwischenziel').join(', '));
 			if (!teile.length) return e.routeOk === false ? 'Route wird berechnet …' : 'Fahrt';
 			return teile.join(' · ');
 		}
@@ -72,7 +80,7 @@
 		return [TYP_NAME[e.typ], e.ort?.name].filter(Boolean).join(' · ');
 	}
 
-	function grossAb(fotos: { id: string }[], i: number) {
+	function grossAb(fotos: Foto[], i: number) {
 		ui.gross = { ids: fotos.map((f) => f.id), i };
 	}
 
@@ -80,7 +88,32 @@
 		const letzter = liste.at(-1)?.datum;
 		ui.dialog = { art: 'eintrag', vorlage: { reise: id, datum: letzter ?? r?.start } };
 	}
+	const notiz = (e: Eintrag, datum: string) => (ui.dialog = { art: 'notiz', eintrag: e.id, datum });
 </script>
+
+{#snippet fotoreihe(fotos: Foto[])}
+	{#if fotos.length}
+		<div class="fotoreihe">
+			{#each fotos.slice(0, 5) as f, i (f.id)}
+				<button onclick={() => grossAb(fotos, i)} aria-label="Foto ansehen"><img alt="" src={f.vorschau} /></button>
+			{/each}
+			{#if fotos.length > 5}
+				<button class="mehrfotos" onclick={() => grossAb(fotos, 5)}>+{fotos.length - 5}</button>
+			{/if}
+		</div>
+	{/if}
+{/snippet}
+
+{#snippet notizen(e: Eintrag, datum: string)}
+	{@const ns = nachtNotizen(e, datum)}
+	{#if ns.length}
+		<ul class="notizen">
+			{#each ns as n (n.id)}
+				<li><small>{notizZeit(n.zeit)}</small>{n.text}</li>
+			{/each}
+		</ul>
+	{/if}
+{/snippet}
 
 {#if r}
 	{@const rf = reiseFarbe(r.farbe, thema.dunkel)}
@@ -101,13 +134,13 @@
 				<div><b>{plaetzeAnzahl(r.id)}</b><span>Plätze</span></div>
 				<div><b>{fs.length}</b><span>Fotos</span></div>
 			</div>
-			{#if r.notiz}<p class="notiz">{r.notiz}</p>{/if}
+			{#if r.notiz}<p class="reisenotiz">{r.notiz}</p>{/if}
 		</header>
 
 		{#if fs.length}
 			<div class="streifen">
 				{#each fs as f, i (f.id)}
-					<button onclick={() => grossAb(fs, i)} aria-label="Foto ansehen"><img alt="" src={f.vorschau} loading="lazy" /></button>
+					<button onclick={() => grossAb(fs, i)} aria-label="Foto ansehen"><img alt="" src={f.vorschau} /></button>
 				{/each}
 				{#if !daten.gast}<button class="mehr" onclick={() => fotosWaehlen({ reise: r.id })}><Camera size={22} /><span>Fotos</span></button>{/if}
 			</div>
@@ -129,16 +162,30 @@
 						<span class="tagnr zahl">Tag {reiseTag(r.start, tag.datum)}</span>
 						<span>{tagLang(tag.datum)}</span>
 					</div>
-					{#if tag.fotos.length}
-						<div class="tagfotos">
-							{#each tag.fotos.slice(0, 5) as f, i (f.id)}
-								<button onclick={() => grossAb(tag.fotos, i)} aria-label="Foto ansehen"><img alt="" src={f.vorschau} loading="lazy" /></button>
-							{/each}
-							{#if tag.fotos.length > 5}
-								<button class="mehrfotos" onclick={() => grossAb(tag.fotos, 5)}>+{tag.fotos.length - 5}</button>
+					{#if tag.fotos.length}<div class="lose">{@render fotoreihe(tag.fotos)}</div>{/if}
+
+					<!-- Folgenächte mehrtägiger Übernachtungen -->
+					{#each tag.naechte as nacht (nacht.eintrag.id + nacht.nr)}
+						{@const e = nacht.eintrag}
+						{@const schluessel = e.id + ':' + nacht.nr}
+						<div class="ein folge" class:markiert={offen === schluessel}>
+							<button class="ein-knopf" onclick={() => getippt(e, schluessel)} aria-expanded={offen === schluessel}>
+								<span class="sym klein"><Moon size={15} weight="fill" /></span>
+								<span class="ein-txt">
+									<span class="ein-titel">{e.titel}</span>
+									<span class="ein-meta">Nacht {nacht.nr} von {nacht.von}</span>
+								</span>
+							</button>
+							{@render notizen(e, tag.datum)}
+							{#if offen === schluessel && !daten.gast}
+								<div class="aktionen" transition:slide={{ duration: 180 }}>
+									<button onclick={() => notiz(e, tag.datum)}><NotePencil size={16} /> Notiz</button>
+									{#if e.platz}<button onclick={() => goto(`#/platz/${e.platz}`)}><Tent size={16} /> Platz <CaretRight size={13} /></button>{/if}
+								</div>
 							{/if}
 						</div>
-					{/if}
+					{/each}
+
 					{#each tag.eintraege as e (e.id)}
 						{@const Sym = SYMBOL[e.typ]}
 						{@const ef = fotosVonEintrag(e.id)}
@@ -146,27 +193,23 @@
 							<button class="ein-knopf" onclick={() => getippt(e)} aria-expanded={offen === e.id}>
 								<span class="sym"><Sym size={18} weight={e.typ === 'stay' ? 'fill' : 'regular'} /></span>
 								<span class="ein-txt">
-									<span class="ein-titel">
-										{e.titel}
-										{#if e.privat}<Lock size={13} class="schloss" />{/if}
-									</span>
+									<span class="ein-titel">{e.titel}</span>
 									<span class="ein-meta zahl">
 										{#if e.typ === 'stay' && e.bewertung}<Sterne wert={e.bewertung} groesse={12} />{/if}
 										<span>{metaText(e)}</span>
-										{#if ef.length}<span class="kamera"><Camera size={13} weight="fill" /> {ef.length}</span>{/if}
 									</span>
 									{#if e.text}<span class="ein-text">{e.text}</span>{/if}
 								</span>
 							</button>
+							{#if e.typ === 'stay'}{@render notizen(e, e.datum)}{/if}
+							{#if ef.length}<div class="beim-eintrag">{@render fotoreihe(ef)}</div>{/if}
 							{#if offen === e.id}
 								<div class="aktionen" transition:slide={{ duration: 180 }}>
 									{#if e.typ === 'stay' && e.platz}
 										<button onclick={() => goto(`#/platz/${e.platz}`)}><Tent size={16} /> Platz <CaretRight size={13} /></button>
 									{/if}
-									{#if ef.length}
-										<button onclick={() => grossAb(ef, 0)}><Camera size={16} /> {ef.length} Fotos</button>
-									{/if}
 									{#if !daten.gast}
+										{#if e.typ === 'stay'}<button onclick={() => notiz(e, e.datum)}><NotePencil size={16} /> Notiz</button>{/if}
 										<button onclick={() => fotosWaehlen({ reise: r.id, eintrag: e.id })}><Plus size={16} /> Fotos</button>
 										<button onclick={() => (ui.dialog = { art: 'eintrag', id: e.id })}><PencilSimple size={16} /> Bearbeiten</button>
 										<button class="weg" onclick={() => loeschen(e)} aria-label="Löschen"><Trash size={16} /></button>
@@ -178,6 +221,14 @@
 				</li>
 			{/each}
 		</ol>
+
+		{#if weitere.length}
+			<section class="weitere">
+				<h4>Weitere Fotos</h4>
+				<p>Aufgenommen außerhalb des Reisezeitraums</p>
+				{@render fotoreihe(weitere)}
+			</section>
+		{/if}
 
 		{#if !daten.gast}<button class="knopf neu" onclick={neuerEintrag}><Plus size={18} weight="bold" /> Eintrag hinzufügen</button>{/if}
 	</article>
@@ -197,7 +248,7 @@
 	.zeit {
 		color: var(--text-2);
 	}
-	.notiz {
+	.reisenotiz {
 		margin-top: 12px;
 		line-height: 1.5;
 	}
@@ -247,7 +298,7 @@
 		background: var(--flaeche-2);
 	}
 	.streifen img,
-	.tagfotos img {
+	.fotoreihe img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
@@ -312,12 +363,11 @@
 		color: var(--schild-text);
 		font-weight: 700;
 	}
-	.tagfotos {
+	.fotoreihe {
 		display: flex;
 		gap: 4px;
-		margin: 0 0 8px 48px;
 	}
-	.tagfotos button {
+	.fotoreihe button {
 		flex: none;
 		width: 52px;
 		height: 52px;
@@ -326,6 +376,15 @@
 		border-radius: 4px;
 		overflow: hidden;
 		background: var(--flaeche-2);
+	}
+	.lose,
+	.beim-eintrag {
+		position: relative;
+		margin: 0 0 8px 48px;
+	}
+	.beim-eintrag {
+		margin-top: -4px;
+		padding-bottom: 6px;
 	}
 	.mehrfotos {
 		display: grid;
@@ -375,6 +434,13 @@
 		border: 2px solid var(--rf);
 		color: var(--rf);
 	}
+	.sym.klein {
+		width: 26px;
+		height: 26px;
+		margin: 5px 0 0 5px;
+		border-radius: 6px;
+		border-width: 1.5px;
+	}
 	.typ-stay .sym {
 		background: var(--rf);
 		color: var(--flaeche);
@@ -390,14 +456,12 @@
 		padding-top: 2px;
 	}
 	.ein-titel {
-		display: flex;
-		align-items: center;
-		gap: 6px;
 		font-weight: 620;
 		font-size: 16px;
 	}
-	.ein-titel :global(.schloss) {
-		color: var(--text-2);
+	.folge .ein-titel {
+		font-weight: 520;
+		font-size: 15px;
 	}
 	.typ-drive .ein-titel {
 		font-weight: 500;
@@ -412,22 +476,35 @@
 	.ein-meta > :global(*) {
 		margin-right: 8px;
 	}
-	.kamera {
-		display: inline-flex;
-		vertical-align: 1px;
-		align-items: center;
-		gap: 3px;
-		padding: 1px 6px;
-		border-radius: 4px;
-		background: var(--flaeche-2);
-		color: var(--text);
-		font-weight: 600;
-	}
 	.ein-text {
 		margin-top: 3px;
 		font-size: 15px;
 		line-height: 1.45;
 		white-space: pre-line;
+	}
+	.notizen {
+		position: relative;
+		margin: -4px 0 8px 48px;
+		padding: 0;
+		list-style: none;
+	}
+	.notizen li {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		margin-bottom: 6px;
+		padding: 6px 10px;
+		border-left: 3px solid color-mix(in srgb, var(--rf) 60%, transparent);
+		border-radius: 0 var(--radius) var(--radius) 0;
+		background: var(--flaeche-2);
+		font-size: 15px;
+		line-height: 1.4;
+		white-space: pre-line;
+	}
+	.notizen small {
+		color: var(--text-2);
+		font-size: 12px;
+		font-weight: 600;
 	}
 	.aktionen {
 		display: flex;
@@ -450,6 +527,24 @@
 	.aktionen .weg {
 		margin-left: auto;
 		color: var(--gefahr);
+	}
+	.weitere {
+		margin-top: 18px;
+		padding-top: 14px;
+		border-top: 1px solid var(--linie);
+	}
+	.weitere h4 {
+		margin: 0;
+		font-size: 12px;
+		font-weight: 650;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-2);
+	}
+	.weitere p {
+		margin: 2px 0 10px;
+		color: var(--text-2);
+		font-size: 13px;
 	}
 	.neu {
 		width: 100%;

@@ -6,7 +6,7 @@
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { besuche, platzBewertung } from '#lib/auswertung.ts';
-	import { AUSSTATTUNG } from '#lib/ausstattung.ts';
+	import { AUSSTATTUNG } from '#lib/merkmale.ts';
 	import { PLATZ_ART } from '#lib/db/typen.ts';
 	import { abstand, standort } from '#lib/geo.ts';
 	import { zahl } from '#lib/datum.ts';
@@ -33,7 +33,7 @@
 				? besuche(p.id).some((b) => b.preis === 0)
 				: f === 'frei'
 					? p.art === 'frei'
-					: p.ausstattung.includes(f);
+					: !!p.merkmale[f];
 
 	const liste = $derived(
 		daten.plaetze
@@ -80,7 +80,7 @@
 					<span class="p-rechts">
 						{#if wert}<Sterne {wert} groesse={12} />{/if}
 						<span class="mini">
-							{#each AUSSTATTUNG.filter((a) => p.ausstattung.includes(a.key)).slice(0, 5) as a (a.key)}<a.icon size={13} />{/each}
+							{#each AUSSTATTUNG.filter((a) => p.merkmale[a.key]).slice(0, 5) as a (a.key)}{#if a.icon}<a.icon size={13} />{/if}{/each}
 						</span>
 					</span>
 				</a>

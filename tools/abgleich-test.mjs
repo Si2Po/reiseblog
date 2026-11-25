@@ -21,14 +21,14 @@ function freigabeLesen(token) {
 	const alle = [...docs.values()].filter((d) => !d.geloescht);
 	const reisen = alle.filter((d) => d.art === 'reise' && (u.reisen === 'alle' || u.reisen.includes(d.id)));
 	const rids = new Set(reisen.map((d) => d.id));
-	const eintraege = alle.filter((d) => d.art === 'eintrag' && rids.has(d.inhalt.reise) && !d.inhalt.privat && (d.inhalt.typ === 'stay' ? u.plaetze : u.unterwegs));
+	const eintraege = alle.filter((d) => d.art === 'eintrag' && rids.has(d.inhalt.reise) && (d.inhalt.typ === 'stay' ? u.plaetze : u.unterwegs));
 	const pids = new Set(eintraege.map((d) => d.inhalt.platz).filter(Boolean));
 	const ohne = (o, felder) => Object.fromEntries(Object.entries(o).filter(([k]) => !felder.includes(k)));
 	return {
 		name: f.name,
 		umfang: u,
 		reisen: reisen.map((d) => (u.texte ? d.inhalt : ohne(d.inhalt, ['notiz']))),
-		eintraege: eintraege.map((d) => ohne(d.inhalt, [...(u.texte ? [] : ['text']), ...(u.preise ? [] : ['preis', 'waehrung'])])),
+		eintraege: eintraege.map((d) => ohne(d.inhalt, [...(u.texte ? [] : ['text', 'notizen']), ...(u.preise ? [] : ['preis', 'waehrung'])])),
 		plaetze: alle.filter((d) => d.art === 'platz' && pids.has(d.id)).map((d) => (u.texte ? d.inhalt : ohne(d.inhalt, ['notiz']))),
 		fotos: u.fotos ? alle.filter((d) => d.art === 'foto' && rids.has(d.inhalt.reise)).map((d) => d.inhalt) : []
 	};

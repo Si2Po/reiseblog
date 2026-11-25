@@ -7,6 +7,7 @@
   Gast-Modus (geteilter Link): Daten nur im Speicher, nichts wird gespeichert.
 */
 import { db } from './db.ts';
+import { aufbereiten } from './aufbereiten.ts';
 import type { Basis, Tabellen, TabellenName } from './typen.ts';
 
 type Liste<T extends TabellenName> = Tabellen[T][];
@@ -34,8 +35,8 @@ class Daten {
 		const [r, e, p, f] = await Promise.all([db.reisen.toArray(), db.eintraege.toArray(), db.plaetze.toArray(), db.fotos.toArray()]);
 		if (this.gast) return; // währenddessen wurde ein geteilter Link geöffnet
 		this.reisen = r.filter((x) => !x.geloescht);
-		this.eintraege = e.filter((x) => !x.geloescht);
-		this.plaetze = p.filter((x) => !x.geloescht);
+		this.eintraege = e.filter((x) => !x.geloescht).map((x) => aufbereiten('eintraege', x));
+		this.plaetze = p.filter((x) => !x.geloescht).map((x) => aufbereiten('plaetze', x));
 		this.fotos = f.filter((x) => !x.geloescht);
 		this.geladen = true;
 	}
@@ -44,8 +45,8 @@ class Daten {
 	gastLaden(g: GastDaten) {
 		this.gast = g.name;
 		this.reisen = g.reisen;
-		this.eintraege = g.eintraege;
-		this.plaetze = g.plaetze;
+		this.eintraege = g.eintraege.map((x) => aufbereiten('eintraege', x));
+		this.plaetze = g.plaetze.map((x) => aufbereiten('plaetze', x));
 		this.fotos = g.fotos;
 		this.geladen = true;
 	}

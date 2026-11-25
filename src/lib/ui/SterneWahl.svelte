@@ -2,10 +2,20 @@
 <script lang="ts">
 	import Star from 'phosphor-svelte/lib/Star';
 
-	let { wert = $bindable<number | undefined>() }: { wert?: number } = $props();
+	let {
+		wert = $bindable<number | undefined>(),
+		onwahl,
+		groesse = 30,
+		name = 'Bewertung'
+	}: { wert?: number; onwahl?: (w: number | undefined) => void; groesse?: number; name?: string } = $props();
+
+	function waehlen(i: number) {
+		wert = wert === i ? undefined : i;
+		onwahl?.(wert);
+	}
 </script>
 
-<div class="sterne" role="radiogroup" aria-label="Bewertung">
+<div class="sterne" role="radiogroup" aria-label={name}>
 	{#each [1, 2, 3, 4, 5] as i (i)}
 		<button
 			type="button"
@@ -13,9 +23,9 @@
 			aria-checked={wert === i}
 			aria-label="{i} {i === 1 ? 'Stern' : 'Sterne'}"
 			class:an={(wert ?? 0) >= i}
-			onclick={() => (wert = wert === i ? undefined : i)}
+			onclick={() => waehlen(i)}
 		>
-			<Star size={30} weight={(wert ?? 0) >= i ? 'fill' : 'regular'} />
+			<Star size={groesse} weight={(wert ?? 0) >= i ? 'fill' : 'regular'} />
 		</button>
 	{/each}
 </div>

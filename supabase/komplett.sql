@@ -62,7 +62,7 @@ create policy "eigene freigaben" on public.freigaben for all to authenticated
 	using (owner = auth.uid()) with check (owner = auth.uid());
 
 -- Gast-Ansicht: liefert nur das Freigegebene. Nicht Freigegebenes wird schon HIER entfernt,
--- es kommt also nie beim Gast an. Private Einträge werden nie geteilt.
+-- es kommt also nie beim Gast an.
 create or replace function public.freigabe_lesen(p_token text) returns jsonb
 language plpgsql security definer set search_path = public stable as $$
 declare
@@ -87,7 +87,6 @@ begin
 		select d.id, d.inhalt from public.dokumente d
 		where d.owner = f.owner and d.art = 'eintrag' and not d.geloescht
 			and (d.inhalt ->> 'reise') in (select id::text from reisen)
-			and coalesce((d.inhalt ->> 'privat')::boolean, false) = false
 			and (
 				((d.inhalt ->> 'typ') = 'stay' and coalesce((u ->> 'plaetze')::boolean, false))
 				or ((d.inhalt ->> 'typ') <> 'stay' and coalesce((u ->> 'unterwegs')::boolean, false))
@@ -111,8 +110,10 @@ begin
 		'reisen', coalesce((select jsonb_agg(
 			case when coalesce((u ->> 'texte')::boolean, false) then inhalt else inhalt - 'notiz' end) from reisen), '[]'::jsonb),
 		'eintraege', coalesce((select jsonb_agg(
-			(case when coalesce((u ->> 'texte')::boolean, false) then inhalt else inhalt - 'text' end)
+			(case when coalesce((u ->> 'texte')::boolean, false) then inhalt else inhalt - array['text', 'notizen'] end)
 			- (case when coalesce((u ->> 'preise')::boolean, false) then '{}'::text[] else array['preis', 'waehrung'] end)
+			#- (case when coalesce((u ->> 'preise')::boolean, false) then '{}'::text[] else '{merkmale,stromkosten}'::text[] end)
+			#- (case when coalesce((u ->> 'preise')::boolean, false) then '{}'::text[] else '{merkmale,kurtaxe}'::text[] end)
 		) from eintraege), '[]'::jsonb),
 		'plaetze', coalesce((select jsonb_agg(
 			case when coalesce((u ->> 'texte')::boolean, false) then inhalt else inhalt - 'notiz' end) from plaetze), '[]'::jsonb),

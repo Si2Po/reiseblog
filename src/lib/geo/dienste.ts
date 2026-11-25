@@ -25,7 +25,7 @@ function zuOrt(f: PhotonFeature): Vorschlag {
 	const name = p.name ?? p.city ?? p.town ?? p.village ?? p.street ?? '';
 	const ort = p.city ?? p.town ?? p.village ?? p.county;
 	const zusatz = [ort !== name ? ort : undefined, p.state, p.country].filter(Boolean).join(', ');
-	return { lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], name, land: p.country, zusatz };
+	return { lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], name, land: p.country, landCode: p.countrycode?.toUpperCase(), zusatz };
 }
 
 /** Ortssuche. Mit `nahe` werden Treffer in der Nähe bevorzugt. */
@@ -39,14 +39,14 @@ export async function ortSuchen(text: string, nahe?: { lat: number; lng: number 
 }
 
 /** Ortsname und Land zu Koordinaten (für GPS-Standorte) */
-export async function ortsname(lat: number, lng: number): Promise<{ name?: string; land?: string }> {
+export async function ortsname(lat: number, lng: number): Promise<{ name?: string; land?: string; landCode?: string }> {
 	try {
 		const r = await fetch(`${PHOTON}/reverse?lat=${lat}&lon=${lng}&lang=de&limit=1`);
 		if (!r.ok) return {};
 		const j = (await r.json()) as { features: PhotonFeature[] };
 		const p = j.features[0]?.properties;
 		if (!p) return {};
-		return { name: p.city ?? p.town ?? p.village ?? p.name ?? p.county, land: p.country };
+		return { name: p.city ?? p.town ?? p.village ?? p.name ?? p.county, land: p.country, landCode: p.countrycode?.toUpperCase() };
 	} catch {
 		return {};
 	}

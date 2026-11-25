@@ -17,6 +17,8 @@
 	import Crosshair from 'phosphor-svelte/lib/Crosshair';
 	import Karte from '#lib/map/Karte.svelte';
 	import Kartenmenue from '#lib/map/Kartenmenue.svelte';
+	import KartenSuche from '#lib/map/KartenSuche.svelte';
+	import PinLeiste from '#lib/map/PinLeiste.svelte';
 	import Sheet from '#lib/ui/Sheet.svelte';
 	import Hinweis from '#lib/ui/Hinweis.svelte';
 	import Grossansicht from '#lib/ui/Grossansicht.svelte';
@@ -26,6 +28,7 @@
 	import HierEintragen from '#lib/formulare/HierEintragen.svelte';
 	import PlatzFormular from '#lib/formulare/PlatzFormular.svelte';
 	import FreigabeFormular from '#lib/formulare/FreigabeFormular.svelte';
+	import NotizFormular from '#lib/formulare/NotizFormular.svelte';
 	import { abgleich } from '#lib/db/abgleich.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { daten } from '#lib/db/daten.svelte.ts';
@@ -118,15 +121,18 @@
 		ui.gross = { ids, i: Math.max(0, ids.indexOf(id)) };
 	}
 
-	// Fadenkreuz für „Ort auf der Karte wählen“: Mitte des sichtbaren Kartenbereichs
-	const kreuz = $derived(
-		ui.breit
-			? { x: 400 + (innerWidth - 400) / 2, y: innerHeight / 2 }
-			: { x: innerWidth / 2, y: (innerHeight - ui.sichtbar) / 2 + 20 }
-	);
+	// Fadenkreuz für „Ort auf der Karte wählen“: Mitte zwischen Suchfeld oben und Leiste unten
+	let kreuz = $state({ x: 0, y: 0 });
+	$effect(() => {
+		if (ui.ortWahl) kreuz = ui.kreuz();
+	});
 	function ortUebernehmen() {
 		const o = ui.karte?.ortBei(kreuz.x, kreuz.y) ?? null;
 		ui.ortWahl?.fertig(o);
+	}
+	function langGedrueckt(o: { lat: number; lng: number }) {
+		if (ui.ortWahl || ui.dialog || daten.gast) return;
+		ui.pin = o;
 	}
 
 	const dialogOffen = $derived(!!ui.dialog);
@@ -158,23 +164,31 @@
 			if (ui.auswahl) ui.zeigeReise(ui.auswahl);
 			else ui.zeigeAlles();
 		}}
+		onlang={langGedrueckt}
+		onleer={() => (ui.pin = null)}
+		pin={ui.pin}
+		gedimmt={!!ui.ortWahl}
 	/>
 
 	{#if !ui.ortWahl && (ui.breit || ui.hoehe !== 'voll')}
 		<div transition:fade={{ duration: 150 }}><Kartenmenue /></div>
 	{/if}
 
+	<!-- Beim „Ort wählen“ verschwindet alles außer Karte, Suche und Fadenkreuz -->
 	{#if ui.breit}
-		<aside class="leiste">
+		<aside class="leiste" class:weg={!!ui.ortWahl}>
 			<div class="leiste-inhalt">{@render children()}</div>
 		</aside>
 	{:else}
-		<Sheet bind:hoehe={ui.hoehe} bind:sichtbar={ui.sichtbar} klein={118}>
+		<Sheet bind:hoehe={ui.hoehe} bind:sichtbar={ui.sichtbar} klein={118} versteckt={!!ui.ortWahl}>
 			{@render children()}
 		</Sheet>
 	{/if}
 
 	{#if ui.ortWahl}
+		<div class="wahlsuche" transition:fade={{ duration: 150 }}>
+			<KartenSuche onwahl={(v) => ui.zeigeOrt(v, 16)} />
+		</div>
 		<div class="kreuz" style:left="{kreuz.x}px" style:top="{kreuz.y}px" transition:fade={{ duration: 150 }}>
 			<Crosshair size={44} weight="bold" />
 		</div>
@@ -182,10 +196,10 @@
 			<p>Karte verschieben, bis das Kreuz auf dem Ort liegt.</p>
 			<div class="wahlknoepfe">
 				<button class="knopf zweit" onclick={() => ui.ortWahl?.fertig(null)}>Abbrechen</button>
-				<button class="knopf" onclick={ortUebernehmen}>Ort übernehmen</button>
+				<button class="knopf" onclick={ortUebernehmen}>Übernehmen</button>
 			</div>
 		</div>
-	{:else if !dialogOffen && !daten.gast && (ui.breit || ui.hoehe !== 'voll')}
+	{:else if !dialogOffen && !daten.gast && !ui.pin && (ui.breit || ui.hoehe !== 'voll')}
 		<button
 			class="hier"
 			class:breit={ui.breit}
@@ -208,8 +222,11 @@
 		<PlatzFormular id={ui.dialog.id} />
 	{:else if ui.dialog?.art === 'freigabe'}
 		<FreigabeFormular token={ui.dialog.token} />
+	{:else if ui.dialog?.art === 'notiz'}
+		<NotizFormular eintrag={ui.dialog.eintrag} datum={ui.dialog.datum} />
 	{/if}
 
+	<PinLeiste />
 	<Hinweis />
 	<Grossansicht />
 	<NeueVersion />
@@ -247,6 +264,24 @@
 		width: var(--leiste-breite);
 		background: var(--flaeche);
 		box-shadow: var(--schatten-leiste);
+	}
+	.leiste.weg {
+		transform: translateX(-100%);
+		visibility: hidden;
+	}
+	.leiste {
+		transition:
+			transform 0.3s var(--sanft),
+			visibility 0.3s;
+	}
+	.wahlsuche {
+		position: absolute;
+		z-index: 30;
+		top: calc(env(safe-area-inset-top) + 18px);
+		left: 12px;
+		right: 12px;
+		max-width: 560px;
+		margin: 0 auto;
 	}
 	.leiste-inhalt {
 		height: 100%;

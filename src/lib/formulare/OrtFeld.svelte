@@ -101,7 +101,7 @@
 				{#if sucht && !vorschlaege.length}<li class="lade">Suche …</li>{/if}
 				{#each vorschlaege as v, i (i)}
 					<li>
-						<button type="button" onclick={() => setzen({ lat: v.lat, lng: v.lng, name: v.name, land: v.land })}>
+						<button type="button" onclick={() => setzen({ lat: v.lat, lng: v.lng, name: v.name, land: v.land, landCode: v.landCode })}>
 							<b>{v.name}</b>
 							<span>{v.zusatz}</span>
 						</button>

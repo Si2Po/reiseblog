@@ -47,8 +47,8 @@
 	const PUNKTE: { k: keyof typeof u; name: string; info: string }[] = [
 		{ k: 'plaetze', name: 'Übernachtungen und Plätze', info: 'mit Bewertung und Ausstattung' },
 		{ k: 'unterwegs', name: 'Fahrten, Ausflüge, Events', info: 'die Route auf der Karte' },
-		{ k: 'fotos', name: 'Fotos', info: 'ohne Fotos privater Einträge' },
-		{ k: 'texte', name: 'Texte und Notizen', info: '„Wie war’s?“, Notizen zu Reisen und Plätzen' },
+		{ k: 'fotos', name: 'Fotos', info: 'Fotos der freigegebenen Reisen' },
+		{ k: 'texte', name: 'Texte und Notizen', info: 'Notizen von unterwegs, zu Reisen und Plätzen' },
 		{ k: 'preise', name: 'Preise', info: 'was eine Nacht gekostet hat' }
 	];
 
@@ -135,7 +135,6 @@
 						<input type="checkbox" bind:checked={u[x.k]} />
 					</label>
 				{/each}
-				<p class="hilfe">Als privat markierte Einträge werden nie geteilt.</p>
 			</div>
 
 			<div class="feld">

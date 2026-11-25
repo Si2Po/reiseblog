@@ -12,14 +12,19 @@
 	import { thema } from '#lib/thema.svelte.ts';
 	import { reiseFarbe } from '#lib/farben.ts';
 	import { besuche, platzBewertung } from '#lib/auswertung.ts';
-	import { kurz, jahr, preisText } from '#lib/datum.ts';
-	import { AUSSTATTUNG } from '#lib/ausstattung.ts';
+	import { kurz, jahr, preisText, notizZeit } from '#lib/datum.ts';
+	import { AUSSTATTUNG, merkmaleFuer, wertText } from '#lib/merkmale.ts';
+	import { linkInfo } from '#lib/links.ts';
 	import { PLATZ_ART } from '#lib/db/typen.ts';
 	import { koordText } from '#lib/geo.ts';
 
 	const p = $derived(daten.platz(page.params.id));
 	const bs = $derived(p ? besuche(p.id) : []);
 	const wert = $derived(p ? platzBewertung(p.id) : 0);
+	// Ausstattung: die acht Klassiker immer zeigen (auch durchgestrichen), Extras nur wenn vorhanden
+	const ausstattung = $derived(AUSSTATTUNG.filter((a, i) => i < 8 || p?.merkmale[a.key]));
+	const weitere = $derived(p ? merkmaleFuer('platz').filter((m) => m.gruppe !== 'ausstattung' && p.merkmale[m.key] !== undefined) : []);
+	const alleNotizen = $derived(bs.flatMap((b) => b.notizen ?? []).sort((a, b) => b.zeit.localeCompare(a.zeit)));
 
 	$effect(() => {
 		if (!p) return;
@@ -51,22 +56,38 @@
 			<a class="knopf" href="https://maps.apple.com/?daddr={p.ort.lat},{p.ort.lng}" target="_blank" rel="noopener"
 				><NavigationArrow size={18} weight="fill" /> Route dorthin</a
 			>
-			{#if p.url}
-				<a class="knopf zweit" href={p.url} target="_blank" rel="noopener"><ArrowSquareOut size={18} /> Webseite</a>
-			{/if}
+			{#each p.links as l (l)}
+				{@const info = linkInfo(l)}
+				<a class="knopf zweit" href={info.url} target="_blank" rel="noopener"><ArrowSquareOut size={18} /> {info.name}</a>
+			{/each}
 		</div>
 
 		<h4>Ausstattung</h4>
 		<ul class="ausst">
-			{#each AUSSTATTUNG as a (a.key)}
-				<li class:da={p.ausstattung.includes(a.key)}><a.icon size={20} /> {a.name}</li>
+			{#each ausstattung as a (a.key)}
+				<li class:da={!!p.merkmale[a.key]}>{#if a.icon}<a.icon size={20} />{/if} {a.name}</li>
 			{/each}
 		</ul>
-		{#if p.untergrund}<p class="klein">Untergrund: {p.untergrund}</p>{/if}
+		{#if weitere.length}
+			<dl class="merkmale">
+				{#each weitere as m (m.key)}
+					<div><dt>{m.name}</dt><dd>{wertText(m, p.merkmale[m.key])}</dd></div>
+				{/each}
+			</dl>
+		{/if}
 
 		{#if p.notiz}
-			<h4>Notiz</h4>
+			<h4>Notiz zum Platz</h4>
 			<p class="notiz">{p.notiz}</p>
+		{/if}
+
+		{#if alleNotizen.length}
+			<h4>Notizen von unterwegs</h4>
+			<ul class="unterwegs">
+				{#each alleNotizen as n (n.id)}
+					<li><small>{notizZeit(n.zeit)}</small>{n.text}</li>
+				{/each}
+			</ul>
 		{/if}
 
 		<h4>{bs.length === 1 ? 'Ein Besuch' : `${bs.length} Besuche`}</h4>
@@ -139,6 +160,7 @@
 	}
 	.aktionen {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 10px;
 		margin-top: 16px;
 	}
@@ -171,10 +193,44 @@
 		color: var(--text);
 		background: var(--flaeche-2);
 	}
-	.klein {
-		margin-top: 10px;
+	.merkmale {
+		display: grid;
+		gap: 6px;
+		margin: 12px 0 0;
+	}
+	.merkmale div {
+		display: flex;
+		justify-content: space-between;
+		padding: 8px 0;
+		border-bottom: 1px solid var(--linie);
+	}
+	.merkmale dt {
 		color: var(--text-2);
-		font-size: 14px;
+	}
+	.merkmale dd {
+		margin: 0;
+		font-weight: 600;
+	}
+	.unterwegs {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.unterwegs li {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		margin-bottom: 6px;
+		padding: 8px 12px;
+		border-radius: var(--radius);
+		background: var(--flaeche-2);
+		line-height: 1.4;
+		white-space: pre-line;
+	}
+	.unterwegs small {
+		color: var(--text-2);
+		font-size: 12px;
+		font-weight: 600;
 	}
 	.notiz {
 		line-height: 1.5;

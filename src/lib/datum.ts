@@ -1,4 +1,4 @@
-import { format, parseISO, differenceInCalendarDays } from 'date-fns';
+import { format, parseISO, differenceInCalendarDays, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 const d = (s: string) => parseISO(s);
@@ -41,3 +41,9 @@ export function preisText(preis: number | undefined, waehrung = 'EUR'): string {
 	const symbol: Record<string, string> = { EUR: '€', CHF: 'CHF', NOK: 'NOK', SEK: 'SEK', DKK: 'DKK', GBP: '£', HRK: 'kn', CZK: 'Kč', PLN: 'zł' };
 	return `${preis.toLocaleString('de-DE', { maximumFractionDigits: 2 })} ${symbol[waehrung] ?? waehrung}`;
 }
+
+/** Notiz-Zeitpunkt „Sa, 12. Juli · 20:30“ */
+export const notizZeit = (z: string) => format(parseISO(z), "EEEEEE, d. MMMM · HH:mm", { locale: de });
+
+/** Datum + n Tage (JJJJ-MM-TT) */
+export const plusTage = (s: string, n: number) => format(addDays(d(s), n), 'yyyy-MM-dd');

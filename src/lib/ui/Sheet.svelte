@@ -16,13 +16,16 @@
 		sichtbar = $bindable(0),
 		klein = 132,
 		kopf,
-		children
+		children,
+		versteckt = false
 	}: {
 		hoehe?: Hoehe;
 		sichtbar?: number;
 		klein?: number;
 		kopf?: Snippet;
 		children: Snippet;
+		/** ganz nach unten weg (z. B. beim „Ort wählen“), Inhalt bleibt erhalten */
+		versteckt?: boolean;
 	} = $props();
 
 	let fensterHoehe = $state(800);
@@ -35,7 +38,7 @@
 		halb: Math.round(fensterHoehe * 0.52),
 		voll: fensterHoehe - obenFrei - 10
 	});
-	const ziel = $derived(ziehen ?? hoehen[hoehe]);
+	const ziel = $derived(versteckt ? -40 : (ziehen ?? hoehen[hoehe]));
 
 	$effect(() => {
 		sichtbar = ziel;

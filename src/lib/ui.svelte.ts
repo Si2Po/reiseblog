@@ -19,7 +19,8 @@ export type Dialog =
 	| { art: 'eintrag'; id?: string; vorlage?: Partial<Eintrag> }
 	| { art: 'hier' }
 	| { art: 'platz'; id: string }
-	| { art: 'freigabe'; token?: string };
+	| { art: 'freigabe'; token?: string }
+	| { art: 'notiz'; eintrag: string; datum: string };
 
 interface Hinweis {
 	nr: number;
@@ -54,10 +55,23 @@ class Ui {
 	/** Teilen-Links neu laden (nach Änderung im Dialog) */
 	freigabenStand = $state(0);
 
+	/** Stecknadel nach langem Drücken auf die Karte */
+	pin = $state<{ lat: number; lng: number; name?: string; land?: string; landCode?: string } | null>(null);
+
 	karte: KartenApi | null = null;
 
 	// --- Karte ---
+	/** Ränder im Wahl-Modus: oben Suchfeld, unten Leiste mit „Ort übernehmen“ */
+	static WAHL = { oben: 86, unten: 150 };
+
+	/** Punkt auf dem Bildschirm, an dem im Wahl-Modus das Fadenkreuz sitzt (= Kartenmitte) */
+	kreuz(): { x: number; y: number } {
+		const { oben, unten } = Ui.WAHL;
+		return { x: innerWidth / 2, y: oben + (innerHeight - oben - unten) / 2 };
+	}
+
 	rand(): Rand {
+		if (this.ortWahl) return { top: Ui.WAHL.oben, bottom: Ui.WAHL.unten, left: 0, right: 0 };
 		if (this.breit) return { top: 70, bottom: 70, left: 400 + 50, right: 70 };
 		const unten = this.hoehe === 'klein' ? 150 : Math.round(innerHeight * 0.52);
 		return { top: 90, bottom: unten + 30, left: 40, right: 40 };

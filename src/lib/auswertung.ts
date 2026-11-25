@@ -1,5 +1,7 @@
 // Abgeleitete Werte aus den Daten (reine Funktionen, keine Seiteneffekte).
-import type { Eintrag, Foto, LngLat, Platz, Reise } from '#lib/db/typen.ts';
+import type { Eintrag, Foto, LngLat, Notiz, Platz, Reise } from '#lib/db/typen.ts';
+import { format } from 'date-fns';
+import { plusTage } from '#lib/datum.ts';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { abstand } from '#lib/geo.ts';
 
@@ -31,17 +33,83 @@ export function laufendeReise(heute = new Date().toISOString().slice(0, 10)): Re
 	return reisenSortiert().find((r) => r.start <= heute && (!r.ende || r.ende >= heute));
 }
 
-/** Tage einer Reise mit ihren Einträgen und Fotos */
-export function tage(reise: string): { datum: string; eintraege: Eintrag[]; fotos: Foto[] }[] {
-	const map = new Map<string, { eintraege: Eintrag[]; fotos: Foto[] }>();
+/** Letzter Tag, der noch zur Reise zählt (offene Reisen: bis heute bzw. bis zum letzten Eintrag) */
+export function reiseBis(r: Reise): string {
+	if (r.ende) return r.ende;
+	const heute = format(new Date(), 'yyyy-MM-dd');
+	const letzter = eintraegeVon(r.id).reduce((m, e) => {
+		const bis = e.typ === 'stay' ? plusTage(e.datum, e.naechte ?? 1) : e.datum;
+		return bis > m ? bis : m;
+	}, r.start);
+	return letzter > heute ? letzter : heute;
+}
+
+/** Folgenacht einer mehrtägigen Übernachtung (Nacht 2, 3 …) */
+export interface Nacht {
+	eintrag: Eintrag;
+	nr: number;
+	von: number;
+}
+export interface Tag {
+	datum: string;
+	eintraege: Eintrag[];
+	naechte: Nacht[];
+	/** Fotos dieses Tages, die keinem Eintrag zugeordnet sind */
+	fotos: Foto[];
+}
+
+/** Tage einer Reise: Einträge, Folgenächte, lose Fotos */
+export function tage(reise: string): Tag[] {
+	const r = daten.reise(reise);
+	const map = new Map<string, Tag>();
 	const tag = (d: string) => {
 		let t = map.get(d);
-		if (!t) map.set(d, (t = { eintraege: [], fotos: [] }));
+		if (!t) map.set(d, (t = { datum: d, eintraege: [], naechte: [], fotos: [] }));
 		return t;
 	};
-	for (const e of eintraegeVon(reise)) tag(e.datum).eintraege.push(e);
-	for (const f of fotosVon(reise)) tag(f.aufgenommen.slice(0, 10)).fotos.push(f);
-	return [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([datum, t]) => ({ datum, ...t }));
+	for (const e of eintraegeVon(reise)) {
+		tag(e.datum).eintraege.push(e);
+		const n = e.typ === 'stay' ? (e.naechte ?? 1) : 1;
+		for (let i = 2; i <= n; i++) tag(plusTage(e.datum, i - 1)).naechte.push({ eintrag: e, nr: i, von: n });
+	}
+	const bis = r ? reiseBis(r) : '9999';
+	for (const f of fotosVon(reise)) {
+		const d = f.aufgenommen.slice(0, 10);
+		if (f.eintrag && daten.eintrag(f.eintrag)) continue; // erscheint direkt beim Eintrag
+		if (r && (d < r.start || d > bis)) continue; // erscheint unter „Weitere Fotos“
+		tag(d).fotos.push(f);
+	}
+	return [...map.values()].sort((a, b) => a.datum.localeCompare(b.datum));
+}
+
+/** Fotos einer Reise, deren Datum außerhalb der Reise liegt und die keinem Eintrag gehören */
+export function weitereFotos(reise: string): Foto[] {
+	const r = daten.reise(reise);
+	if (!r) return [];
+	const bis = reiseBis(r);
+	return fotosVon(reise).filter((f) => {
+		const d = f.aufgenommen.slice(0, 10);
+		return !(f.eintrag && daten.eintrag(f.eintrag)) && (d < r.start || d > bis);
+	});
+}
+
+/**
+ * Notizen einer Übernachtung, die zu einer bestimmten Nacht gehören.
+ * Notizen vor 12 Uhr zählen zur Nacht davor („Nacht 2: morgens Nachbarn laut“).
+ * Notizen außerhalb des Zeitraums landen bei der ersten bzw. letzten Nacht.
+ */
+export function nachtNotizen(e: Eintrag, nachtDatum: string): Notiz[] {
+	const n = e.naechte ?? 1;
+	const letzte = plusTage(e.datum, n - 1);
+	return (e.notizen ?? [])
+		.filter((x) => {
+			let d = x.zeit.slice(0, 10);
+			if (x.zeit.slice(11, 13) < '12') d = plusTage(d, -1);
+			if (d < e.datum) d = e.datum;
+			if (d > letzte) d = letzte;
+			return d === nachtDatum;
+		})
+		.sort((a, b) => a.zeit.localeCompare(b.zeit));
 }
 
 export const besuche = (platz: string) => daten.eintraege.filter((e) => e.platz === platz).sort(eintragFolge);

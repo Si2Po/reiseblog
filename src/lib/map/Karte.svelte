@@ -42,7 +42,11 @@
 		onpunkt,
 		onreise,
 		onfoto,
-		onbereit
+		onbereit,
+		onlang,
+		onleer,
+		pin = null,
+		gedimmt = false
 	}: {
 		farben: KartenFarben;
 		halo: string;
@@ -57,6 +61,14 @@
 		onreise?: (id: string) => void;
 		onfoto?: (id: string) => void;
 		onbereit?: () => void;
+		/** langes Drücken (iPhone) bzw. Rechtsklick (PC) auf einen beliebigen Punkt */
+		onlang?: (o: { lat: number; lng: number }) => void;
+		/** Tipp auf eine freie Stelle der Karte */
+		onleer?: () => void;
+		/** Stecknadel (nach langem Drücken) */
+		pin?: { lat: number; lng: number } | null;
+		/** Routen und Punkte blass darstellen (z. B. beim „Ort wählen“) */
+		gedimmt?: boolean;
 	} = $props();
 
 	let box: HTMLDivElement;
@@ -64,6 +76,30 @@
 	let bereit = $state(false);
 	let fotoMarker: maplibregl.Marker[] = [];
 	let ichMarker: maplibregl.Marker | null = null;
+	let pinMarker: maplibregl.Marker | null = null;
+
+	// --- langes Drücken auf dem iPhone (MapLibre meldet das nicht von selbst) ---
+	let druck: { timer: ReturnType<typeof setTimeout>; x: number; y: number } | null = null;
+	function druckStart(e: maplibregl.MapTouchEvent) {
+		druckEnde();
+		if (e.originalEvent.touches.length !== 1) return;
+		const { lng, lat } = e.lngLat;
+		druck = {
+			x: e.point.x,
+			y: e.point.y,
+			timer: setTimeout(() => {
+				druck = null;
+				onlang?.({ lat, lng });
+			}, 550)
+		};
+	}
+	function druckBewegt(e: maplibregl.MapTouchEvent) {
+		if (druck && Math.hypot(e.point.x - druck.x, e.point.y - druck.y) > 10) druckEnde();
+	}
+	function druckEnde() {
+		if (druck) clearTimeout(druck.timer);
+		druck = null;
+	}
 
 	// --- von außen aufrufbar ---
 	export function zeigeBereich(coords: [number, number][], rand: Rand, maxZoom = 11) {
@@ -144,7 +180,7 @@
 
 	function hervorheben() {
 		if (!map || !bereit) return;
-		const deck: maplibregl.ExpressionSpecification | number = auswahl ? ['case', ['==', ['get', 'reise'], auswahl], 1, 0.22] : 1;
+		const deck: maplibregl.ExpressionSpecification | number = gedimmt ? 0.15 : auswahl ? ['case', ['==', ['get', 'reise'], auswahl], 1, 0.22] : 1;
 		map.setPaintProperty('linien', 'line-opacity', deck);
 		map.setPaintProperty('linien-gerade', 'line-opacity', deck);
 		map.setPaintProperty('linien-halo', 'line-opacity', deck);
@@ -231,6 +267,20 @@
 				map.on('mouseenter', id, () => map && (map.getCanvas().style.cursor = 'pointer'));
 				map.on('mouseleave', id, () => map && (map.getCanvas().style.cursor = ''));
 			}
+			// Langes Drücken (iPhone) bzw. Rechtsklick (PC): beliebigen Ort wählen
+			map.on('touchstart', druckStart);
+			map.on('touchmove', druckBewegt);
+			for (const ev of ['touchend', 'touchcancel', 'dragstart', 'zoomstart', 'pitchstart'] as const) map.on(ev, druckEnde);
+			map.on('contextmenu', (e) => {
+				e.preventDefault();
+				onlang?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+			});
+			// Tipp ins Leere (nicht auf Route/Punkt)
+			map.on('click', (e) => {
+				if (!map) return;
+				const da = map.queryRenderedFeatures(e.point, { layers: ['punkte', 'linien', 'linien-gerade'].filter((l) => map!.getLayer(l)) });
+				if (!da.length) onleer?.();
+			});
 		});
 		return () => {
 			weg = true;
@@ -259,7 +309,22 @@
 	});
 	$effect(() => {
 		void auswahl;
+		void gedimmt;
 		hervorheben();
+	});
+	$effect(() => {
+		if (!map) return;
+		if (!pin) {
+			pinMarker?.remove();
+			pinMarker = null;
+			return;
+		}
+		if (!pinMarker) {
+			// äußeres Element positioniert MapLibre, das innere wird animiert
+			const el = document.createElement('div');
+			el.innerHTML = '<div class="pin"><svg viewBox="0 0 40 52" width="40" height="52"><path d="M20 2C10 2 2 10 2 20c0 13 18 30 18 30s18-17 18-30C38 10 30 2 20 2z"/><circle cx="20" cy="20" r="7"/></svg></div>';
+			pinMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([pin.lng, pin.lat]).addTo(map);
+		} else pinMarker.setLngLat([pin.lng, pin.lat]);
 	});
 	$effect(() => {
 		void fotos;
@@ -288,6 +353,28 @@
 		position: absolute;
 		inset: 0;
 		background: var(--grund);
+		/* kein iOS-Menü/Textauswahl beim langen Drücken */
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		user-select: none;
+	}
+	:global(.pin) {
+		filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+		animation: pin-rein 0.35s var(--sanft);
+	}
+	:global(.pin svg path) {
+		fill: var(--signal);
+		stroke: #111;
+		stroke-width: 2;
+	}
+	:global(.pin svg circle) {
+		fill: #111;
+	}
+	@keyframes pin-rein {
+		from {
+			transform: translateY(-24px);
+			opacity: 0;
+		}
 	}
 	:global(.fpin) {
 		position: relative;

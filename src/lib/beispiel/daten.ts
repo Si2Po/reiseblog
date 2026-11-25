@@ -19,8 +19,12 @@ const reisen: Reise[] = [
 	{ ...basis('do23'), titel: 'Dolomiten im Herbst', start: '2023-09-14', ende: '2023-09-24', farbe: 2, titelbild: 'bsp-f-do-1' }
 ];
 
+const tagPlus = (d: string, n: number) => new Date(Date.parse(d + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+const LAND: Record<string, string> = { Norwegen: 'NO', Frankreich: 'FR', Italien: 'IT' };
+
 function platz(id: string, name: string, art: PlatzArt, lat: number, lng: number, ort: string, land: string, ausstattung: string[], notiz: string, wiederkommen: boolean): Platz {
-	return { ...basis(id), name, art, ort: { lat, lng, name: ort, land }, ausstattung, notiz, wiederkommen };
+	const merkmale = Object.fromEntries(ausstattung.map((k) => [k, true]));
+	return { ...basis(id), name, art, ort: { lat, lng, name: ort, land, landCode: LAND[land] }, merkmale, links: [], notiz, wiederkommen };
 }
 
 const plaetze: Platz[] = [
@@ -40,11 +44,15 @@ const plaetze: Platz[] = [
 	platz('p14', 'Camping Bavaria', 'camping', 45.885, 10.842, 'Riva del Garda', 'Italien', ['strom', 'wasser', 'dusche', 'wc', 'wlan'], 'Direkt am Wasser, abends Pizza um die Ecke.', true)
 ];
 
+
 const pl = (id: string) => plaetze.find((p) => p.id === 'bsp-' + id)!;
 let n = 0;
-function stay(reise: string, platzId: string, datum: string, naechte: number, bewertung: number, preis: number, waehrung: string, text?: string): Eintrag {
+function stay(reise: string, platzId: string, datum: string, naechte: number, bewertung: number, preis: number, waehrung: string, text?: string, spaeter?: [number, string]): Eintrag {
 	const p = pl(platzId);
-	return { ...basis('e' + ++n), reise: 'bsp-' + reise, typ: 'stay', titel: p.name, datum, ort: p.ort, platz: p.id, naechte, bewertung, preis, waehrung, text };
+	const notizen = text ? [{ id: 'bsp-n' + n, zeit: `${datum}T20:30`, text }] : [];
+	// optional: Notiz in einer späteren Nacht ([Nacht-Nr., Text])
+	if (spaeter) notizen.push({ id: 'bsp-m' + n, zeit: `${tagPlus(datum, spaeter[0] - 1)}T22:10`, text: spaeter[1] });
+	return { ...basis('e' + ++n), reise: 'bsp-' + reise, typ: 'stay', titel: p.name, datum, ort: p.ort, platz: p.id, naechte, bewertung, preis, waehrung, notizen: notizen.length ? notizen : undefined };
 }
 function drive(reise: string, i: number, datum: string, von: string, nach: string): Eintrag {
 	const r = R[reise === 'no25' ? 'norwegen' : reise === 'br24' ? 'bretagne' : 'dolomiten'][i];
@@ -78,7 +86,7 @@ const eintraege: Eintrag[] = [
 	anderes('no25', 'outing', 'Trolltunga', '2025-07-10', 60.124, 6.74, 'Skjeggedal', '27 km, 10 Stunden. Beine am Ende.'),
 	anderes('no25', 'event', 'Cider-Probe in Hardanger', '2025-07-11', 60.32, 6.66, 'Lofthus'),
 	drive('no25', 2, '2025-07-12', 'Odda', 'Geiranger'),
-	stay('no25', 'p4', '2025-07-12', 4, 5, 410, 'NOK', 'Bester Platz der Reise.'),
+	stay('no25', 'p4', '2025-07-12', 4, 5, 410, 'NOK', 'Bester Platz der Reise.', [3, 'Nacht 3: Regen. Um 6 Uhr hupt das Kreuzfahrtschiff – trotzdem schön.']),
 	anderes('no25', 'outing', 'Dalsnibba bei Sonnenaufgang', '2025-07-14', 62.047, 7.272, 'Dalsnibba'),
 	drive('no25', 3, '2025-07-16', 'Geiranger', 'Ålesund'),
 	stay('no25', 'p5', '2025-07-16', 2, 2, 300, 'NOK'),

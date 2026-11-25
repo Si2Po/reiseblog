@@ -1,9 +1,17 @@
 /*
-  Datenmodell. Jede Tabelle hat dieselben Grundfelder (Basis):
+  Datenmodell – bewusst nur vier Sorten von Objekten:
+    Reise · Eintrag (Art: Übernachtung, Fahrt, Ausflug, Event) · Platz · Foto
+  Zusätzliche, auswertbare Eigenschaften stehen NICHT als eigene Felder im Code, sondern als
+  `merkmale` (Schlüssel → Wert). Welche Merkmale es gibt, beschreibt der Katalog in src/lib/merkmale.ts.
+  Neues Merkmal = eine Zeile im Katalog, alte Daten bleiben gültig.
+
+  Werte immer auswertbar speichern: Zahlen als Zahlen, Ja/Nein als boolean, Auswahl als fester Schlüssel,
+  Länder zusätzlich als ISO-Code (landCode), Freitext nur in Notizen.
+
+  Jede Tabelle hat dieselben Grundfelder (Basis):
   - id: vom Gerät erzeugt (crypto.randomUUID), bleibt für immer gleich
   - geaendert: Zeitpunkt der letzten Änderung auf diesem Gerät (ms)
   - geloescht: weiches Löschen (bleibt für Abgleich und Rückgängig erhalten)
-  Der Abgleich mit Supabase kommt später; geänderte Datensätze stehen bis dahin in der Outbox.
 */
 
 export interface Basis {
@@ -14,6 +22,10 @@ export interface Basis {
 
 export type LngLat = [number, number];
 
+/** Wert eines Merkmals */
+export type Wert = boolean | number | string;
+export type Merkmale = Record<string, Wert>;
+
 export interface Ort {
 	lat: number;
 	lng: number;
@@ -21,6 +33,16 @@ export interface Ort {
 	name?: string;
 	/** Land, z. B. „Norwegen“ */
 	land?: string;
+	/** Ländercode ISO 3166-1, z. B. „NO“ (für Auswertungen) */
+	landCode?: string;
+}
+
+/** Notiz mit Zeitpunkt (z. B. „Nacht 2: Nachbarn laut“) */
+export interface Notiz {
+	id: string;
+	/** ISO-Zeitpunkt JJJJ-MM-TTTHH:MM */
+	zeit: string;
+	text: string;
 }
 
 export interface Reise extends Basis {
@@ -46,13 +68,17 @@ export interface Eintrag extends Basis {
 	/** Uhrzeit HH:MM:SS (nur für die Reihenfolge am Tag, wird nicht angezeigt) */
 	zeit?: string;
 	ort?: Ort;
+	/** Freitext (Ausflug, Event, Fahrt) */
 	text?: string;
-	/** wird nie geteilt */
-	privat?: boolean;
+	/** Notizen mit Zeitpunkt (Übernachtung: pro Nacht) */
+	notizen?: Notiz[];
+	/** weitere Eigenschaften laut Katalog */
+	merkmale?: Merkmale;
 
 	// Übernachtung
 	platz?: string;
 	naechte?: number;
+	/** Preis pro Nacht */
 	preis?: number;
 	waehrung?: string;
 	bewertung?: number;
@@ -74,9 +100,10 @@ export interface Platz extends Basis {
 	name: string;
 	art: PlatzArt;
 	ort: Ort;
-	ausstattung: string[];
-	untergrund?: string;
-	url?: string;
+	/** Ausstattung, Umgebung … laut Katalog */
+	merkmale: Merkmale;
+	/** Links zum Wiederfinden (Park4Night, Webseite, …) */
+	links: string[];
 	notiz?: string;
 	wiederkommen?: boolean;
 }
