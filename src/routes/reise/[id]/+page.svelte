@@ -242,6 +242,7 @@
 
 		<ol class="zeitleiste">
 			{#each liste as tag (tag.datum)}
+				{@const ersteNacht = tag.eintraege.findIndex((e) => e.typ === 'stay')}
 				<li class="tag">
 					<div class="tagkopf">
 						<span class="tagnr zahl">Tag {reiseTag(r.start, tag.datum)}</span>
@@ -256,29 +257,32 @@
 					</div>
 					{#if tag.fotos.length}<div class="lose">{@render fotoreihe(tag.fotos)}</div>{/if}
 
-					<!-- Folgenächte mehrtägiger Übernachtungen -->
-					{#each tag.naechte as nacht (nacht.eintrag.id + nacht.nr)}
-						{@const e = nacht.eintrag}
-						{@const schluessel = e.id + ':' + nacht.nr}
-						<div class="ein folge" class:markiert={offen === schluessel}>
-							<button class="ein-knopf" onclick={() => getippt(e, schluessel)} aria-expanded={offen === schluessel}>
-								<span class="sym klein"><Moon size={15} weight="fill" /></span>
-								<span class="ein-txt">
-									<span class="ein-titel">{e.titel}</span>
-									<span class="ein-meta">Nacht {nacht.nr} von {nacht.von}</span>
-								</span>
-							</button>
-							{@render notizen(e, tag.datum)}
-							{#if offen === schluessel}
-								<div class="aktionen" transition:slide={{ duration: 180 }}>
-									<button onclick={() => notiz(e, tag.datum)}><NotePencil size={16} /> Notiz</button>
-									{#if e.platz}<button onclick={() => goto(`#/platz/${e.platz}`)}><Tent size={16} /> Platz <CaretRight size={13} /></button>{/if}
-								</div>
-							{/if}
-						</div>
-					{/each}
+					<!-- Folgenächte mehrtägiger Übernachtungen: nach Fahrten und Ausflügen des Tages, vor einer neuen Übernachtung -->
+					{#snippet folgeNaechte()}
+						{#each tag.naechte as nacht (nacht.eintrag.id + nacht.nr)}
+							{@const e = nacht.eintrag}
+							{@const schluessel = e.id + ':' + nacht.nr}
+							<div class="ein folge" class:markiert={offen === schluessel}>
+								<button class="ein-knopf" onclick={() => getippt(e, schluessel)} aria-expanded={offen === schluessel}>
+									<span class="sym klein"><Moon size={15} weight="fill" /></span>
+									<span class="ein-txt">
+										<span class="ein-titel">{e.titel}</span>
+										<span class="ein-meta">Nacht {nacht.nr} von {nacht.von}</span>
+									</span>
+								</button>
+								{@render notizen(e, tag.datum)}
+								{#if offen === schluessel}
+									<div class="aktionen" transition:slide={{ duration: 180 }}>
+										<button onclick={() => notiz(e, tag.datum)}><NotePencil size={16} /> Notiz</button>
+										{#if e.platz}<button onclick={() => goto(`#/platz/${e.platz}`)}><Tent size={16} /> Platz <CaretRight size={13} /></button>{/if}
+									</div>
+								{/if}
+							</div>
+						{/each}
+					{/snippet}
 
-					{#each tag.eintraege as e (e.id)}
+					{#each tag.eintraege as e, i (e.id)}
+						{#if i === ersteNacht}{@render folgeNaechte()}{/if}
 						{@const Sym = SYMBOL[e.typ]}
 						{@const ef = fotosVonEintrag(e.id)}
 						<div class="ein typ-{e.typ}" class:markiert={offen === e.id} id="e-{e.id}">
@@ -311,6 +315,7 @@
 							{/if}
 						</div>
 					{/each}
+					{#if ersteNacht < 0}{@render folgeNaechte()}{/if}
 				</li>
 			{/each}
 		</ol>
