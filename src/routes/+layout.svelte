@@ -21,6 +21,7 @@
 	import PinLeiste from '#lib/map/PinLeiste.svelte';
 	import { zusatzFuer } from '#lib/map/zusatz.ts';
 	import ZielFormular from '#lib/formulare/ZielFormular.svelte';
+	import PdfDialog from '#lib/formulare/PdfDialog.svelte';
 	import Sheet from '#lib/ui/Sheet.svelte';
 	import Hinweis from '#lib/ui/Hinweis.svelte';
 	import Grossansicht from '#lib/ui/Grossansicht.svelte';
@@ -236,6 +237,8 @@
 		<NotizFormular eintrag={ui.dialog.eintrag} datum={ui.dialog.datum} />
 	{:else if ui.dialog?.art === 'ziel'}
 		<ZielFormular id={ui.dialog.id} vorlage={ui.dialog.vorlage} />
+	{:else if ui.dialog?.art === 'pdf'}
+		<PdfDialog reise={ui.dialog.reise} />
 	{/if}
 
 	<PinLeiste />

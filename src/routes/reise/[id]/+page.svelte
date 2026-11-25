@@ -17,6 +17,7 @@
 	import Camera from 'phosphor-svelte/lib/Camera';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+	import FilePdf from 'phosphor-svelte/lib/FilePdf';
 	import NotePencil from 'phosphor-svelte/lib/NotePencil';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import CaretRight from 'phosphor-svelte/lib/CaretRight';
@@ -172,6 +173,7 @@
 	{@const rf = reiseFarbe(r.farbe, thema.dunkel)}
 	<Kopf>
 		{#snippet rechts()}
+			{#if !inPlanung}<button onclick={() => (ui.dialog = { art: 'pdf', reise: r.id })} aria-label="Als PDF"><FilePdf size={18} /></button>{/if}
 			<button onclick={() => (ui.dialog = { art: 'reise', id: r.id })}><PencilSimple size={17} /> Bearbeiten</button>
 		{/snippet}
 	</Kopf>

@@ -12,6 +12,8 @@ Ein Reisetagebuch für Camper-Reisen – als Web-App, die sich auf dem iPhone wi
 - **Kosten** je Reise (Übernachtung, Tanken, Maut, Fähre …), auch in fremder Währung
 - **Wetter** zu jedem Reisetag, automatisch nachgetragen
 - **Statistik** mit Weltkarte der besuchten Länder
+- **Reise als PDF** zum Verschicken: Tag für Tag mit Routenskizze, wahlweise mit Fotos, Texten und Kosten
+- **Sicherung als Datei**, mit Passwort verschlüsselt
 - Abgleich zwischen Geräten, **Ende-zu-Ende verschlüsselt** (auch die Fotos)
 - Funktioniert offline, hell und dunkel, am iPhone und am PC
 

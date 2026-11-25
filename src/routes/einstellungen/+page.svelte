@@ -2,14 +2,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Konto from '#lib/einstellungen/Konto.svelte';
-	import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
-	import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
+	import Sicherung from '#lib/einstellungen/Sicherung.svelte';
 	import Kopf from '#lib/ui/Kopf.svelte';
 	import { thema, type ThemaWahl } from '#lib/thema.svelte.ts';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { beispielLaden, beispielEntfernen, hatBeispiel } from '#lib/beispiel/daten.ts';
-	import { sicherungHerunterladen, sicherungEinlesen } from '#lib/db/sicherung.ts';
 
 	onMount(() => {
 		ui.auswahl = null;
@@ -20,19 +18,6 @@
 		{ w: 'hell', name: 'Hell' },
 		{ w: 'dunkel', name: 'Dunkel' }
 	];
-
-	let datei: HTMLInputElement | undefined = $state();
-	async function einlesen(e: Event) {
-		const f = (e.target as HTMLInputElement).files?.[0];
-		if (!f) return;
-		try {
-			const n = await sicherungEinlesen(f);
-			ui.zeige(`${n} Datensätze eingelesen`);
-		} catch (err) {
-			ui.zeige((err as Error).message);
-		}
-		(e.target as HTMLInputElement).value = '';
-	}
 </script>
 
 <Kopf />
@@ -52,15 +37,7 @@
 
 	<Konto />
 
-	<section>
-		<h4>Sicherung</h4>
-		<div class="zeile">
-			<button class="knopf zweit" onclick={sicherungHerunterladen}><DownloadSimple size={18} /> Als Datei sichern</button>
-			<button class="knopf zweit" onclick={() => datei?.click()}><UploadSimple size={18} /> Einlesen</button>
-			<input bind:this={datei} type="file" accept="application/json,.json" hidden onchange={einlesen} />
-		</div>
-		<p class="hilfe">Sichert Reisen, Einträge und Plätze (ohne Fotos) als Datei. Einlesen ergänzt und überschreibt gleiche Einträge.</p>
-	</section>
+	<Sicherung />
 
 	<section>
 		<h4>Beispieldaten</h4>

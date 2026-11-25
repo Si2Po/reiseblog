@@ -7,6 +7,8 @@
   Abholen:   alle Dokumente mit geaendert_am > letzter Stand, entschlüsselt. Bei gleichzeitiger Änderung
              gewinnt der neuere Zeitstempel (Feld `geaendert` im Inhalt). Fotos werden erst beim Ansehen geladen.
   Gelöscht wird nur weich (geloescht = true), damit andere Geräte es mitbekommen.
+  Dateien gelöschter Fotos werden nach einem Tag (bis dahin geht „Rückgängig“ sicher) aus dem
+  Speicher-Eimer und vom Gerät entfernt (#fotosAufraeumen).
   Beispieldaten (IDs „bsp-…“) werden nie hochgeladen.
 */
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -40,6 +42,7 @@ class Abgleich {
 	#uid: string | null = null;
 	#nochmal = false;
 	#zeit: ReturnType<typeof setTimeout> | undefined;
+	#aufgeraeumt = 0;
 
 	async client(): Promise<SupabaseClient | null> {
 		if (!this.moeglich) return null;
@@ -137,6 +140,7 @@ class Abgleich {
 			const c = (await this.client())!;
 			await this.#hochladen(c);
 			await this.#holen(c);
+			await this.#fotosAufraeumen(c);
 			this.zuletzt = Date.now();
 			await db.meta.put({ schluessel: 'zuletzt', wert: this.zuletzt });
 			this.fehler = '';
@@ -216,6 +220,24 @@ class Abgleich {
 		if (geaendert) await daten.laden();
 		// gelegentlich alte Löschmarkierungen auf dem Server aufräumen
 		if (Math.random() < 0.05) await c.rpc('aufraeumen');
+	}
+
+	/** Dateien von Fotos, die seit über einem Tag gelöscht sind, aus dem Speicher-Eimer und vom Gerät entfernen (höchstens alle 6 Stunden) */
+	async #fotosAufraeumen(c: SupabaseClient) {
+		if (Date.now() - this.#aufgeraeumt < 6 * 3600_000) return;
+		this.#aufgeraeumt = Date.now();
+		const grenze = Date.now() - 24 * 3600_000;
+		const weg = await db.fotos.filter((f) => !!f.geloescht && f.geaendert < grenze).toArray();
+		if (!weg.length) return;
+		const mitPfad = weg.filter((f) => f.pfad);
+		for (let i = 0; i < mitPfad.length; i += 100) {
+			const teil = mitPfad.slice(i, i + 100);
+			const { error } = await c.storage.from('fotos').remove(teil.map((f) => f.pfad!));
+			if (error) throw error;
+			// nur hier vermerken, nicht hochladen: die Datei gibt es nicht mehr
+			await db.fotos.bulkUpdate(teil.map((f) => ({ key: f.id, changes: { pfad: undefined } })));
+		}
+		await db.dateien.bulkDelete(weg.map((f) => f.id));
 	}
 
 	/** Foto vom Server holen, entschlüsseln und auf dem Gerät ablegen. Gibt die Bytes zurück (oder null). */

@@ -37,6 +37,11 @@ async function supabase(route) {
 		const d = dateien.get(k);
 		return d ? route.fulfill({ status: 200, contentType: 'application/octet-stream', body: d }) : json({ error: 'not found' }, 404);
 	}
+	if (p === '/storage/v1/object/fotos' && m === 'DELETE') {
+		const weg = body()?.prefixes ?? [];
+		for (const k of weg) dateien.delete(k);
+		return json(weg.map((name) => ({ name })));
+	}
 	if (p === '/rest/v1/rpc/aufraeumen') return json(0);
 	if (p === '/rest/v1/rpc/ping') return json('wach');
 
@@ -72,7 +77,8 @@ const b = await webkit.launch();
 const fehler = [];
 const ok = (bed, text) => (console.log((bed ? '✓ ' : '✗ ') + text), bed || fehler.push(text));
 
-async function geraet(name) {
+/** versatz: Uhr des Geräts in ms vorstellen (z. B. „zwei Tage später“) */
+async function geraet(name, versatz = 0) {
 	const ctx = await b.newContext({
 		viewport: { width: 375, height: 812 },
 		geolocation: { latitude: 47.9959, longitude: 7.8522, accuracy: 10 },
@@ -80,6 +86,11 @@ async function geraet(name) {
 		locale: 'de-DE'
 	});
 	await ctx.route(SB + '/**', supabase);
+	if (versatz)
+		await ctx.addInitScript((v) => {
+			const echt = Date.now;
+			Date.now = () => echt() + v;
+		}, versatz);
 	const p = await ctx.newPage();
 	p.on('pageerror', (e) => fehler.push(`${name}: ${e.message}`));
 	p.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && fehler.push(`${name}: ${m.text()}`));
@@ -253,6 +264,17 @@ const schluesselWeg = await bb.evaluate(
 		})
 );
 ok(schluesselWeg, 'Nach dem Abmelden ist der Schlüssel vom Gerät entfernt');
+
+// Foto gelöscht → ein Gerät, das zwei Tage später abgleicht, entfernt die Datei auch aus dem Speicher
+const fotoDoc = [...docs.values()].find((d) => d.art === 'foto');
+docs.set(fotoDoc.id, { ...fotoDoc, geloescht: true, geaendert_am: new Date((uhr += 1000)).toISOString() });
+ok(dateien.size === 1, 'Fotodatei liegt noch im Speicher');
+const dd = await geraet('D', 2 * 86400_000);
+await anmelden(dd);
+await dd.locator('input[autocomplete="current-password"]').last().fill('Neues Passwort 2027');
+await dd.getByRole('button', { name: 'Entsperren' }).click();
+await dd.waitForTimeout(6000);
+ok(dateien.size === 0, 'Nach einem Tag ist die Datei des gelöschten Fotos auch aus dem Speicher entfernt');
 
 await b.close();
 console.log(fehler.length ? 'FEHLER:\n' + [...new Set(fehler)].join('\n') : 'Alles in Ordnung');

@@ -20,7 +20,8 @@ export type Dialog =
 	| { art: 'hier' }
 	| { art: 'platz'; id: string }
 	| { art: 'notiz'; eintrag: string; datum: string }
-	| { art: 'ziel'; id?: string; vorlage?: Partial<Ziel> };
+	| { art: 'ziel'; id?: string; vorlage?: Partial<Ziel> }
+	| { art: 'pdf'; reise: string };
 
 interface Hinweis {
 	nr: number;

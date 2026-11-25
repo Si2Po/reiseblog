@@ -77,6 +77,21 @@ export const codeSaeubern = (s: string) =>
 		.replace(/1/g, 'I');
 const istCode = (s: string) => codeSaeubern(s).length === 25 && /^[A-Z2-9]+$/.test(codeSaeubern(s));
 
+/** Mit einem Passwort verschlüsseln (z. B. die Sicherungsdatei) – unabhängig vom Tagebuch-Schlüssel */
+export async function mitPasswort(passwort: string, wert: unknown): Promise<Paket & { salz: string }> {
+	const salz = zufall(16);
+	return { salz: b64(salz), ...(await einpacken(await ableiten(passwort, salz), text.encode(JSON.stringify(wert)))) };
+}
+export async function mitPasswortLesen<T>(passwort: string, p: Paket & { salz: string }): Promise<T> {
+	let roh: ArrayBuffer;
+	try {
+		roh = await auspacken(await ableiten(passwort, unb64(p.salz)), p);
+	} catch {
+		throw new Error('Das Passwort passt nicht zu dieser Sicherung.');
+	}
+	return JSON.parse(new TextDecoder().decode(roh));
+}
+
 export type TresorStatus = 'aus' | 'pruefen' | 'einrichten' | 'entsperren' | 'offen';
 
 class Tresor {
