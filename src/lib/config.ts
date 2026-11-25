@@ -5,8 +5,8 @@
   Anleitung: supabase/ANLEITUNG.md
   (Die beiden Zeilen werden auch vom Wecker-Ablauf gelesen – Format beibehalten.)
 */
-export const SUPABASE_URL = '';
-export const SUPABASE_KEY = '';
+export const SUPABASE_URL = 'https://khsaqnerfhafudystqfb.supabase.co';
+export const SUPABASE_KEY = 'sb_publishable_dxiUL3MEj6TwPU9OFTPQYQ_yOogKMb7';
 
 // Nur für automatische Tests (tools/abgleich-test.mjs): nachgebaute Supabase über Umgebungsvariablen
 const TEST_URL = import.meta.env.VITE_TEST_SUPABASE_URL as string | undefined;
