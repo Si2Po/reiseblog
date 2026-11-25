@@ -168,6 +168,7 @@
 		onleer={() => (ui.pin = null)}
 		pin={ui.pin}
 		gedimmt={!!ui.ortWahl}
+		onkartenfehler={() => ui.zeige('Die Karte lädt gerade nicht. Internet prüfen – ein Werbeblocker (z. B. Brave Shields) kann sie auch blockieren.')}
 	/>
 
 	{#if !ui.ortWahl && (ui.breit || ui.hoehe !== 'voll')}

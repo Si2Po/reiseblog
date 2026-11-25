@@ -12,6 +12,7 @@
 	import Footprints from 'phosphor-svelte/lib/Footprints';
 	import Ticket from 'phosphor-svelte/lib/Ticket';
 	import Moon from 'phosphor-svelte/lib/Moon';
+	import X from 'phosphor-svelte/lib/X';
 	import Camera from 'phosphor-svelte/lib/Camera';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
@@ -33,7 +34,22 @@
 	const id = $derived(page.params.id ?? '');
 	const r = $derived(daten.reise(id));
 	const fs = $derived(r ? fotosVon(r.id) : []);
-	const liste = $derived(r ? tage(r.id) : []);
+	// Filter über die Kennzahlen: Tipp auf „km“ zeigt nur Fahrten usw.
+	type Filter = 'naechte' | 'km' | 'plaetze' | 'fotos';
+	const FILTER_NAME: Record<Filter, string> = { naechte: 'alle Nächte', km: 'Fahrten', plaetze: 'Plätze', fotos: 'Fotos' };
+	let filter = $state<Filter | null>(null);
+	const alleTage = $derived(r ? tage(r.id) : []);
+	const liste = $derived.by(() => {
+		if (!filter) return alleTage;
+		return alleTage
+			.map((t) => {
+				if (filter === 'naechte') return { ...t, eintraege: t.eintraege.filter((e) => e.typ === 'stay'), fotos: [] };
+				if (filter === 'plaetze') return { ...t, eintraege: t.eintraege.filter((e) => e.typ === 'stay'), naechte: [], fotos: [] };
+				if (filter === 'km') return { ...t, eintraege: t.eintraege.filter((e) => e.typ === 'drive'), naechte: [], fotos: [] };
+				return { ...t, eintraege: t.eintraege.filter((e) => fotosVonEintrag(e.id).length), naechte: [] };
+			})
+			.filter((t) => t.eintraege.length || t.naechte.length || t.fotos.length);
+	});
 	const weitere = $derived(r ? weitereFotos(r.id) : []);
 	let offen = $state<string | null>(null);
 
@@ -128,12 +144,16 @@
 			<span class="ueber">{monatJahr(r.start)}</span>
 			<h1>{r.titel}</h1>
 			<p class="zeit">{zeitraum(r.start, r.ende ?? reiseEnde(r))}</p>
-			<div class="kennzahlen zahl">
-				<div class="gelb"><b>{naechte(r.id)}</b><span>Nächte</span></div>
-				<div><b>{zahl(km(r.id))}</b><span>km</span></div>
-				<div><b>{plaetzeAnzahl(r.id)}</b><span>Plätze</span></div>
-				<div><b>{fs.length}</b><span>Fotos</span></div>
+			<div class="kennzahlen zahl" role="group" aria-label="Zeitleiste filtern">
+				{#each [['naechte', naechte(r.id), 'Nächte'], ['km', zahl(km(r.id)), 'km'], ['plaetze', plaetzeAnzahl(r.id), 'Plätze'], ['fotos', fs.length, 'Fotos']] as [k, wert, name], i (k)}
+					<button class:gelb={i === 0} class:an={filter === k} aria-pressed={filter === k} onclick={() => (filter = filter === k ? null : (k as Filter))}>
+						<b>{wert}</b><span>{name}</span>
+					</button>
+				{/each}
 			</div>
+			{#if filter}
+				<button class="filterzeile" onclick={() => (filter = null)}>Gefiltert: {FILTER_NAME[filter]} <X size={14} /></button>
+			{/if}
 			{#if r.notiz}<p class="reisenotiz">{r.notiz}</p>{/if}
 		</header>
 
@@ -258,17 +278,45 @@
 		gap: 6px;
 		margin: 16px 0 4px;
 	}
-	.kennzahlen div {
+	.kennzahlen button {
 		display: flex;
 		flex-direction: column;
+		align-items: flex-start;
 		padding: 10px;
+		border: 0;
 		border-radius: var(--radius);
 		background: var(--tief);
 		color: var(--tief-text);
+		text-align: left;
+		transition:
+			transform 0.15s,
+			box-shadow 0.15s;
 	}
 	.kennzahlen .gelb {
 		background: var(--signal);
 		color: var(--signal-text);
+	}
+	.kennzahlen button.an {
+		box-shadow:
+			0 0 0 2px var(--flaeche),
+			0 0 0 4px var(--text);
+	}
+	.kennzahlen button:active {
+		transform: scale(0.96);
+	}
+	.filterzeile {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		margin-top: 8px;
+		height: 32px;
+		padding: 0 12px;
+		border: 0;
+		border-radius: 16px;
+		background: var(--text);
+		color: var(--flaeche);
+		font-size: 13px;
+		font-weight: 600;
 	}
 	.kennzahlen b {
 		font-size: 22px;

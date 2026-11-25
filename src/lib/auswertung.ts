@@ -7,8 +7,18 @@ import { abstand } from '#lib/geo.ts';
 
 const TYP_FOLGE = { drive: 0, outing: 1, event: 2, stay: 3 };
 
+/**
+ * Reihenfolge am Tag: Die Übernachtung schließt den Tag ab (steht immer nach Fahrt, Ausflug, Event).
+ * Die Uhrzeit ordnet nur innerhalb gleicher Gruppe.
+ */
 export function eintragFolge(a: Eintrag, b: Eintrag): number {
-	return a.datum.localeCompare(b.datum) || (a.zeit ?? '').localeCompare(b.zeit ?? '') || TYP_FOLGE[a.typ] - TYP_FOLGE[b.typ];
+	const nacht = (e: Eintrag) => (e.typ === 'stay' ? 1 : 0);
+	return (
+		a.datum.localeCompare(b.datum) ||
+		nacht(a) - nacht(b) ||
+		(a.zeit ?? '').localeCompare(b.zeit ?? '') ||
+		TYP_FOLGE[a.typ] - TYP_FOLGE[b.typ]
+	);
 }
 
 export const reisenSortiert = (): Reise[] => [...daten.reisen].sort((a, b) => b.start.localeCompare(a.start));
@@ -28,12 +38,16 @@ export function reiseEnde(r: Reise): string {
 	return e && e.datum > r.start ? e.datum : r.start;
 }
 
-/** Reise, die heute läuft (oder die jüngste, wenn sie erst vor kurzem anfing und kein Ende hat) */
-export function laufendeReise(heute = new Date().toISOString().slice(0, 10)): Reise | undefined {
-	return reisenSortiert().find((r) => r.start <= heute && (!r.ende || r.ende >= heute));
+/** Reise, die heute läuft (Enddatum offen und zuletzt aktiv, oder heute im Zeitraum) */
+export function laufendeReise(heute = format(new Date(), 'yyyy-MM-dd')): Reise | undefined {
+	return reisenSortiert().find((r) => r.start <= heute && reiseBis(r) >= heute);
 }
 
-/** Letzter Tag, der noch zur Reise zählt (offene Reisen: bis heute bzw. bis zum letzten Eintrag) */
+/**
+ * Letzter Tag, der noch zur Reise zählt.
+ * Ohne Enddatum: bis heute, solange die Reise frisch ist (letzter Eintrag höchstens 30 Tage her) –
+ * sonst bis zum letzten Eintrag. So landen heutige Fotos nicht in einer alten Reise.
+ */
 export function reiseBis(r: Reise): string {
 	if (r.ende) return r.ende;
 	const heute = format(new Date(), 'yyyy-MM-dd');
@@ -41,7 +55,8 @@ export function reiseBis(r: Reise): string {
 		const bis = e.typ === 'stay' ? plusTage(e.datum, e.naechte ?? 1) : e.datum;
 		return bis > m ? bis : m;
 	}, r.start);
-	return letzter > heute ? letzter : heute;
+	if (letzter >= heute) return letzter;
+	return plusTage(letzter, 30) >= heute ? heute : letzter;
 }
 
 /** Folgenacht einer mehrtägigen Übernachtung (Nacht 2, 3 …) */

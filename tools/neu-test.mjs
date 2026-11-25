@@ -173,6 +173,54 @@ await fahrt.getByRole('button', { name: 'Bearbeiten' }).click();
 await warte(500);
 ok((await p.locator('.via').count()) === 1, 'Formular zeigt das Zwischenziel');
 await foto('10-via-formular');
+await p.getByRole('button', { name: 'Abbrechen' }).click();
+await warte(400);
+
+// --- Filter über die Kennzahlen ---
+await p.goto(BASIS + '#/reise/bsp-no25');
+await warte(1500);
+await voll();
+await p.locator('.kennzahlen button', { hasText: 'km' }).click();
+await warte(400);
+const alleFahrt = await p.locator('.zeitleiste .ein').evaluateAll((els) => els.every((e) => e.classList.contains('typ-drive')));
+ok(alleFahrt && (await p.locator('.zeitleiste .ein').count()) === 4, `Filter „km“: nur die 4 Fahrten (${await p.locator('.zeitleiste .ein').count()})`);
+await p.locator('.kennzahlen button', { hasText: 'Nächte' }).click();
+await warte(400);
+ok((await p.locator('.zeitleiste .typ-drive').count()) === 0 && (await p.locator('.zeitleiste .folge').count()) === 8, 'Filter „Nächte“: Übernachtungen + Folgenächte');
+await foto('11-filter');
+await p.locator('.filterzeile').click();
+await warte(300);
+ok((await p.locator('.zeitleiste .typ-drive').count()) === 4, 'Filter aufgehoben');
+
+// --- Foto löschen (mit Rückgängig) ---
+const vorherFotos = await p.locator('.streifen img').count();
+await p.locator('.streifen button').first().click();
+await warte(600);
+await p.getByRole('button', { name: 'Foto löschen' }).click();
+await warte(500);
+await p.keyboard.press('Escape');
+await warte(400);
+ok((await p.locator('.streifen img').count()) === vorherFotos - 1, 'Foto gelöscht');
+await p.getByRole('button', { name: 'Rückgängig' }).click();
+await warte(600);
+ok((await p.locator('.streifen img').count()) === vorherFotos, 'Foto wiederhergestellt');
+
+// --- Reihenfolge: Fahrt vor der Übernachtung desselben Tages ---
+await p.goto(BASIS + '#/');
+await warte(800);
+await voll();
+await p.locator('.reise', { hasText: 'Bodensee' }).click();
+await warte(1000);
+await voll();
+await p.getByRole('button', { name: 'Eintrag hinzufügen' }).click();
+await warte(500);
+await p.getByRole('radio', { name: 'Fahrt' }).click();
+await p.locator('input[placeholder^="z. B. Über den Pass"]').fill('Anreise');
+await p.locator('input[type="date"]').first().fill('2026-07-31');
+await p.getByRole('button', { name: 'Eintragen' }).click();
+await warte(1200);
+const ersteArt = await p.locator('.tag').first().locator('.ein').first().getAttribute('class');
+ok(ersteArt.includes('typ-drive'), 'Am selben Tag steht die Fahrt vor der Übernachtung');
 
 await b.close();
 console.log(fehler.length ? 'FEHLER:\n' + [...new Set(fehler)].join('\n') : 'Alles in Ordnung');

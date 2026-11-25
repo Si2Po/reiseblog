@@ -26,7 +26,7 @@
 	// Worker von Vite bündeln lassen; MapLibres eigene Pfadsuche klappt nach dem Bündeln nicht.
 	import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 	import Supercluster from 'supercluster';
-	import { kartenStil, type KartenFarben } from './stil.ts';
+	import { kartenStil, kartenSpeicherLeeren, type KartenFarben } from './stil.ts';
 
 	type FC = GeoJSON.FeatureCollection;
 
@@ -46,7 +46,8 @@
 		onlang,
 		onleer,
 		pin = null,
-		gedimmt = false
+		gedimmt = false,
+		onkartenfehler
 	}: {
 		farben: KartenFarben;
 		halo: string;
@@ -69,6 +70,8 @@
 		pin?: { lat: number; lng: number } | null;
 		/** Routen und Punkte blass darstellen (z. B. beim „Ort wählen“) */
 		gedimmt?: boolean;
+		/** Kacheln laden auch nach dem Neuladen nicht */
+		onkartenfehler?: () => void;
 	} = $props();
 
 	let box: HTMLDivElement;
@@ -235,6 +238,21 @@
 
 	maplibregl.setWorkerUrl(workerUrl);
 
+	// Selbstheilung: Häufen sich Kachel-Fehler (z. B. veraltete Kachel-Übersicht im Speicher),
+	// Karten-Zwischenspeicher leeren und den Stil einmal frisch laden.
+	let fehlerZahl = 0;
+	let geheilt = false;
+	async function kachelFehler(e: maplibregl.ErrorEvent & { sourceId?: string }) {
+		if (e.sourceId !== 'openmaptiles' || !navigator.onLine) return;
+		if (++fehlerZahl < 4) return;
+		fehlerZahl = 0;
+		if (geheilt) return onkartenfehler?.();
+		geheilt = true;
+		await kartenSpeicherLeeren();
+		bereit = false;
+		map?.setStyle(await kartenStil(farben));
+	}
+
 	onMount(() => {
 		let weg = false;
 		kartenStil(farben).then((style) => {
@@ -250,6 +268,7 @@
 			});
 			map.touchZoomRotate.disableRotation();
 			map.on('style.load', ebenenAnlegen);
+			map.on('error', kachelFehler);
 			map.on('moveend', fotosZeichnen);
 			map.on('click', 'punkte', (e) => {
 				const id = e.features?.[0]?.properties?.id;

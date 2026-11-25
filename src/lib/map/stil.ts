@@ -30,6 +30,15 @@ function laden() {
 	return grundstil;
 }
 
+/**
+ * Selbstheilung, wenn Kacheln nicht laden: Karten-Zwischenspeicher leeren
+ * (veraltete Kachel-Übersicht) und den Stil frisch holen.
+ */
+export async function kartenSpeicherLeeren() {
+	grundstil = null;
+	if ('caches' in self) await Promise.all(['karte-stil', 'karte'].map((n) => caches.delete(n)));
+}
+
 const OHNE = new Set(['highway-shield-non-us', 'highway-shield-us-interstate', 'road_shield_us', 'airport']);
 
 function farbeFuer(l: LayerSpecification, f: KartenFarben): Record<string, unknown> | null {

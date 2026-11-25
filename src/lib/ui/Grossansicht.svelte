@@ -5,6 +5,8 @@
 	import { fade } from 'svelte/transition';
 	import X from 'phosphor-svelte/lib/X';
 	import MapPin from 'phosphor-svelte/lib/MapPin';
+	import Image from 'phosphor-svelte/lib/Image';
+	import Trash from 'phosphor-svelte/lib/Trash';
 	import CaretLeft from 'phosphor-svelte/lib/CaretLeft';
 	import CaretRight from 'phosphor-svelte/lib/CaretRight';
 	import { ui } from '#lib/ui.svelte.ts';
@@ -33,6 +35,23 @@
 		ui.gross = { ids: g.ids, i: (g.i + r + n) % n };
 	}
 	const zu = () => (ui.gross = null);
+
+	/** Foto löschen (mit Rückgängig); die Großansicht springt zum nächsten Foto */
+	async function loeschen() {
+		if (!g || !foto) return;
+		const id = foto.id;
+		const zurueck = await daten.loeschen('fotos', id);
+		if (reise?.titelbild === id) await daten.speichern('reisen', { ...reise, titelbild: undefined });
+		const ids = g.ids.filter((x) => x !== id);
+		ui.gross = ids.length ? { ids, i: Math.min(g.i, ids.length - 1) } : null;
+		ui.zeige('Foto gelöscht', zurueck);
+	}
+
+	async function alsTitelbild() {
+		if (!reise || !foto) return;
+		await daten.speichern('reisen', { ...reise, titelbild: foto.id });
+		ui.zeige(`Titelbild von „${reise.titel}“`);
+	}
 
 	// Wischen
 	let x0 = 0,
@@ -96,16 +115,24 @@
 		<div class="unterschrift">
 			<b>{eintrag?.titel ?? reise?.titel ?? 'Foto'}</b>
 			<span class="zahl">{tagLang(foto.aufgenommen.slice(0, 10))}{g.ids.length > 1 ? ` · ${g.i + 1} von ${g.ids.length}` : ''}</span>
-			{#if foto.ort}
-				<button
-					onclick={() => {
-						const o = foto.ort!;
-						zu();
-						ui.fotosAn = true;
-						ui.zeigeOrt(o, 14);
-					}}><MapPin size={14} weight="fill" /> Auf der Karte</button
-				>
-			{/if}
+			<div class="knoepfe">
+				{#if foto.ort}
+					<button
+						onclick={() => {
+							const o = foto.ort!;
+							zu();
+							ui.fotosAn = true;
+							ui.zeigeOrt(o, 14);
+						}}><MapPin size={14} weight="fill" /> Auf der Karte</button
+					>
+				{/if}
+				{#if !daten.gast}
+					{#if reise && reise.titelbild !== foto.id}
+						<button onclick={alsTitelbild}><Image size={14} weight="fill" /> Als Titelbild</button>
+					{/if}
+					<button class="weg" onclick={loeschen} aria-label="Foto löschen"><Trash size={16} /></button>
+				{/if}
+			</div>
 		</div>
 	</div>
 {/if}
@@ -184,12 +211,16 @@
 		color: #aaa;
 		font-size: 14px;
 	}
-	.unterschrift button {
-		align-self: flex-start;
+	.knoepfe {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 10px;
+	}
+	.knoepfe button {
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		margin-top: 10px;
 		height: 36px;
 		padding: 0 14px;
 		border: 0;
@@ -197,5 +228,12 @@
 		background: rgba(255, 255, 255, 0.14);
 		color: #fff;
 		font-size: 14px;
+	}
+	.knoepfe .weg {
+		margin-left: auto;
+		width: 36px;
+		padding: 0;
+		justify-content: center;
+		color: #ff8a73;
 	}
 </style>

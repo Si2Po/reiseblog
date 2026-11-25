@@ -47,10 +47,11 @@ export default defineConfig({
 					cleanupOutdatedCaches: true,
 					runtimeCaching: [
 						{
-							// Kartenstil und Kachel-Übersicht: schnell aus dem Speicher, im Hintergrund auffrischen
-							urlPattern: /^https:\/\/tiles\.openfreemap\.org\/(styles|planet$)/,
-							handler: 'StaleWhileRevalidate',
-							options: { cacheName: 'karte-stil', expiration: { maxEntries: 20, maxAgeSeconds: 30 * TAG } }
+							// Kartenstil und Kachel-Übersicht: zuerst aus dem Netz (die Übersicht zeigt auf datierte
+							// Kachel-Ordner, die OpenFreeMap regelmäßig austauscht), offline aus dem Speicher
+							urlPattern: /^https:\/\/tiles\.openfreemap\.org\/(styles\/|planet$)/,
+							handler: 'NetworkFirst',
+							options: { cacheName: 'karte-stil', networkTimeoutSeconds: 4, expiration: { maxEntries: 20, maxAgeSeconds: 30 * TAG } }
 						},
 						{
 							// Hochgeladene Fotos (Supabase): einmal angesehen = offline verfügbar

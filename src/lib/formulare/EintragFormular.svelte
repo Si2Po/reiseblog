@@ -140,7 +140,8 @@
 		// vor dem Speichern merken – danach ist die neue Übernachtung selbst „die letzte“
 		const start = typ === 'stay' && fahrtSinnvoll && fahrtMit ? vorige : undefined;
 		// heutige Einträge bekommen die Uhrzeit, damit die Reihenfolge am Tag stimmt
-		const zeit = alt ? alt.zeit : datum === heute() ? format(new Date(), 'HH:mm:ss') : undefined;
+		// (bei geändertem Datum gilt die alte Uhrzeit nicht mehr)
+		const zeit = alt && alt.datum === datum ? alt.zeit : datum === heute() ? format(new Date(), 'HH:mm:ss') : undefined;
 		let platz: string | undefined;
 		if (typ === 'stay') {
 			const p = daten.platz(platzId);
