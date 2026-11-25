@@ -29,6 +29,8 @@
 	let notiz = $state(alt?.notiz ?? '');
 	let titelbild = $state(alt?.titelbild);
 	const fotos = $derived(alt ? fotosVon(alt.id) : []);
+	/** Löschen braucht einen zweiten Tipp – erst dann wird wirklich gelöscht */
+	let sicher = $state(false);
 
 	const ok = $derived(titel.trim().length > 0 && !!start && (!ende || ende >= start));
 	const zu = () => (ui.dialog = null);
@@ -110,15 +112,24 @@
 	</form>
 
 	{#snippet fuss()}
-		{#if alt}
-			<button class="knopf gefahr fuss-links" onclick={loeschen} aria-label="Reise löschen"><Trash size={20} /></button>
+		{#if sicher}
+			<button class="knopf zweit" onclick={() => (sicher = false)}>Behalten</button>
+			<button class="knopf loeschen" onclick={loeschen}><Trash size={18} /> Ja, löschen</button>
+		{:else}
+			{#if alt}
+				<button class="knopf gefahr fuss-links" onclick={() => (sicher = true)} aria-label="Reise löschen"><Trash size={20} /></button>
+			{/if}
+			<button class="knopf zweit" onclick={zu}>Abbrechen</button>
+			<button class="knopf" type="submit" form="reiseform" disabled={!ok}>{alt ? 'Speichern' : 'Anlegen'}</button>
 		{/if}
-		<button class="knopf zweit" onclick={zu}>Abbrechen</button>
-		<button class="knopf" type="submit" form="reiseform" disabled={!ok}>{alt ? 'Speichern' : 'Anlegen'}</button>
 	{/snippet}
 </Dialog>
 
 <style>
+	.loeschen {
+		background: var(--gefahr);
+		color: #fff;
+	}
 	.hilfe {
 		margin: -6px 0 16px;
 		color: var(--text-2);
