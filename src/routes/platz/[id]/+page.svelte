@@ -1,11 +1,18 @@
 <!-- Ein Stellplatz: Bewertung, Ausstattung, Notiz, alle Besuche. -->
 <script lang="ts">
+	import { pfeile } from '#lib/ui/pfeile.ts';
 	import { page } from '$app/state';
 	import NavigationArrow from 'phosphor-svelte/lib/NavigationArrow';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import ArrowSquareOut from 'phosphor-svelte/lib/ArrowSquareOut';
 	import Kopf from '#lib/ui/Kopf.svelte';
 	import Sterne from '#lib/ui/Sterne.svelte';
+	import Wischzeile from '#lib/ui/Wischzeile.svelte';
+	import Van from 'phosphor-svelte/lib/Van';
+	import Camera from 'phosphor-svelte/lib/Camera';
+	import { goto } from '$app/navigation';
+	import { fotosWaehlen } from '#lib/fotos/import.ts';
+	import type { Eintrag } from '#lib/db/typen.ts';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { thema } from '#lib/thema.svelte.ts';
@@ -24,6 +31,27 @@
 	const ausstattung = $derived(AUSSTATTUNG.filter((a, i) => i < 8 || p?.merkmale[a.key]));
 	const weitere = $derived(p ? merkmaleFuer('platz').filter((m) => m.gruppe !== 'ausstattung' && p.merkmale[m.key] !== undefined) : []);
 	const alleNotizen = $derived(bs.flatMap((b) => b.notizen ?? []).sort((a, b) => b.zeit.localeCompare(a.zeit)));
+
+	/** Rechtsklick (PC) auf einen Besuch */
+	function besuchMenue(b: Eintrag, x: number, y: number) {
+		ui.aktionen = {
+			titel: daten.reise(b.reise)?.titel ?? 'Besuch',
+			x,
+			y,
+			punkte: [
+				{ text: 'Details', icon: PencilSimple, los: () => (ui.dialog = { art: 'eintrag', id: b.id }) },
+				{ text: 'Fotos hinzufügen', icon: Camera, los: () => fotosWaehlen({ reise: b.reise, eintrag: b.id }) },
+				{
+					text: 'Zur Reise',
+					icon: Van,
+					los: () => {
+						ui.markiert = b.id;
+						goto(`#/reise/${b.reise}`);
+					}
+				}
+			]
+		};
+	}
 
 	$effect(() => {
 		if (!p) return;
@@ -92,10 +120,12 @@
 		{/if}
 
 		<h4>{bs.length === 1 ? 'Ein Besuch' : `${bs.length} Besuche`}</h4>
-		<ul class="besuche">
+		<ul class="besuche" {@attach pfeile('a')}>
 			{#each bs as b (b.id)}
 				{@const r = daten.reise(b.reise)}
 				<li>
+					<!-- Besuch: Tippen führt zur Reise; nach links wischen bzw. Rechtsklick → Details direkt hier -->
+					<Wischzeile links={[{ text: 'Details', icon: PencilSimple, los: () => (ui.dialog = { art: 'eintrag', id: b.id }) }]} onmenue={(x, y) => besuchMenue(b, x, y)}>
 					<a
 						href="#/reise/{b.reise}"
 						onclick={() => {
@@ -111,6 +141,7 @@
 						</span>
 						{#if b.bewertung}<Sterne wert={b.bewertung} groesse={12} />{/if}
 					</a>
+					</Wischzeile>
 				</li>
 			{/each}
 		</ul>

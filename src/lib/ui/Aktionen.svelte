@@ -5,7 +5,9 @@
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import { tick } from 'svelte';
 	import { ui, type Aktion } from '#lib/ui.svelte.ts';
+	import { pfeile } from '#lib/ui/pfeile.ts';
 
 	const a = $derived(ui.aktionen);
 	/** am PC (oder mit Mausposition): schwebendes Menü statt Liste von unten */
@@ -21,7 +23,18 @@
 		pos = { x: Math.min(a.x!, innerWidth - b - 8), y: Math.min(a.y!, innerHeight - h - 8) };
 	});
 
-	const zu = () => (ui.aktionen = null);
+	// Tastatur: beim Öffnen auf den ersten Punkt, beim Schließen zurück zum vorigen Element
+	let vorher: HTMLElement | null = null;
+	$effect(() => {
+		if (!a) return;
+		vorher = document.activeElement as HTMLElement | null;
+		tick().then(() => document.querySelector<HTMLElement>('.portal [role=menuitem]')?.focus({ preventScroll: true }));
+	});
+	function zu() {
+		ui.aktionen = null;
+		vorher?.focus?.({ preventScroll: true });
+		vorher = null;
+	}
 	async function los(p: Aktion) {
 		zu();
 		// Fehler einer Aktion dürfen das Menü nicht „hängen“ lassen
@@ -44,7 +57,7 @@
 	<div class="portal" {@attach zumBody}>
 		<div class="dimmer" class:hell={schwebend} onclick={zu} oncontextmenu={(e) => (e.preventDefault(), zu())} role="presentation" transition:fade={{ duration: 150 }}></div>
 		{#if schwebend}
-			<div class="schwebend" bind:this={menue} role="menu" style:left="{pos.x}px" style:top="{pos.y}px" transition:fade={{ duration: 100 }}>
+			<div class="schwebend" bind:this={menue} role="menu" {@attach pfeile('[role=menuitem]')} style:left="{pos.x}px" style:top="{pos.y}px" transition:fade={{ duration: 100 }}>
 				{#each a.punkte as p (p.text)}
 					<button role="menuitem" class:gefahr={p.gefahr} onclick={() => los(p)}>
 						{#if p.icon}<p.icon size={17} />{/if}
@@ -54,7 +67,7 @@
 			</div>
 		{:else}
 			<div class="unten" role="menu" aria-label={a.titel ?? 'Aktionen'} transition:fly={{ y: 300, duration: 260, easing: cubicOut }}>
-				<div class="gruppe">
+				<div class="gruppe" {@attach pfeile('[role=menuitem]')}>
 					{#if a.titel}<p class="titel">{a.titel}</p>{/if}
 					{#each a.punkte as p (p.text)}
 						<button role="menuitem" class:gefahr={p.gefahr} onclick={() => los(p)}>

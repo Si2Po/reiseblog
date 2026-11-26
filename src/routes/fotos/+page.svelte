@@ -6,6 +6,9 @@
   Filter „Ohne Ort“ + „Auswählen“: mehrere Fotos gemeinsam auf der Karte platzieren (Fadenkreuz).
 -->
 <script lang="ts">
+	import { pfeile } from '#lib/ui/pfeile.ts';
+	import { kontext } from '#lib/ui/kontext.ts';
+	import { fotoAktionen } from '#lib/fotos/aktionen.ts';
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import Plus from 'phosphor-svelte/lib/Plus';
@@ -107,7 +110,7 @@
 
 <Reiter />
 
-<div class="seite">
+<div class="seite" {@attach pfeile('.raster button', 'raster')}>
 	<div class="kopf">
 		{#if auswaehlen}
 			<span class="ueber zahl">{gewaehlt.size ? `${fotoText(gewaehlt.size)} ausgewählt` : 'Fotos antippen'}</span>
@@ -155,6 +158,7 @@
 					<button
 						class:gewaehlt={gewaehlt.has(f.id)}
 						onclick={() => getippt(g, f, i)}
+						{@attach kontext(() => (auswaehlen ? { punkte: [] } : fotoAktionen(f, () => getippt(g, f, i))))}
 						aria-label={auswaehlen ? 'Foto auswählen' : 'Foto ansehen'}
 						aria-pressed={auswaehlen ? gewaehlt.has(f.id) : undefined}
 					>

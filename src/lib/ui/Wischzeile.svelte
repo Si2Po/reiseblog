@@ -120,7 +120,10 @@
 	oncontextmenu={(e) => {
 		if (!onmenue) return;
 		e.preventDefault();
-		onmenue(e.clientX, e.clientY);
+		// Kontextmenü-Taste bzw. Umschalt+F10: keine Mausposition → am Element öffnen
+		const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const ohneMaus = e.clientX === 0 && e.clientY === 0;
+		onmenue(ohneMaus ? r.left + 48 : e.clientX, ohneMaus ? r.top + 24 : e.clientY);
 	}}
 >
 	{#if dx > 0 && rechts}

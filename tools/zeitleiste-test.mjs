@@ -167,6 +167,39 @@ await q.locator('.ein', { hasText: 'Trolltunga' }).click({ button: 'right' });
 await q.waitForTimeout(300);
 await q.screenshot({ path: 'tools/bilder/zeitleiste-6-pc.png' });
 ok((await q.locator('.schwebend[role=menu]').count()) === 1, 'PC: Rechtsklick öffnet das Menü an der Maus');
+await q.keyboard.press('Escape');
+await q.waitForTimeout(300);
+ok((await q.locator('.schwebend').count()) === 0, 'PC: Esc schließt das Menü');
+
+// Tastatur: Pfeile innerhalb der Zeitleiste, Kontextmenü-Taste, Menü mit Pfeilen bedienen
+const erster = q.locator('.zeitleiste .ein-knopf').first();
+await erster.focus();
+const gruppe = '.zeitleiste .ein-knopf, .zeitleiste .fotoreihe button, .zeitleiste .aktionen button';
+await q.keyboard.press('ArrowDown');
+const pos = await q.evaluate((g) => [...document.querySelectorAll(g)].indexOf(document.activeElement), gruppe);
+ok(pos === 1, 'Tastatur: Pfeil runter geht zum nächsten Element der Zeitleiste');
+ok((await q.locator('.zeitleiste').locator('[tabindex="0"]').count()) === 1, 'Tastatur: in der Zeitleiste ist nur ein Element per Tab erreichbar');
+await q.keyboard.press('ArrowUp');
+await q.keyboard.press('Shift+F10');
+await q.waitForTimeout(300);
+ok((await q.locator('.schwebend').count()) === 1 && (await q.evaluate(() => document.activeElement?.getAttribute('role'))) === 'menuitem', 'Tastatur: Umschalt+F10 öffnet das Menü, Fokus auf dem ersten Punkt');
+await q.keyboard.press('ArrowDown');
+await q.keyboard.press('Escape');
+await q.waitForTimeout(300);
+ok((await q.evaluate(() => !!document.activeElement?.closest('.zeitleiste'))), 'Tastatur: nach Esc ist der Fokus wieder in der Zeitleiste');
+await q.screenshot({ path: 'tools/bilder/zeitleiste-9-tastatur.png' });
+
+// Fotoalbum: Pfeile im Raster
+await q.goto(BASIS + '#/fotos');
+await q.waitForTimeout(1500);
+await q.locator('.raster button').first().focus();
+await q.keyboard.press('ArrowRight');
+const idx = await q.evaluate(() => [...document.querySelectorAll('.raster button')].indexOf(document.activeElement));
+ok(idx === 1, 'Tastatur: Pfeil rechts im Fotoalbum geht zum nächsten Foto');
+await q.keyboard.press('ArrowDown');
+const idx2 = await q.evaluate(() => [...document.querySelectorAll('.raster button')].indexOf(document.activeElement));
+ok(idx2 > 1, 'Tastatur: Pfeil runter geht eine Reihe tiefer (' + idx2 + ')');
+
 await b2.close();
 
 console.log(fehler.length ? '\nFEHLER:\n' + fehler.join('\n') : '\nAlles gut.');

@@ -1,5 +1,11 @@
 <!-- Merkliste / Planung: Ziele für bestimmte Reisen oder „irgendwann“. -->
 <script lang="ts">
+	import { pfeile } from '#lib/ui/pfeile.ts';
+	import { kontext } from '#lib/ui/kontext.ts';
+	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+	import MapPin from 'phosphor-svelte/lib/MapPin';
+	import Trash from 'phosphor-svelte/lib/Trash';
+	import type { Aktion } from '#lib/ui.svelte.ts';
 	import { onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
 	import Plus from 'phosphor-svelte/lib/Plus';
@@ -45,6 +51,21 @@
 		ui.zeigeOrt(z.ort, 13);
 		ui.dialog = { art: 'ziel', id: z.id };
 	};
+
+	/** Rechtsklick (PC) auf ein Ziel */
+	function zielMenue(z: Ziel) {
+		const punkte: Aktion[] = [
+			{ text: 'Bearbeiten', icon: PencilSimple, los: () => oeffnen(z) },
+			{ text: 'Auf der Karte', icon: MapPin, los: () => ui.zeigeOrt(z.ort, 13) },
+			{
+				text: 'Löschen',
+				icon: Trash,
+				gefahr: true,
+				los: async () => ui.zeige(`„${z.name}“ gelöscht`, await daten.loeschen('ziele', z.id))
+			}
+		];
+		return { titel: z.name, punkte };
+	}
 </script>
 
 <Reiter />
@@ -61,10 +82,10 @@
 
 	{#if nahe.length}
 		<h4>In der Nähe</h4>
-		<ul class="ziele">
+		<ul class="ziele" {@attach pfeile('li > button')}>
 			{#each nahe as { ziel: z, m } (z.id)}
 				<li>
-					<button onclick={() => oeffnen(z)}>
+					<button onclick={() => oeffnen(z)} {@attach kontext(() => zielMenue(z))}>
 						<span class="punkt" style:background={zielFarbe(z.art, thema.dunkel)}></span>
 						<span class="z-txt">
 							<b>{z.name}</b>
@@ -79,10 +100,10 @@
 
 	{#each gruppen as g (g.titel)}
 		<h4>{g.titel}</h4>
-		<ul class="ziele">
+		<ul class="ziele" {@attach pfeile('li > button')}>
 			{#each g.ziele as z (z.id)}
 				<li>
-					<button onclick={() => oeffnen(z)}>
+					<button onclick={() => oeffnen(z)} {@attach kontext(() => zielMenue(z))}>
 						<span class="punkt" style:background={zielFarbe(z.art, thema.dunkel)}></span>
 						<span class="z-txt">
 							<b>{z.name}</b>
@@ -100,10 +121,10 @@
 			Erledigt ({erledigt.length})
 		</button>
 		{#if erledigteOffen}
-			<ul class="ziele" transition:slide={{ duration: 180 }}>
+			<ul class="ziele" {@attach pfeile('li > button')} transition:slide={{ duration: 180 }}>
 				{#each erledigt as z (z.id)}
 					<li class="fertig">
-						<button onclick={() => oeffnen(z)}>
+						<button onclick={() => oeffnen(z)} {@attach kontext(() => zielMenue(z))}>
 							<CheckCircle size={18} weight="fill" />
 							<span class="z-txt"><b>{z.name}</b><span>{ZIEL_ART[z.art]} · erledigt {z.erledigt === heute() ? 'heute' : ''}</span></span>
 						</button>

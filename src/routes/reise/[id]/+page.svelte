@@ -5,6 +5,9 @@
   Wetter steht im Tageskopf (wird beim Öffnen still nachgetragen), Kosten am Ende.
 -->
 <script lang="ts">
+	import { pfeile } from '#lib/ui/pfeile.ts';
+	import { kontext } from '#lib/ui/kontext.ts';
+	import { fotoAktionen } from '#lib/fotos/aktionen.ts';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { untrack } from 'svelte';
@@ -191,7 +194,9 @@
 	{#if fotos.length}
 		<div class="fotoreihe">
 			{#each fotos.slice(0, 5) as f, i (f.id)}
-				<button onclick={() => grossAb(fotos, i)} aria-label="Foto ansehen"><img alt="" src={f.vorschau} /></button>
+				<button onclick={() => grossAb(fotos, i)} aria-label="Foto ansehen" {@attach kontext(() => fotoAktionen(f, () => grossAb(fotos, i)))}>
+					<img alt="" src={f.vorschau} />
+				</button>
 			{/each}
 			{#if fotos.length > 5}
 				<button class="mehrfotos" onclick={() => grossAb(fotos, 5)}>+{fotos.length - 5}</button>
@@ -237,7 +242,7 @@
 			<h1>{r.titel}</h1>
 			<p class="zeit">{zeitraum(r.start, r.ende ?? reiseEnde(r))}</p>
 			{#if !inPlanung}
-			<div class="kennzahlen zahl" role="group" aria-label="Zeitleiste filtern">
+			<div class="kennzahlen zahl" role="group" aria-label="Zeitleiste filtern" {@attach pfeile('button', 'zeile')}>
 				{#each [['naechte', naechte(r.id), 'Nächte'], ['km', zahl(km(r.id)), 'km'], ['plaetze', plaetzeAnzahl(r.id), 'Plätze'], ['fotos', fs.length, 'Fotos']] as [k, wert, name], i (k)}
 					<button class:gelb={i === 0} class:an={filter === k} aria-pressed={filter === k} onclick={() => (filter = filter === k ? null : (k as Filter))}>
 						<b>{wert}</b><span>{name}</span>
@@ -252,7 +257,7 @@
 		</header>
 
 		{#if fs.length}
-			<div class="streifen">
+			<div class="streifen" {@attach pfeile('button', 'zeile')}>
 				{#each fs as f, i (f.id)}
 					<button onclick={() => grossAb(fs, i)} aria-label="Foto ansehen"><img alt="" src={f.vorschau} /></button>
 				{/each}
@@ -295,7 +300,7 @@
 			<p class="leer">Noch keine Einträge. Füg die erste Übernachtung oder Fahrt hinzu.</p>
 		{/if}
 
-		<ol class="zeitleiste">
+		<ol class="zeitleiste" {@attach pfeile('.ein-knopf, .fotoreihe button, .aktionen button')}>
 			{#each liste as tag (tag.datum)}
 				{@const ersteNacht = tag.eintraege.findIndex((e) => e.typ === 'stay')}
 				<li class="tag">
@@ -579,6 +584,16 @@
 	.beim-eintrag {
 		position: relative;
 		margin: 0 0 8px 48px;
+	}
+	/* lose Fotos des Tages: Zeitleisten-Strich läuft daneben weiter (wie bei .ein::before) */
+	.lose::before {
+		content: '';
+		position: absolute;
+		left: -31px;
+		top: -8px;
+		bottom: -8px;
+		width: 2px;
+		background: color-mix(in srgb, var(--rf) 35%, transparent);
 	}
 	.beim-eintrag {
 		margin-top: -4px;

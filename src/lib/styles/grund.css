@@ -61,8 +61,16 @@ img {
 	font-variant-numeric: tabular-nums;
 }
 :focus-visible {
-	outline: 2px solid var(--signal);
+	/* Tastatur-Fokus (PC): kräftiger Rahmen in Textfarbe, gut sichtbar hell wie dunkel */
+	outline: 2.5px solid var(--text);
 	outline-offset: 2px;
+}
+/* in Bereichen mit overflow: hidden (Wischzeilen, Fotoraster, Bildstreifen) nach innen zeichnen, sonst abgeschnitten */
+.wz :focus-visible,
+.raster :focus-visible,
+.streifen :focus-visible,
+.fotoreihe :focus-visible {
+	outline-offset: -3px;
 }
 
 /* Kleine Überschrift über Abschnitten, wie Schildbeschriftung */

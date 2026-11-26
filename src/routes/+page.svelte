@@ -1,5 +1,12 @@
 <!-- Startseite: alle Reisen als große Bildkarten. -->
 <script lang="ts">
+	import { pfeile } from '#lib/ui/pfeile.ts';
+	import { kontext } from '#lib/ui/kontext.ts';
+	import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
+	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+	import FilePdf from 'phosphor-svelte/lib/FilePdf';
+	import type { Aktion } from '#lib/ui.svelte.ts';
+	import type { Reise } from '#lib/db/typen.ts';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { differenceInCalendarDays, parseISO } from 'date-fns';
@@ -23,6 +30,16 @@
 		ui.markiert = null;
 		if (daten.geladen) ui.zeigeAlles();
 	});
+
+	/** Rechtsklick (PC) auf eine Reise */
+	function reiseMenue(r: Reise) {
+		const punkte: Aktion[] = [
+			{ text: 'Öffnen', icon: ArrowRight, los: () => goto(`#/reise/${r.id}`) },
+			{ text: 'Bearbeiten', icon: PencilSimple, los: () => (ui.dialog = { art: 'reise', id: r.id }) }
+		];
+		if (r.start <= heute()) punkte.push({ text: 'Als PDF', icon: FilePdf, los: () => (ui.dialog = { art: 'pdf', reise: r.id }) });
+		return { titel: r.titel, punkte };
+	}
 
 	function titelbild(id: string) {
 		const r = daten.reise(id);
@@ -51,10 +68,10 @@
 			<span class="ueber zahl">{s.reisen} {s.reisen === 1 ? 'Reise' : 'Reisen'} · {s.naechte} Nächte · {zahl(s.km)} km</span>
 			<span class="statistik"><ChartBar size={15} weight="bold" /> Statistik</span>
 		</a>
-		<div class="reisen">
+		<div class="reisen" {@attach pfeile('a.reise')}>
 			{#each reisen as r (r.id)}
 				{@const bild = titelbild(r.id)}
-				<a class="reise" class:ohne-bild={!bild} href="#/reise/{r.id}" style="--rf:{reiseFarbe(r.farbe, thema.dunkel)}">
+				<a class="reise" class:ohne-bild={!bild} href="#/reise/{r.id}" {@attach kontext(() => reiseMenue(r))} style="--rf:{reiseFarbe(r.farbe, thema.dunkel)}">
 					{#if bild}<img class="cover" alt="" src={bild} />{/if}
 					<span class="r-txt">
 						<span class="jahr zahl">{r.start > heute() ? `Geplant · ${jahr(r.start)}` : jahr(r.start)}</span>

@@ -1,5 +1,12 @@
 <!-- Alle Stellplätze, sortiert nach Bewertung oder Entfernung, mit Filtern. -->
 <script lang="ts">
+	import { pfeile } from '#lib/ui/pfeile.ts';
+	import { kontext } from '#lib/ui/kontext.ts';
+	import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
+	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+	import NavigationArrow from 'phosphor-svelte/lib/NavigationArrow';
+	import { goto } from '$app/navigation';
+	import type { Aktion } from '#lib/ui.svelte.ts';
 	import { onMount } from 'svelte';
 	import Reiter from '#lib/ui/Reiter.svelte';
 	import Sterne from '#lib/ui/Sterne.svelte';
@@ -36,6 +43,16 @@
 		{ key: 'top', name: '4+ Sterne' },
 		{ key: 'gratis', name: 'Gratis' }
 	];
+/** Rechtsklick (PC) auf einen Platz */
+	function platzMenue(p: Platz) {
+		const punkte: Aktion[] = [
+			{ text: 'Öffnen', icon: ArrowRight, los: () => goto(`#/platz/${p.id}`) },
+			{ text: 'Bearbeiten', icon: PencilSimple, los: () => (ui.dialog = { art: 'platz', id: p.id }) },
+			{ text: 'Route dorthin', icon: NavigationArrow, los: () => window.open(`https://maps.apple.com/?daddr=${p.ort.lat},${p.ort.lng}`, '_blank', 'noopener') }
+		];
+		return { titel: p.name, punkte };
+	}
+
 	const passtSchnell = (p: Platz, f: string) => (f === 'top' ? platzBewertung(p.id) >= 4 : besuche(p.id).some((b) => b.preis === 0));
 	const passtMerkmale = (p: Platz) => Object.entries(merkmale).every(([k, w]) => p.merkmale[k] === w);
 	const anzahlFilter = $derived(Object.keys(merkmale).length + arten.length + (minSterne ? 1 : 0));
@@ -81,7 +98,7 @@
 
 <div class="seite">
 	{#if daten.plaetze.length}
-		<div class="chips rand">
+		<div class="chips rand" {@attach pfeile('button', 'zeile')}>
 			<button class:an={anzahlFilter > 0} onclick={() => (filterOffen = true)}><Funnel size={15} /> Filter{anzahlFilter ? ` (${anzahlFilter})` : ''}</button>
 			<button class:an={sortierung === 'naehe'} onclick={nachNaehe}>In der Nähe</button>
 			{#each SCHNELL as f (f.key)}
@@ -117,10 +134,10 @@
 			{/snippet}
 		</Dialog>
 	{/if}
-	<ul class="plaetze">
+	<ul class="plaetze" {@attach pfeile('a')}>
 		{#each liste as { p, wert, weg } (p.id)}
 			<li>
-				<a href="#/platz/{p.id}">
+				<a href="#/platz/{p.id}" {@attach kontext(() => platzMenue(p))}>
 					<span class="p-txt">
 						<b>{p.name}</b>
 						<span>{PLATZ_ART[p.art]}{#if p.ort.name}{' · '}{p.ort.name}{/if}{#if sortierung === 'naehe' && ui.ich}{' · '}{entfernung(weg)}{/if}</span>

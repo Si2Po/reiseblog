@@ -1,5 +1,6 @@
 <!-- Hauptbereiche (Reisen, Plätze, Ziele, Fotos) plus Suche und Zahnrad als Symbole. Bleibt beim Scrollen oben. -->
 <script lang="ts">
+	import { pfeile } from '#lib/ui/pfeile.ts';
 	import { page } from '$app/state';
 	import MapTrifold from 'phosphor-svelte/lib/MapTrifold';
 	import Tent from 'phosphor-svelte/lib/Tent';
@@ -14,7 +15,7 @@
 </script>
 
 <nav class="reiter" aria-label="Bereiche">
-	<div class="gruppe">
+	<div class="gruppe" {@attach pfeile('a', 'zeile')}>
 		<a href="#/" class:aktiv={aktiv === '/' || aktiv === '/statistik'}><MapTrifold size={18} /> Reisen</a>
 		<a href="#/plaetze" class:aktiv={aktiv === '/plaetze'}><Tent size={18} /> Plätze</a>
 		<a href="#/ziele" class:aktiv={aktiv === '/ziele'}><Flag size={18} /> Ziele</a>
