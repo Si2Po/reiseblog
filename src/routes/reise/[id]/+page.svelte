@@ -161,6 +161,16 @@
 		ui.gross = { ids: fotos.map((f) => f.id), i };
 	}
 
+	// „+“ oben in der Kopfzeile, sobald der Knopf „Eintrag hinzufügen“ unten nicht mehr zu sehen ist
+	let untenKnopf: HTMLElement | undefined = $state();
+	let untenSichtbar = $state(true);
+	$effect(() => {
+		if (!untenKnopf) return;
+		const b = new IntersectionObserver(([e]) => (untenSichtbar = e.isIntersecting));
+		b.observe(untenKnopf);
+		return () => b.disconnect();
+	});
+
 	function neuerEintrag() {
 		const letzter = liste.at(-1)?.datum;
 		ui.dialog = { art: 'eintrag', vorlage: { reise: id, datum: letzter ?? r?.start } };
@@ -231,6 +241,7 @@
 	{@const rf = reiseFarbe(r.farbe, thema.dunkel)}
 	<Kopf>
 		{#snippet rechts()}
+			{#if !untenSichtbar}<button onclick={neuerEintrag} aria-label="Eintrag hinzufügen"><Plus size={18} weight="bold" /></button>{/if}
 			{#if !inPlanung}<button onclick={() => (ui.dialog = { art: 'pdf', reise: r.id })} aria-label="Als PDF"><FilePdf size={18} /></button>{/if}
 			<button onclick={() => (ui.dialog = { art: 'reise', id: r.id })}><PencilSimple size={17} /> Details</button>
 		{/snippet}
@@ -405,7 +416,7 @@
 			</section>
 		{/if}
 
-		<button class="knopf neu" onclick={neuerEintrag}><Plus size={18} weight="bold" /> Eintrag hinzufügen</button>
+		<button class="knopf neu" bind:this={untenKnopf} onclick={neuerEintrag}><Plus size={18} weight="bold" /> Eintrag hinzufügen</button>
 	</article>
 {:else if daten.geladen}
 	<Kopf />

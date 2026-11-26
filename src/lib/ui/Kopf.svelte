@@ -32,6 +32,8 @@
 		justify-content: space-between;
 		padding: 0 10px 4px 8px;
 		background: var(--flaeche);
+		/* deckt den Innenabstand über der klebenden Leiste ab – sonst scrollt dort Inhalt durch */
+		box-shadow: 0 -16px 0 var(--flaeche);
 	}
 	.zurueck {
 		display: inline-flex;

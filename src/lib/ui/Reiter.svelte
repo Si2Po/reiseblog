@@ -34,6 +34,8 @@
 		gap: 8px;
 		padding: 2px 14px 10px;
 		background: var(--flaeche);
+		/* deckt den Innenabstand über der klebenden Leiste ab – sonst scrollt dort Inhalt durch */
+		box-shadow: 0 -16px 0 var(--flaeche);
 	}
 	.gruppe {
 		flex: 1;

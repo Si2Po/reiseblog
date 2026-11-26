@@ -17,6 +17,8 @@
 	import Tent from 'phosphor-svelte/lib/Tent';
 	import Van from 'phosphor-svelte/lib/Van';
 	import Footprints from 'phosphor-svelte/lib/Footprints';
+	import Camera from 'phosphor-svelte/lib/Camera';
+	import { fotosWaehlen } from '#lib/fotos/import.ts';
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import X from 'phosphor-svelte/lib/X';
 	import CaretDown from 'phosphor-svelte/lib/CaretDown';
@@ -49,7 +51,7 @@
 	const v: Partial<Eintrag> = { ...(vorlage ?? {}), ...(alt ?? {}) };
 	const altPlatz = daten.platz(v.platz);
 
-	let reise = $state(v.reise ?? vorschlagReise()?.id ?? '');
+	let reise = $state(v.reise ?? daten.reise(page.params.id)?.id ?? vorschlagReise()?.id ?? '');
 	let typ = $state<Typ>(v.typ ?? 'stay');
 	let titel = $state(v.titel ?? '');
 	let datum = $state(v.datum ?? heute());
@@ -286,6 +288,20 @@
 					{TYP_NAME[x.t]}
 				</button>
 			{/each}
+			{#if !alt}
+				<!-- Nur Fotos: Fotoauswahl für die gewählte Reise (Zuordnung zu Tag/Ausflug automatisch) -->
+				<button
+					type="button"
+					onclick={() => {
+						const r = reise || undefined;
+						zu();
+						fotosWaehlen({ reise: r });
+					}}
+				>
+					<Camera size={22} />
+					Fotos
+				</button>
+			{/if}
 		</div>
 
 		{#if reisen.length > 1}

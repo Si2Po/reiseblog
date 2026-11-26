@@ -4,6 +4,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import Tent from 'phosphor-svelte/lib/Tent';
 	import Footprints from 'phosphor-svelte/lib/Footprints';
 	import Van from 'phosphor-svelte/lib/Van';
@@ -29,7 +30,8 @@
 	let sucht = $state(true);
 
 	const reisen = reisenSortiert();
-	let reise = $state(vorschlagReise()?.id ?? '');
+	// Ist gerade eine Reise offen, gehört der Eintrag dorthin; sonst die laufende bzw. passende Reise
+	let reise = $state(daten.reise(page.params.id)?.id ?? vorschlagReise()?.id ?? '');
 	const r = $derived(daten.reise(reise));
 	const bekannt = $derived(ort ? plaetzeInDerNaehe(ort.lat, ort.lng)[0] : undefined);
 

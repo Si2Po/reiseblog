@@ -95,6 +95,27 @@ await warte(500);
 const vorher = await p.locator('.ein .vorne[style*=translate]').count();
 ok(vorher === 0, 'Keine Zeile bleibt verschoben');
 
+// „+“ oben, sobald „Eintrag hinzufügen“ unten nicht zu sehen ist; Reise vorbelegt; „Fotos“ als Wahl
+await p.goto(BASIS + '#/reise/bsp-no25');
+await warte(1500);
+await p.locator('.seite').evaluate((e) => e.closest('.inhalt')?.scrollTo(0, 0));
+await warte(400);
+const plus = p.locator('.kopf').getByRole('button', { name: 'Eintrag hinzufügen' });
+ok((await plus.count()) === 1, '„+“ oben erscheint, wenn der untere Knopf nicht zu sehen ist');
+await plus.click();
+await warte(600);
+const wahl = await p.locator('.dialog select').first().evaluate((e) => e.options[e.selectedIndex]?.text ?? '');
+ok(wahl.includes('Norwegen'), 'Neuer Eintrag: offene Reise ist vorbelegt (' + wahl + ')');
+ok((await p.locator('.dialog .wahl-typ button', { hasText: 'Fotos' }).count()) === 1, 'Neuer Eintrag bietet „Fotos“ an');
+await p.locator('.dialog').getByRole('button', { name: 'Abbrechen' }).click();
+await warte(500);
+await p.locator('button.hier').click();
+await warte(1500);
+const wahl2 = await p.locator('.dialog select').first().evaluate((e) => e.options[e.selectedIndex]?.text ?? '');
+ok(wahl2.includes('Norwegen'), '„Hier eintragen“: offene Reise ist vorbelegt (' + wahl2 + ')');
+await p.keyboard.press('Escape');
+await warte(500);
+
 // Aus der Suche direkt zum gefundenen Eintrag (aufgeklappt und sichtbar)
 await p.goto(BASIS + '#/suche');
 await warte(1000);
