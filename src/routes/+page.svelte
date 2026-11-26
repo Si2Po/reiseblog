@@ -18,12 +18,14 @@
 	import { ui } from '#lib/ui.svelte.ts';
 	import { thema } from '#lib/thema.svelte.ts';
 	import { reiseFarbe } from '#lib/farben.ts';
-	import { reisenSortiert, naechte, km, fotosVon, reiseEnde, summe } from '#lib/auswertung.ts';
-	import { zeitraum, jahr, zahl, heute, wort } from '#lib/datum.ts';
+	import { reisenSortiert, naechte, km, fotosVon, reiseEnde, summe, erinnerungen } from '#lib/auswertung.ts';
+	import ClockCounterClockwise from 'phosphor-svelte/lib/ClockCounterClockwise';
+	import { zeitraum, jahr, zahl, heute, wort, tagMitJahr } from '#lib/datum.ts';
 	import { beispielLaden } from '#lib/beispiel/daten.ts';
 
 	const reisen = $derived(reisenSortiert());
 	const s = $derived(summe());
+	const erinnert = $derived(daten.geladen ? erinnerungen() : []);
 
 	onMount(() => {
 		ui.auswahl = null;
@@ -68,6 +70,24 @@
 			<span class="ueber zahl">{s.reisen} {s.reisen === 1 ? 'Reise' : 'Reisen'} · {s.naechte} {wort(s.naechte, 'Nacht', 'Nächte')} · {zahl(s.km)} km</span>
 			<span class="statistik"><ChartBar size={15} weight="bold" /> Statistik</span>
 		</a>
+		<!-- „Heute vor einem Jahr“: ein Reisetag aus früheren Jahren -->
+		{#each erinnert as m (m.reise.id)}
+			<a
+				class="erinnerung"
+				href="#/reise/{m.reise.id}"
+				style="--rf:{reiseFarbe(m.reise.farbe, thema.dunkel)}"
+				onclick={() => {
+					ui.markiert = m.eintrag?.id ?? null;
+				}}
+			>
+				{#if m.fotos[0]}<img alt="" src={m.fotos[0].vorschau} />{:else}<span class="bild"><ClockCounterClockwise size={24} /></span>{/if}
+				<span class="e-txt">
+					<span class="ueber">{m.genau ? 'Heute' : 'Diese Woche'} vor {m.jahre} {m.jahre === 1 ? 'Jahr' : 'Jahren'}</span>
+					<b>{m.eintrag?.titel ?? m.reise.titel}</b>
+					<small>{m.reise.titel} · {tagMitJahr(m.datum)}{m.fotos.length ? ` · ${m.fotos.length} ${wort(m.fotos.length, 'Foto', 'Fotos')}` : ''}</small>
+				</span>
+			</a>
+		{/each}
 		<div class="reisen" {@attach pfeile('a.reise')}>
 			{#each reisen as r (r.id)}
 				{@const bild = titelbild(r.id)}
@@ -123,6 +143,48 @@
 		color: var(--text);
 		font-size: 13px;
 		font-weight: 600;
+	}
+	.erinnerung {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 12px;
+		padding: 8px;
+		border-radius: var(--radius-gross);
+		background: color-mix(in srgb, var(--rf) 14%, var(--flaeche));
+		color: var(--text);
+		text-decoration: none;
+	}
+	.erinnerung img,
+	.erinnerung .bild {
+		flex: none;
+		width: 64px;
+		height: 64px;
+		border-radius: var(--radius);
+		object-fit: cover;
+	}
+	.erinnerung .bild {
+		display: grid;
+		place-items: center;
+		background: var(--rf);
+		color: var(--flaeche);
+	}
+	.e-txt {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		min-width: 0;
+	}
+	.e-txt b {
+		font-size: 17px;
+		font-weight: 650;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.e-txt small {
+		color: var(--text-2);
+		font-size: 13px;
 	}
 	.reisen {
 		display: flex;

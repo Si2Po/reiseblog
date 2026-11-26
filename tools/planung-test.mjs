@@ -138,5 +138,24 @@ await p.getByRole('button', { name: 'Als Ziel merken' }).click();
 await warte(800);
 ok((await p.locator('.dialog', { hasText: 'Ziel merken' }).count()) === 1, 'Stecknadel → „Ziel merken“-Dialog mit Ort');
 
+// „Heute vor einem Jahr“: Uhr auf den 8. Juli 2026 → Norwegen (Juli 2025)
+{
+	const ctx2 = await b.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, locale: 'de-DE' });
+	const q = await ctx2.newPage();
+	await q.clock.setFixedTime(new Date('2026-07-08T10:00:00'));
+	await q.goto(BASIS);
+	await q.waitForTimeout(2500);
+	await q.getByText('Beispielreisen laden').click();
+	await q.waitForTimeout(1500);
+	const karte = q.locator('a.erinnerung');
+	const text = (await karte.count()) ? await karte.first().innerText() : '';
+	await q.screenshot({ path: 'tools/bilder/planung-heute-vor.png' });
+	ok(/Heute vor 1 Jahr/i.test(text) && text.includes('Norwegen') && text.includes('Preikestolen'), 'Startseite: „Heute vor 1 Jahr“ mit Norwegen (' + text.replace(/\s+/g, ' ') + ')');
+	await karte.first().click();
+	await q.waitForTimeout(1500);
+	ok(q.url().includes('#/reise/bsp-no25') && (await q.locator('.ein.markiert').count()) === 1, 'Tipp darauf öffnet die Reise beim Eintrag des Tages');
+	await ctx2.close();
+}
+
 await b.close();
 console.log(fehler.length ? 'FEHLER:\n' + [...new Set(fehler)].join('\n') : 'Alles in Ordnung');

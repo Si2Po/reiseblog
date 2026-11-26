@@ -1,6 +1,6 @@
 // Abgeleitete Werte aus den Daten (reine Funktionen, keine Seiteneffekte).
 import type { Eintrag, Foto, LngLat, Notiz, Platz, Reise } from '#lib/db/typen.ts';
-import { format } from 'date-fns';
+import { format, parseISO, addDays, setYear } from 'date-fns';
 import { plusTage } from '#lib/datum.ts';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { abstand } from '#lib/geo.ts';
@@ -169,3 +169,43 @@ export const summe = () => ({
 	naechte: daten.reisen.reduce((s, r) => s + naechte(r.id), 0),
 	km: daten.reisen.reduce((s, r) => s + km(r.id), 0)
 });
+
+/** „Heute vor einem Jahr“: ein Reisetag aus einem früheren Jahr zum heutigen Datum (oder bis 3 Tage daneben) */
+export interface Erinnerung {
+	reise: Reise;
+	datum: string;
+	/** wie viele Jahre her */
+	jahre: number;
+	/** genau heute (sonst „diese Woche“) */
+	genau: boolean;
+	/** wichtigster Eintrag des Tages (Übernachtung der Nacht, sonst der letzte des Tages) */
+	eintrag?: Eintrag;
+	fotos: Foto[];
+}
+
+export function erinnerungen(heuteS = format(new Date(), 'yyyy-MM-dd')): Erinnerung[] {
+	const jetzt = parseISO(heuteS);
+	const liste: Erinnerung[] = [];
+	for (const r of daten.reisen) {
+		if (r.start >= heuteS) continue;
+		const bis = reiseBis(r);
+		const vonJahr = Number(r.start.slice(0, 4));
+		const bisJahr = Math.min(Number(bis.slice(0, 4)), jetzt.getFullYear() - 1);
+		let treffer: Erinnerung | undefined;
+		// erst genau heute, dann bis 3 Tage daneben
+		for (const versatz of [0, -1, 1, -2, 2, -3, 3]) {
+			for (let jahr = bisJahr; jahr >= vonJahr && !treffer; jahr--) {
+				const tag = format(addDays(setYear(jetzt, jahr), versatz), 'yyyy-MM-dd');
+				if (tag < r.start || tag > bis) continue;
+				const t = tage(r.id).find((x) => x.datum === tag);
+				const nacht = t?.eintraege.find((e) => e.typ === 'stay') ?? t?.naechte[0]?.eintrag;
+				const fotos = fotosVon(r.id).filter((f) => f.aufgenommen.startsWith(tag));
+				if (!t && !fotos.length) continue;
+				treffer = { reise: r, datum: tag, jahre: jetzt.getFullYear() - jahr, genau: versatz === 0, eintrag: nacht ?? t?.eintraege.at(-1), fotos };
+			}
+			if (treffer) break;
+		}
+		if (treffer) liste.push(treffer);
+	}
+	return liste.sort((a, b) => Number(b.genau) - Number(a.genau) || a.jahre - b.jahre).slice(0, 2);
+}
