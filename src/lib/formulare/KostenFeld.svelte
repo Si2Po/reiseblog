@@ -30,6 +30,9 @@
 			</select>
 			<button type="button" class="rund" onclick={() => (kosten = kosten.filter((_, j) => j !== i))} aria-label="Ausgabe entfernen"><X size={14} /></button>
 		</div>
+		{#if k.art === 'sonstig'}
+			<input class="wofuer" bind:value={k.notiz} placeholder="Wofür? z. B. Waschmaschine, Gas" maxlength="60" aria-label="Wofür" />
+		{/if}
 	{/each}
 	<button type="button" class="dazu" onclick={neu}><Plus size={16} /> {typ === 'drive' ? 'Tanken, Maut, Fähre …' : typ === 'outing' ? 'Eintritt, Essen …' : 'Ausgabe'}</button>
 </div>
@@ -46,6 +49,10 @@
 	}
 	.kosten-zeile .w {
 		padding: 0 4px 0 8px;
+	}
+	/* Notiz zu „Sonstiges“ direkt unter ihrer Zeile */
+	.wofuer {
+		margin-top: -2px;
 	}
 	.dazu {
 		display: inline-flex;

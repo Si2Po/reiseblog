@@ -1,9 +1,12 @@
 <!--
   Zeile mit Wischgesten (iPhone), wie in der Mail-App:
-  - nach links wischen legt Knöpfe frei (`links`, z. B. Bearbeiten / Löschen) – erst ein Tipp löst aus
+  - ein Stück nach links wischen legt Knöpfe frei (`links`, z. B. Löschen · Details) – erst ein Tipp löst aus
+  - ganz nach links durchziehen löst den äußersten Knopf (den letzten in `links`) direkt aus;
+    kurz vorher füllt er die ganze Breite, damit man sieht, was gleich passiert
   - nach rechts wischen löst `rechts` direkt aus (z. B. „Hinzufügen“-Menü)
   - Rechtsklick (PC) ruft `onmenue` mit der Mausposition auf
-  Es ist immer nur eine Zeile offen; ein Tipp auf die offene Zeile schließt sie wieder.
+  Die Knöpfe wachsen beim Wischen mit (Symbol und Text blenden ein). Es ist immer nur eine Zeile
+  offen; ein Tipp auf die offene Zeile schließt sie wieder.
 -->
 <script lang="ts" module>
 	/** die gerade offene Zeile (nur eine zur Zeit) */
@@ -27,8 +30,12 @@
 	} = $props();
 
 	const ich = Symbol();
-	const KNOPF = 76;
+	const KNOPF = 80;
+	/** Breite der freigelegten Knöpfe (eingerastet) */
 	const breite = $derived(links.length * KNOPF);
+	let zeilenBreite = $state(0);
+	/** ab hier löst Durchziehen den äußersten Knopf aus */
+	const vollAb = $derived(Math.max(breite + 60, zeilenBreite * 0.6));
 
 	let dx = $state(0);
 	let zieht = $state(false);
@@ -40,6 +47,9 @@
 	let geradeGewischt = 0;
 
 	const offen = $derived(offeneZeile === ich && dx < 0);
+	const voll = $derived(links.length > 0 && -dx >= vollAb);
+	/** 0…1: wie weit die Knöpfe schon zu sehen sind (für das Einblenden) */
+	const anteil = $derived(breite ? Math.min(1, -dx / breite) : 0);
 	$effect(() => {
 		// eine andere Zeile wurde geöffnet → diese schließen
 		if (offeneZeile !== ich && !zieht) dx = 0;
@@ -68,7 +78,7 @@
 		if (e.cancelable) e.preventDefault();
 		e.stopPropagation();
 		let x = basis + mx;
-		const minX = -breite,
+		const minX = -zeilenBreite,
 			maxX = rechts ? 110 : 0;
 		if (x < minX) x = minX + (x - minX) * 0.25;
 		if (x > maxX) x = maxX + (x - maxX) * 0.25;
@@ -79,14 +89,13 @@
 		zieht = false;
 		geradeGewischt = Date.now();
 		if (dx > 70 && rechts) {
-			dx = 0;
-			offeneZeile = null;
+			schliessen();
 			rechts.los();
+		} else if (voll) {
+			schliessen();
+			links[links.length - 1].los();
 		} else if (dx < -Math.min(60, breite / 2)) dx = -breite;
-		else {
-			dx = 0;
-			if (offeneZeile === ich) offeneZeile = null;
-		}
+		else schliessen();
 	}
 	function schliessen() {
 		dx = 0;
@@ -103,6 +112,7 @@
 <div
 	class="wz"
 	role="group"
+	bind:clientWidth={zeilenBreite}
 	{@attach beobachten}
 	ontouchstart={start}
 	ontouchend={ende}
@@ -120,17 +130,20 @@
 		</div>
 	{/if}
 	{#if dx < 0}
-		<div class="hinten rechts-seite" style:width="{breite}px">
-			{#each links as a (a.text)}
+		<div class="hinten rechts-seite" class:zieht class:voll style:width="{-dx}px">
+			{#each links as a, i (a.text)}
 				<button
 					class:gefahr={a.gefahr}
+					class:aussen={i === links.length - 1}
 					onclick={() => {
 						schliessen();
 						a.los();
 					}}
 				>
-					{#if a.icon}<a.icon size={20} />{/if}
-					<span>{a.text}</span>
+					<span class="inhalt" style:opacity={anteil} style:transform="scale({0.6 + 0.4 * anteil})">
+						{#if a.icon}<a.icon size={20} />{/if}
+						<span>{a.text}</span>
+					</span>
 				</button>
 			{/each}
 		</div>
@@ -162,7 +175,7 @@
 	}
 	.vorne {
 		position: relative;
-		transition: transform 0.25s var(--sanft);
+		transition: transform 0.28s var(--sanft);
 	}
 	.vorne.zieht {
 		transition: none;
@@ -182,24 +195,49 @@
 		font-size: 14px;
 		font-weight: 650;
 	}
+	/* Knöpfe hinter der Zeile: abgerundete Kacheln, die mit dem Finger mitwachsen */
 	.rechts-seite {
 		right: 0;
+		gap: 6px;
+		padding: 6px 6px 6px 0;
+		transition: width 0.28s var(--sanft);
+	}
+	.rechts-seite.zieht {
+		transition: none;
 	}
 	.rechts-seite button {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 4px;
+		flex: 1 1 0;
+		min-width: 0;
+		overflow: hidden;
+		display: grid;
+		place-items: center;
 		border: 0;
-		background: var(--flaeche-2);
-		color: var(--text);
+		border-radius: var(--radius);
+		background: var(--rf, var(--text));
+		color: var(--flaeche);
 		font-size: 12px;
-		font-weight: 600;
+		font-weight: 650;
+		transition:
+			flex-grow 0.22s var(--sanft),
+			opacity 0.22s;
 	}
 	.rechts-seite button.gefahr {
 		background: var(--gefahr);
 		color: #fff;
+	}
+	/* Durchziehen: der äußerste Knopf übernimmt die ganze Breite */
+	.rechts-seite.voll button:not(.aussen) {
+		flex-grow: 0.0001;
+		opacity: 0;
+	}
+	.rechts-seite.voll button.aussen {
+		flex-grow: 1;
+	}
+	.inhalt {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		white-space: nowrap;
 	}
 </style>

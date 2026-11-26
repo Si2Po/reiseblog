@@ -6,7 +6,7 @@
 */
 import { eintraegeVon } from '#lib/auswertung.ts';
 import { heute } from '#lib/datum.ts';
-import { KOSTEN_ART, type Eintrag, type KostenArt } from '#lib/db/typen.ts';
+import { KOSTEN_ART, type Eintrag, type Kosten, type KostenArt } from '#lib/db/typen.ts';
 
 export const WAEHRUNGEN = ['EUR', 'CHF', 'NOK', 'SEK', 'DKK', 'GBP', 'CZK', 'PLN', 'HUF', 'ISK'];
 
@@ -49,6 +49,9 @@ export function reiseKosten(reise: string): Posten[] {
 	}
 	return liste;
 }
+
+/** Kurzer Name einer Ausgabe: bei „Sonstiges“ die eigene Notiz, sonst die Art („Maut“ statt „Maut / Vignette“) */
+export const kostenName = (k: Kosten) => (k.art === 'sonstig' && k.notiz?.trim()) || KOSTEN_ART[k.art].split(' /')[0];
 
 export function summe(posten: Posten[]): Betraege {
 	const s: Betraege = {};

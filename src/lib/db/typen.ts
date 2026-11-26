@@ -106,6 +106,8 @@ export interface Kosten {
 	art: KostenArt;
 	betrag: number;
 	waehrung: string;
+	/** nur bei „Sonstiges“: wofür (z. B. „Waschmaschine“) */
+	notiz?: string;
 }
 
 /** Tageswetter (Open-Meteo): WMO-Code, Höchst-/Tiefsttemperatur °C, Niederschlag mm */

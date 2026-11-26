@@ -12,12 +12,12 @@ import type { jsPDF as JsPdf } from 'jspdf';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { tage, naechte, km, plaetzeAnzahl, fotosVon, fotosVonEintrag, reiseEnde, nachtNotizen, weitereFotos, eintraegeVon } from '#lib/auswertung.ts';
 import { zeitraum, tagLang, monatJahr, reiseTag, dauer, zahl, preisText, notizZeit } from '#lib/datum.ts';
-import { reiseKosten, summe, nurEuro, wechselkurse, type Betraege } from '#lib/kosten.svelte.ts';
+import { reiseKosten, summe, nurEuro, wechselkurse, kostenName, type Betraege } from '#lib/kosten.svelte.ts';
 import { wetterArt, tagesWetter } from '#lib/wetter.ts';
 import { reiseFarbe } from '#lib/farben.ts';
 import { vollbild } from '#lib/fotos/bild.ts';
 import { kartenBild, KARTE_QUELLE } from './karte.ts';
-import { KOSTEN_ART, type Eintrag, type Foto, type LngLat, type Notiz, type Reise } from '#lib/db/typen.ts';
+import { type Eintrag, type Foto, type LngLat, type Notiz, type Reise } from '#lib/db/typen.ts';
 
 export interface PdfWahl {
 	fotos: boolean;
@@ -284,7 +284,7 @@ export async function reisePdf(r: Reise, wahl: PdfWahl, fortschritt?: (n: number
 		b.y += 1;
 	};
 	const ausgaben = (e: Eintrag) =>
-		wahl.kosten ? (e.kosten ?? []).map((k) => `${KOSTEN_ART[k.art].split(' /')[0]} ${preisText(k.betrag, k.waehrung)}`) : [];
+		wahl.kosten ? (e.kosten ?? []).map((k) => `${kostenName(k)} ${preisText(k.betrag, k.waehrung)}`) : [];
 	const meta = (e: Eintrag): string => {
 		const teile: string[] = [];
 		if (e.typ === 'drive') {

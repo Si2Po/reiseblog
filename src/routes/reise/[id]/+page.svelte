@@ -36,11 +36,11 @@
 	import { aktuelleUebernachtung, weiterfahren, zieleInDerNaehe, entfernungText } from '#lib/unterwegs.ts';
 	import { laufendeReise } from '#lib/auswertung.ts';
 	import { wetterNachtragen, tagesWetter, wetterArt } from '#lib/wetter.ts';
-	import { reiseKosten, summe, wechselkurse, nurEuro, type Betraege } from '#lib/kosten.svelte.ts';
+	import { reiseKosten, summe, wechselkurse, nurEuro, kostenName, type Betraege } from '#lib/kosten.svelte.ts';
 	import { zielFarbe } from '#lib/map/zusatz.ts';
 	import Flag from 'phosphor-svelte/lib/Flag';
 	import type { Eintrag, Foto } from '#lib/db/typen.ts';
-	import { TYP_NAME, ZIEL_ART, KOSTEN_ART } from '#lib/db/typen.ts';
+	import { TYP_NAME, ZIEL_ART } from '#lib/db/typen.ts';
 
 	async function losfahren(e: Eintrag) {
 		await weiterfahren(e);
@@ -117,7 +117,7 @@
 		Object.entries(b)
 			.map(([w, x]) => preisText(Math.round(x * 100) / 100, w))
 			.join(' + ');
-	const ausgabenText = (e: Eintrag) => (e.kosten ?? []).map((k) => `${KOSTEN_ART[k.art].split(' /')[0]} ${preisText(k.betrag, k.waehrung)}`).join(' · ');
+	const ausgabenText = (e: Eintrag) => (e.kosten ?? []).map((k) => `${kostenName(k)} ${preisText(k.betrag, k.waehrung)}`).join(' · ');
 
 	const SYMBOL = { stay: Tent, drive: Van, outing: Footprints };
 
@@ -319,7 +319,7 @@
 							{@const schluessel = e.id + ':' + nacht.nr}
 							<div class="ein folge" class:markiert={offen === schluessel}>
 								<Wischzeile
-									links={[{ text: 'Bearbeiten', icon: PencilSimple, los: () => bearbeiten(e) }]}
+									links={[{ text: 'Details', icon: PencilSimple, los: () => bearbeiten(e) }]}
 									rechts={{ text: 'Hinzufügen', icon: Plus, los: () => hinzufuegen(e, tag.datum) }}
 									onmenue={(x, y) => menue(e, tag.datum, x, y)}
 								>
@@ -344,8 +344,8 @@
 						<div class="ein typ-{e.typ}" class:markiert={offen === e.id} id="e-{e.id}">
 							<Wischzeile
 								links={[
-									{ text: 'Bearbeiten', icon: PencilSimple, los: () => bearbeiten(e) },
-									{ text: 'Löschen', icon: Trash, gefahr: true, los: () => loeschen(e) }
+									{ text: 'Löschen', icon: Trash, gefahr: true, los: () => loeschen(e) },
+									{ text: 'Details', icon: PencilSimple, los: () => bearbeiten(e) }
 								]}
 								rechts={{ text: 'Hinzufügen', icon: Plus, los: () => hinzufuegen(e, e.datum) }}
 								onmenue={(x, y) => menue(e, e.datum, x, y)}

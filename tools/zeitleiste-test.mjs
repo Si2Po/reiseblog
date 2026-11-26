@@ -14,7 +14,7 @@ const warte = (ms) => p.waitForTimeout(ms);
 const foto = (n) => p.screenshot({ path: `tools/bilder/zeitleiste-${n}.png` });
 
 /** Wischen mit dem Finger über ein Element (dx in px) */
-async function wischen(loc, dx) {
+async function wischen(loc, dx, bild) {
 	const box = await loc.boundingBox();
 	const x = box.x + box.width / 2,
 		y = box.y + Math.min(30, box.height / 2);
@@ -24,6 +24,7 @@ async function wischen(loc, dx) {
 		await t('touchMove', x + (dx * i) / 10);
 		await warte(16);
 	}
+	if (bild) await foto(bild); // Zwischenstand mit dem Finger noch auf dem Glas
 	await t('touchEnd', x + dx);
 	await warte(400);
 }
@@ -57,13 +58,19 @@ await warte(400);
 await wischen(troll, -180);
 await foto('3-links');
 const loeschKnopf = troll.locator('.rechts-seite button', { hasText: 'Löschen' });
-ok(await loeschKnopf.isVisible(), 'Nach links wischen zeigt „Löschen“');
+ok(await loeschKnopf.isVisible() && (await troll.locator('.rechts-seite button', { hasText: 'Details' }).isVisible()), 'Ein Stück nach links wischen zeigt „Löschen“ und „Details“');
 await loeschKnopf.click();
 await warte(600);
 ok((await p.locator('.ein', { hasText: 'Trolltunga' }).count()) === 0, 'Ein Tipp auf „Löschen“ löscht');
 await p.getByRole('button', { name: 'Rückgängig' }).click();
 await warte(800);
 ok((await p.locator('.ein', { hasText: 'Trolltunga' }).count()) === 1, 'Rückgängig holt den Eintrag zurück');
+
+// Ganz nach links durchziehen öffnet die Details
+await wischen(troll, -330, '3b-durchziehen');
+ok((await p.locator('.dialog', { hasText: 'Ausflug bearbeiten' }).count()) === 1, 'Durchziehen nach links öffnet die Details');
+await p.getByRole('button', { name: 'Abbrechen' }).click();
+await warte(500);
 
 // Wischen nach rechts: Hinzufügen
 const cider = p.locator('.ein', { hasText: 'Cider-Probe' });
@@ -75,7 +82,13 @@ await p.locator('[role=menu]').getByText('Ausgabe hinzufügen').click();
 await warte(900);
 await foto('5-ausgabe');
 ok((await p.locator('.kosten-zeile').count()) === 1, '„Ausgabe hinzufügen“ öffnet den Eintrag mit leerer Ausgabe-Zeile');
-await p.getByRole('button', { name: 'Abbrechen' }).click();
+// „Sonstiges“ mit eigener Notiz
+await p.locator('.kosten-zeile select').first().selectOption('sonstig');
+await p.locator('.kosten-zeile input').fill('5');
+await p.getByLabel('Wofür').fill('Waschmaschine');
+await p.getByRole('button', { name: 'Speichern' }).click();
+await warte(700);
+ok((await cider.locator('.ein-meta').innerText()).includes('Waschmaschine 5'), 'Sonstige Ausgabe zeigt ihre Notiz („Waschmaschine 5 €“)');
 await warte(500);
 
 // Senkrecht scrollen darf nicht wischen

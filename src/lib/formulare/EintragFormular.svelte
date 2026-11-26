@@ -180,7 +180,9 @@
 			}
 		}
 
-		const ausgaben = kosten.filter((k) => Number(k.betrag) > 0).map((k) => ({ ...k, betrag: Number(k.betrag) }));
+		const ausgaben = kosten
+			.filter((k) => Number(k.betrag) > 0)
+			.map((k) => ({ ...k, betrag: Number(k.betrag), notiz: k.art === 'sonstig' ? k.notiz?.trim() || undefined : undefined }));
 		const gemeinsam = {
 			reise,
 			typ,

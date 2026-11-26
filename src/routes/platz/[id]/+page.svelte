@@ -45,8 +45,11 @@
 		<h1>{p.name}</h1>
 		<div class="bewertung">
 			{#if wert}
+				{@const n = bs.filter((b) => b.bewertung).length}
+				<!-- Schnitt der Bewertungen aller Übernachtungen hier (bewertet wird bei der Übernachtung) -->
 				<Sterne wert={wert} groesse={20} />
 				<span class="zahl">{wert.toLocaleString('de-DE', { maximumFractionDigits: 1 })}</span>
+				<span class="herkunft">{n === 1 ? 'aus 1 Besuch' : `Schnitt aus ${n} Besuchen`}</span>
 			{:else}
 				<span class="ohne">Noch nicht bewertet</span>
 			{/if}
@@ -142,6 +145,11 @@
 		gap: 8px;
 		min-height: 32px;
 		font-weight: 600;
+	}
+	.herkunft {
+		color: var(--text-2);
+		font-size: 13px;
+		font-weight: 500;
 	}
 	.ohne {
 		color: var(--text-2);
