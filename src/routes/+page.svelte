@@ -35,7 +35,7 @@
 	function reiseMenue(r: Reise) {
 		const punkte: Aktion[] = [
 			{ text: 'Öffnen', icon: ArrowRight, los: () => goto(`#/reise/${r.id}`) },
-			{ text: 'Bearbeiten', icon: PencilSimple, los: () => (ui.dialog = { art: 'reise', id: r.id }) }
+			{ text: 'Details', icon: PencilSimple, los: () => (ui.dialog = { art: 'reise', id: r.id }) }
 		];
 		if (r.start <= heute()) punkte.push({ text: 'Als PDF', icon: FilePdf, los: () => (ui.dialog = { art: 'pdf', reise: r.id }) });
 		return { titel: r.titel, punkte };

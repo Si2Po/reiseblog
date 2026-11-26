@@ -54,7 +54,7 @@
 	}
 </script>
 
-<Dialog titel="Platz bearbeiten" onschliessen={zu} versteckt={!!ui.ortWahl}>
+<Dialog titel="Platz" onschliessen={zu} versteckt={!!ui.ortWahl}>
 	<form
 		id="platzform"
 		onsubmit={(e) => {

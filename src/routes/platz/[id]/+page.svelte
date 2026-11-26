@@ -64,7 +64,7 @@
 {#if p}
 	<Kopf>
 		{#snippet rechts()}
-			<button onclick={() => (ui.dialog = { art: 'platz', id: p.id })}><PencilSimple size={17} /> Bearbeiten</button>
+			<button onclick={() => (ui.dialog = { art: 'platz', id: p.id })}><PencilSimple size={17} /> Details</button>
 		{/snippet}
 	</Kopf>
 	<article class="seite">

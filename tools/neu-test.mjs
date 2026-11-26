@@ -118,7 +118,7 @@ if ((await stayKnopf.getAttribute('aria-expanded')) !== 'true') await stayKnopf.
 await warte(300);
 await p.locator('.typ-stay').locator('.aktionen').getByLabel('Mehr').click();
 await p.waitForTimeout(300);
-await p.getByRole('menuitem', { name: 'Bearbeiten', exact: true }).click();
+await p.getByRole('menuitem', { name: 'Details', exact: true }).click();
 await warte(400);
 await p.locator('.dialog').getByRole('button', { name: 'Mehr', exact: true }).click();
 await warte(400);
@@ -132,7 +132,7 @@ await warte(300);
 await p.goto(BASIS + '#/platz/bsp-p4');
 await warte(1200);
 await voll();
-await p.getByRole('button', { name: 'Bearbeiten' }).click();
+await p.getByRole('button', { name: 'Details' }).click();
 await warte(400);
 await p.getByRole('button', { name: 'Am Wasser' }).click();
 await p.locator('input[placeholder^="z. B. Park4Night"]').fill('https://park4night.com/de/place/12345');
@@ -175,7 +175,7 @@ await foto('9-route-neu');
 // --- Zwischenziel im Formular ---
 await fahrt.locator('.aktionen').getByLabel('Mehr').click();
 await p.waitForTimeout(300);
-await p.getByRole('menuitem', { name: 'Bearbeiten', exact: true }).click();
+await p.getByRole('menuitem', { name: 'Details', exact: true }).click();
 await warte(500);
 ok((await p.locator('.via').count()) === 1, 'Formular zeigt das Zwischenziel');
 await foto('10-via-formular');

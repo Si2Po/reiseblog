@@ -184,7 +184,7 @@
 		if (e.typ === 'stay' && aktuelleUebernachtung()?.id === e.id) punkte.push({ text: 'Weiterfahren', icon: Van, los: () => losfahren(e) });
 		punkte.push(...hinzuPunkte(e, datum));
 		if (e.platz) punkte.push({ text: 'Platz ansehen', icon: Tent, los: () => goto(`#/platz/${e.platz}`) });
-		punkte.push({ text: e.typ === 'stay' && datum !== e.datum ? 'Übernachtung bearbeiten' : 'Bearbeiten', icon: PencilSimple, los: () => bearbeiten(e) });
+		punkte.push({ text: e.typ === 'stay' && datum !== e.datum ? 'Details zur Übernachtung' : 'Details', icon: PencilSimple, los: () => bearbeiten(e) });
 		if (datum === e.datum) punkte.push({ text: 'Löschen', icon: Trash, gefahr: true, los: () => loeschen(e) });
 		ui.aktionen = { titel: e.titel, punkte, x, y };
 	}
@@ -232,7 +232,7 @@
 	<Kopf>
 		{#snippet rechts()}
 			{#if !inPlanung}<button onclick={() => (ui.dialog = { art: 'pdf', reise: r.id })} aria-label="Als PDF"><FilePdf size={18} /></button>{/if}
-			<button onclick={() => (ui.dialog = { art: 'reise', id: r.id })}><PencilSimple size={17} /> Bearbeiten</button>
+			<button onclick={() => (ui.dialog = { art: 'reise', id: r.id })}><PencilSimple size={17} /> Details</button>
 		{/snippet}
 	</Kopf>
 

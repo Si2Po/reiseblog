@@ -47,7 +47,7 @@
 	function platzMenue(p: Platz) {
 		const punkte: Aktion[] = [
 			{ text: 'Öffnen', icon: ArrowRight, los: () => goto(`#/platz/${p.id}`) },
-			{ text: 'Bearbeiten', icon: PencilSimple, los: () => (ui.dialog = { art: 'platz', id: p.id }) },
+			{ text: 'Details', icon: PencilSimple, los: () => (ui.dialog = { art: 'platz', id: p.id }) },
 			{ text: 'Route dorthin', icon: NavigationArrow, los: () => window.open(`https://maps.apple.com/?daddr=${p.ort.lat},${p.ort.lng}`, '_blank', 'noopener') }
 		];
 		return { titel: p.name, punkte };

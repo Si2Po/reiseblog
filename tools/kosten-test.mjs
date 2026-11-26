@@ -54,7 +54,7 @@ await p.locator('.typ-outing .ein-knopf', { hasText: 'Dalsnibba' }).click();
 await warte(400);
 await p.locator('.aktionen').getByLabel('Mehr').click();
 await p.waitForTimeout(300);
-await p.getByRole('menuitem', { name: 'Bearbeiten', exact: true }).click();
+await p.getByRole('menuitem', { name: 'Details', exact: true }).click();
 await warte(500);
 await p.getByRole('button', { name: /Eintritt, Essen/ }).click();
 await warte(200);

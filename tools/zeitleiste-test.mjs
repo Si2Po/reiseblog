@@ -1,4 +1,4 @@
-// Test: ruhige Zeitleiste – Tippen klappt nur auf (Foto + „…“), Wischen links (Bearbeiten/Löschen),
+// Test: ruhige Zeitleiste – Tippen klappt nur auf (Foto + „…“), Wischen links (Löschen/Details, Durchziehen),
 // Wischen rechts (Hinzufügen), Aktionen-Menü, „Ausgabe hinzufügen“, Rechtsklick am PC, Sprung aus der Suche, Fotoalbum/Großansicht.
 // Echte Touch-Gesten über Chromium (CDP). Aufruf: node tools/zeitleiste-test.mjs   (Dev-Server auf :5173)
 import { chromium } from 'playwright';
@@ -44,7 +44,7 @@ await troll.locator('.ein-knopf').click();
 await warte(400);
 await foto('1-offen');
 ok((await troll.getByLabel('Fotos hinzufügen').count()) === 1 && (await troll.getByLabel('Mehr').count()) === 1, 'Aufgeklappt: Foto- und „…“-Knopf');
-ok((await troll.getByText('Bearbeiten').count()) === 0, 'Keine Knopfreihe mit „Bearbeiten“ mehr');
+ok((await troll.getByText('Details').count()) === 0, 'Keine Knopfreihe mit „Details“ mehr');
 
 await troll.getByLabel('Mehr').click();
 await warte(400);
@@ -54,7 +54,7 @@ ok((await menue.getByText('Ausgabe hinzufügen').count()) === 1 && (await menue.
 await p.getByRole('button', { name: 'Abbrechen' }).click();
 await warte(400);
 
-// Wischen nach links: Bearbeiten / Löschen
+// Wischen nach links: Löschen / Details
 await wischen(troll, -180);
 await foto('3-links');
 const loeschKnopf = troll.locator('.rechts-seite button', { hasText: 'Löschen' });
@@ -68,7 +68,7 @@ ok((await p.locator('.ein', { hasText: 'Trolltunga' }).count()) === 1, 'Rückgä
 
 // Ganz nach links durchziehen öffnet die Details
 await wischen(troll, -330, '3b-durchziehen');
-ok((await p.locator('.dialog', { hasText: 'Ausflug bearbeiten' }).count()) === 1, 'Durchziehen nach links öffnet die Details');
+ok((await p.locator('.dialog', { hasText: 'Wo?' }).count()) === 1, 'Durchziehen nach links öffnet die Details');
 await p.getByRole('button', { name: 'Abbrechen' }).click();
 await warte(500);
 

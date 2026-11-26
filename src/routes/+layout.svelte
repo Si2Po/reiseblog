@@ -313,6 +313,8 @@
 	.leiste-inhalt {
 		height: 100%;
 		overflow-y: auto;
+		/* Platz für den Scrollbalken immer freihalten – sonst springt der Inhalt, sobald er erscheint */
+		scrollbar-gutter: stable;
 		padding: 14px 0 40px;
 	}
 	.hier {

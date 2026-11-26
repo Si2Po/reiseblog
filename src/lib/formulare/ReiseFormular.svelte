@@ -62,7 +62,7 @@
 	}
 </script>
 
-<Dialog titel={alt ? 'Reise bearbeiten' : 'Neue Reise'} onschliessen={zu} versteckt={!!ui.ortWahl}>
+<Dialog titel={alt ? 'Reise' : 'Neue Reise'} onschliessen={zu} versteckt={!!ui.ortWahl}>
 	<form
 		id="reiseform"
 		onsubmit={(e) => {

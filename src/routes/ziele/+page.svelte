@@ -55,7 +55,7 @@
 	/** Rechtsklick (PC) auf ein Ziel */
 	function zielMenue(z: Ziel) {
 		const punkte: Aktion[] = [
-			{ text: 'Bearbeiten', icon: PencilSimple, los: () => oeffnen(z) },
+			{ text: 'Details', icon: PencilSimple, los: () => oeffnen(z) },
 			{ text: 'Auf der Karte', icon: MapPin, los: () => ui.zeigeOrt(z.ort, 13) },
 			{
 				text: 'Löschen',

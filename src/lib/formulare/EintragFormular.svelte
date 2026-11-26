@@ -271,7 +271,7 @@
 	];
 </script>
 
-<Dialog titel={alt ? `${TYP_NAME[typ]} bearbeiten` : 'Neuer Eintrag'} onschliessen={zu} versteckt={!!ui.ortWahl}>
+<Dialog titel={alt ? TYP_NAME[typ] : 'Neuer Eintrag'} onschliessen={zu} versteckt={!!ui.ortWahl}>
 	<form
 		id="eintragform"
 		onsubmit={(e) => {
