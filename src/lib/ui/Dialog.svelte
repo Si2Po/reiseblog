@@ -30,7 +30,8 @@
 	}
 </script>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && !versteckt && onschliessen()} />
+<!-- Esc: erst eine offene Foto-Großansicht darüber schließen, nicht den Dialog darunter -->
+<svelte:window onkeydown={(e) => e.key === 'Escape' && !versteckt && !ui.gross && onschliessen()} />
 
 <!-- An den <body> gehängt: sonst würde ein verschobenes Sheet (transform) „fixed“ verfälschen -->
 <div class="portal" {@attach zumBody}>

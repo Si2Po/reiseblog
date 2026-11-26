@@ -39,7 +39,7 @@
 	import { routeNachtragen, viaEinfuegen } from '#lib/geo/routen.ts';
 	import { offeneFahrt, naechteBis } from '#lib/unterwegs.ts';
 	import { koordText } from '#lib/geo.ts';
-	import { aufraeumen } from '#lib/merkmale.ts';
+	import { aufraeumen, merkmaleFuer } from '#lib/merkmale.ts';
 	import { TYP_NAME, PLATZ_ART, type Eintrag, type Kosten, type Merkmale, type Notiz, type Ort, type PlatzArt, type Typ } from '#lib/db/typen.ts';
 
 	/** kostenNeu: gleich eine leere Ausgabe-Zeile anlegen und hinspringen (aus „Ausgabe hinzufügen“) */
@@ -76,6 +76,8 @@
 	let notizen = $state<Notiz[]>([...(v.notizen ?? [])]);
 	let neueNotiz = $state('');
 	let mehr = $state(false);
+	const mehrMoeglich = $derived(typ === 'stay' || merkmaleFuer(typ).length > 0);
+	const eintragFotos = $derived(alt ? daten.fotos.filter((f) => f.eintrag === alt.id).sort((a, b) => a.aufgenommen.localeCompare(b.aufgenommen)) : []);
 
 	// „Ausgabe hinzufügen“ aus der Zeitleiste: leere Zeile anlegen, hinscrollen, Betrag fokussieren
 	// (einmalig beim Öffnen – untrack: Startwerte, keine Abhängigkeit)
@@ -440,6 +442,25 @@
 
 		<KostenFeld bind:kosten {waehrung} {typ} />
 
+		<!-- Fotos dieses Eintrags: ansehen und weitere hinzufügen (nur bei schon gespeicherten Einträgen) -->
+		{#if alt}
+			<div class="feld">
+				<span class="name">Fotos</span>
+				<div class="eintrag-fotos">
+					{#each eintragFotos as f, i (f.id)}
+						<button type="button" onclick={() => (ui.gross = { ids: eintragFotos.map((x) => x.id), i })} aria-label="Foto ansehen"
+							><img alt="" src={f.vorschau} /></button
+						>
+					{/each}
+					<button type="button" class="dazu-foto" onclick={() => fotosWaehlen({ reise: alt.reise, eintrag: alt.id })} aria-label="Fotos hinzufügen"
+						><Camera size={22} /></button
+					>
+				</div>
+			</div>
+		{/if}
+
+		<!-- „Mehr“ nur, wenn es dort auch etwas gibt -->
+		{#if mehrMoeglich}
 		<button type="button" class="aufklapp" onclick={() => (mehr = !mehr)} aria-expanded={mehr}>
 			<CaretDown size={16} style="transform: rotate({mehr ? 180 : 0}deg); transition: transform .2s" /> Mehr
 		</button>
@@ -463,9 +484,9 @@
 					</label>
 				{:else}
 					<MerkmalFelder bezug={typ} bind:werte={merkmale} />
-					<p class="leer klein">Hier gibt es noch keine weiteren Merkmale.</p>
 				{/if}
 			</div>
+		{/if}
 		{/if}
 	</form>
 
@@ -598,9 +619,30 @@
 		width: 30px;
 		height: 30px;
 	}
-	.leer.klein {
-		padding: 4px 0 12px;
-		text-align: left;
-		font-size: 14px;
+	.eintrag-fotos {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.eintrag-fotos button {
+		width: 64px;
+		height: 64px;
+		padding: 0;
+		border: 0;
+		border-radius: var(--radius);
+		overflow: hidden;
+		background: var(--flaeche-2);
+	}
+	.eintrag-fotos img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.eintrag-fotos .dazu-foto {
+		display: grid;
+		place-items: center;
+		border: 1.5px dashed var(--linie);
+		background: none;
+		color: var(--text-2);
 	}
 </style>

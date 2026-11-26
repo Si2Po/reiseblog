@@ -5,6 +5,8 @@ import Van from 'phosphor-svelte/lib/Van';
 import ArrowsOut from 'phosphor-svelte/lib/ArrowsOut';
 import Trash from 'phosphor-svelte/lib/Trash';
 import Tray from 'phosphor-svelte/lib/Tray';
+import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
+import { fotoDrehen } from './drehen.ts';
 import { page } from '$app/state';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { ui, zurReise, type Aktion } from '#lib/ui.svelte.ts';
@@ -28,6 +30,7 @@ export function fotoAktionen(f: Foto, ansehen: () => void): { titel: string; pun
 		punkte.push({ text: 'Zur Reise', icon: Van, los: () => zurReise(reise.id, f.eintrag) });
 	}
 	punkte.push({ text: 'Zuordnen …', icon: Tray, los: () => (ui.dialog = { art: 'zuordnen', fotos: [f.id] }) });
+	punkte.push({ text: 'Drehen', icon: ArrowClockwise, los: () => fotoDrehen(f) });
 	if (reise && reise.titelbild !== f.id) {
 		punkte.push({
 			text: 'Als Titelbild',

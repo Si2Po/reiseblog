@@ -101,6 +101,11 @@
 		ui.zeigeOrt(o, 13);
 		ui.zeige(`${fotoText(fotos.length)} auf der Karte platziert`);
 	}
+	function zumBody(el: HTMLElement) {
+		document.body.append(el);
+		return () => el.remove();
+	}
+
 	async function loeschen() {
 		const ids = [...gewaehlt];
 		const zurueck = await daten.loeschenAlle(ids.map((id) => ['fotos', id]));
@@ -111,7 +116,7 @@
 
 <Reiter />
 
-<div class="seite" {@attach pfeile('.raster button', 'raster')}>
+<div class="seite" class:mit-leiste={auswaehlen} {@attach pfeile('.raster button', 'raster')}>
 	<div class="kopf">
 		{#if auswaehlen}
 			<span class="ueber zahl">{gewaehlt.size ? `${fotoText(gewaehlt.size)} ausgewählt` : 'Fotos antippen'}</span>
@@ -175,8 +180,9 @@
 		</section>
 	{/each}
 
-	{#if auswaehlen && gewaehlt.size}
-		<div class="leiste" transition:fly={{ y: 40, duration: 180 }}>
+	{#if auswaehlen && gewaehlt.size && !ui.ortWahl}
+		<!-- an den Bildschirmrand gehängt (am PC unten an die Seitenleiste): „klebend“ im Blatt richtet Safari sich am Innenabstand aus und die Leiste schwebt -->
+		<div class="leiste" class:breit={ui.breit} {@attach zumBody} transition:fly={{ y: 40, duration: 180 }}>
 			<button class="knopf" onclick={platzieren}><MapPinPlus size={18} /> Platzieren</button>
 			<button
 				class="knopf zweit"
@@ -314,14 +320,25 @@
 	}
 	/* Aktionen für die Auswahl: feste Leiste am unteren Rand, über die ganze Breite */
 	.leiste {
-		position: sticky;
+		position: fixed;
+		z-index: 25;
+		left: 0;
+		right: 0;
 		bottom: 0;
 		display: flex;
 		gap: 8px;
-		margin: 16px -18px 0;
 		padding: 10px 18px calc(10px + env(safe-area-inset-bottom));
 		border-top: 1px solid var(--linie);
 		background: var(--flaeche);
+	}
+	.leiste.breit {
+		right: auto;
+		width: var(--leiste-breite);
+		box-sizing: border-box;
+	}
+	/* Platz, damit die letzten Fotos nicht unter der Leiste liegen */
+	.seite.mit-leiste {
+		padding-bottom: 110px;
 	}
 	.leiste .knopf:first-child {
 		flex: 1;

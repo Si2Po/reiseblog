@@ -231,6 +231,8 @@ class Abgleich {
 				const lokal = (await db.table(tabelle).get(z.id)) as Basis | undefined;
 				if (lokal && lokal.geaendert > fern.geaendert) continue; // hier neuer → wird hochgeladen
 				if (lokal && lokal.geaendert === fern.geaendert && !!lokal.geloescht === fern.geloescht) continue; // eigene Änderung
+				// Foto auf einem anderen Gerät gedreht (neue Vorschau): gespeichertes volles Bild ist veraltet → beim Ansehen neu holen
+				if (tabelle === 'fotos' && lokal && (lokal as Foto).vorschau !== (fern as Foto).vorschau) await db.dateien.delete(z.id);
 				await db.table(tabelle).put(fern);
 				geaendert = true;
 			}

@@ -106,6 +106,41 @@ await warte(800);
 await p.goto(BASIS + '#/reise/bsp-no25');
 await warte(1500);
 ok((await p.locator('.ein', { hasText: 'Trolltunga' }).locator('.beim-eintrag img').count()) === 1, 'Foto steht jetzt beim Ausflug „Trolltunga“');
+// Details des Ausflugs zeigen jetzt seine Fotos; „Mehr“ gibt es bei Ausflügen nicht mehr (nichts drin)
+await p.locator('.ein', { hasText: 'Trolltunga' }).locator('.ein-knopf').click();
+await warte(400);
+await p.locator('.aktionen').getByLabel('Mehr').click();
+await warte(300);
+await p.getByRole('menuitem', { name: 'Details', exact: true }).click();
+await warte(700);
+ok((await p.locator('.dialog .eintrag-fotos img').count()) === 1, 'Details des Ausflugs zeigen sein Foto');
+ok((await p.locator('.dialog .aufklapp', { hasText: 'Mehr' }).count()) === 0, 'Kein leeres „Mehr“ beim Ausflug');
+await p.screenshot({ path: 'tools/bilder/details-fotos.png' });
+await p.locator('.dialog').getByRole('button', { name: 'Abbrechen' }).click();
+await warte(400);
+
+// Foto drehen (Großansicht): aus quer wird hoch
+await p.goto(BASIS + '#/fotos');
+await warte(1200);
+await klick(p.locator('.seite > section', { hasText: 'Bretagne' }).locator('.raster button').first());
+await warte(800);
+const vorDrehen = await p.locator('.gross img').evaluate((i) => i.naturalWidth > i.naturalHeight);
+await p.getByRole('button', { name: 'Foto drehen' }).click();
+await warte(1500);
+const nachDrehen = await p.locator('.gross img').evaluate((i) => i.naturalWidth > i.naturalHeight);
+ok(vorDrehen && !nachDrehen, 'Foto drehen: aus quer wird hoch');
+await p.keyboard.press('Escape');
+await warte(400);
+
+// Auswahl-Leiste liegt am unteren Bildschirmrand
+await klick(p.getByRole('button', { name: 'Auswählen' }));
+await klick(p.locator('.raster button').first());
+await warte(400);
+const leiste = await p.locator('.leiste').boundingBox();
+ok(!!leiste && Math.abs(leiste.y + leiste.height - 812) < 2, 'Auswahl-Leiste liegt am unteren Rand (' + JSON.stringify(leiste) + ')');
+await klick(p.getByRole('button', { name: 'Fertig' }));
+await warte(300);
+
 await p.goto(BASIS + '#/fotos');
 await warte(1200);
 

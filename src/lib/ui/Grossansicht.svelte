@@ -8,6 +8,8 @@
 	import MapPin from 'phosphor-svelte/lib/MapPin';
 	import Image from 'phosphor-svelte/lib/Image';
 	import Trash from 'phosphor-svelte/lib/Trash';
+	import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
+	import { fotoDrehen } from '#lib/fotos/drehen.ts';
 	import Van from 'phosphor-svelte/lib/Van';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import { reiseAm } from '#lib/fotos/import.ts';
@@ -78,6 +80,19 @@
 		datumOffen = false;
 		const r = daten.reise(neu.reise);
 		ui.zeige(andere && andere !== foto.reise ? `Datum geändert · jetzt bei „${r?.titel}“` : 'Datum geändert');
+	}
+
+	let dreht = $state(false);
+	async function drehen() {
+		if (!foto) return;
+		dreht = true;
+		try {
+			await fotoDrehen(foto);
+		} catch (e) {
+			ui.zeige((e as Error).message);
+		} finally {
+			dreht = false;
+		}
 	}
 
 	async function alsTitelbild() {
@@ -215,7 +230,8 @@
 				{#if reise && reise.titelbild !== foto.id}
 					<button onclick={alsTitelbild}><Image size={14} weight="fill" /> Als Titelbild</button>
 				{/if}
-				<button class="weg" onclick={loeschen} aria-label="Foto löschen"><Trash size={16} /></button>
+				<button class="symbol drehen" onclick={drehen} disabled={dreht} aria-label="Foto drehen"><ArrowClockwise size={16} /></button>
+				<button class="symbol" onclick={loeschen} aria-label="Foto löschen"><Trash size={16} class="rot" /></button>
 			</div>
 		</div>
 	</div>
@@ -379,11 +395,16 @@
 		color: #fff;
 		font-size: 14px;
 	}
-	.knoepfe .weg {
-		margin-left: auto;
+	/* runde Symbol-Knöpfe rechts: Drehen, Löschen */
+	.knoepfe .symbol {
 		width: 36px;
 		padding: 0;
 		justify-content: center;
+	}
+	.knoepfe .drehen {
+		margin-left: auto;
+	}
+	.knoepfe :global(.rot) {
 		color: #ff8a73;
 	}
 </style>

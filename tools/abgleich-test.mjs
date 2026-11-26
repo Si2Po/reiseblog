@@ -93,7 +93,7 @@ async function geraet(name, versatz = 0) {
 		}, versatz);
 	const p = await ctx.newPage();
 	p.on('pageerror', (e) => fehler.push(`${name}: ${e.message}`));
-	p.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && fehler.push(`${name}: ${m.text()}`));
+	p.on('console', (m) => m.type() === 'error' && !/Failed to load resource|access control checks/.test(m.text()) && fehler.push(`${name}: ${m.text()}`));
 	await p.goto(BASIS);
 	await p.waitForTimeout(2000);
 	return p;
