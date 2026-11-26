@@ -10,11 +10,10 @@
 	import Wischzeile from '#lib/ui/Wischzeile.svelte';
 	import Van from 'phosphor-svelte/lib/Van';
 	import Camera from 'phosphor-svelte/lib/Camera';
-	import { goto } from '$app/navigation';
 	import { fotosWaehlen } from '#lib/fotos/import.ts';
 	import type { Eintrag } from '#lib/db/typen.ts';
 	import { daten } from '#lib/db/daten.svelte.ts';
-	import { ui } from '#lib/ui.svelte.ts';
+	import { ui, zurReise } from '#lib/ui.svelte.ts';
 	import { thema } from '#lib/thema.svelte.ts';
 	import { reiseFarbe } from '#lib/farben.ts';
 	import { besuche, platzBewertung } from '#lib/auswertung.ts';
@@ -41,14 +40,7 @@
 			punkte: [
 				{ text: 'Details', icon: PencilSimple, los: () => (ui.dialog = { art: 'eintrag', id: b.id }) },
 				{ text: 'Fotos hinzufügen', icon: Camera, los: () => fotosWaehlen({ reise: b.reise, eintrag: b.id }) },
-				{
-					text: 'Zur Reise',
-					icon: Van,
-					los: () => {
-						ui.markiert = b.id;
-						goto(`#/reise/${b.reise}`);
-					}
-				}
+				{ text: 'Zur Reise', icon: Van, los: () => zurReise(b.reise, b.id) }
 			]
 		};
 	}

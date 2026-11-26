@@ -21,12 +21,12 @@
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { reisenSortiert, reiseEnde } from '#lib/auswertung.ts';
-	import { zeitraum, monatJahr, zahl } from '#lib/datum.ts';
+	import { zeitraum, monatJahr, zahl, wort } from '#lib/datum.ts';
 	import { fotosWaehlen } from '#lib/fotos/import.ts';
 	import type { Foto } from '#lib/db/typen.ts';
 
 	const nachZeit = (a: Foto, b: Foto) => a.aufgenommen.localeCompare(b.aufgenommen);
-	const fotoText = (n: number) => `${zahl(n)} ${n === 1 ? 'Foto' : 'Fotos'}`;
+	const fotoText = (n: number) => `${zahl(n)} ${wort(n, 'Foto', 'Fotos')}`;
 
 	/** nur Fotos ohne Ort zeigen */
 	let nurOhneOrt = $state(false);

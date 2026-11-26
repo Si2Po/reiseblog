@@ -3,7 +3,7 @@
 	import ArrowsClockwise from 'phosphor-svelte/lib/ArrowsClockwise';
 	import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
 	import WarningCircle from 'phosphor-svelte/lib/WarningCircle';
-	import { abgleich } from '#lib/db/abgleich.svelte.ts';
+	import { abgleich, wartetText } from '#lib/db/abgleich.svelte.ts';
 	import { tresor } from '#lib/db/tresor.svelte.ts';
 	import Tresor from './Tresor.svelte';
 	import { ui } from '#lib/ui.svelte.ts';
@@ -50,7 +50,7 @@
 					{#if !tresor.offen}Wartet auf die Verschlüsselung
 					{:else if abgleich.laeuft}Wird abgeglichen …
 					{:else if abgleich.fehler}{abgleich.fehler}
-					{:else if abgleich.wartet}{abgleich.wartet} {abgleich.wartet === 1 ? 'Änderung wartet' : 'Änderungen warten'} auf den Abgleich{navigator.onLine ? '' : ' (kein Internet)'}
+					{:else if abgleich.wartet}{wartetText(abgleich.wartet)}{navigator.onLine ? '' : ' (kein Internet)'}
 					{:else if abgleich.zuletzt}Abgeglichen {formatDistanceToNow(abgleich.zuletzt, { locale: de, addSuffix: true })}
 					{:else}Noch nicht abgeglichen{/if}
 				</span>

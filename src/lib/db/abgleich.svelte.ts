@@ -32,6 +32,9 @@ function fehlerText(e: unknown): string {
 	return m;
 }
 
+/** „2 Änderungen warten auf den Abgleich“ */
+export const wartetText = (n: number) => `${n} ${n === 1 ? 'Änderung wartet' : 'Änderungen warten'} auf den Abgleich`;
+
 class Abgleich {
 	moeglich = abgleichMoeglich();
 	email = $state<string | null>(null);

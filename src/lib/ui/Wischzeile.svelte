@@ -16,6 +16,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { Aktion } from '#lib/ui.svelte.ts';
+	import { menuePosition } from '#lib/ui/kontext.ts';
 
 	let {
 		links = [],
@@ -120,10 +121,8 @@
 	oncontextmenu={(e) => {
 		if (!onmenue) return;
 		e.preventDefault();
-		// Kontextmenü-Taste bzw. Umschalt+F10: keine Mausposition → am Element öffnen
-		const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-		const ohneMaus = e.clientX === 0 && e.clientY === 0;
-		onmenue(ohneMaus ? r.left + 48 : e.clientX, ohneMaus ? r.top + 24 : e.clientY);
+		const { x, y } = menuePosition(e, e.currentTarget as HTMLElement, 48, 24);
+		onmenue(x, y);
 	}}
 >
 	{#if dx > 0 && rechts}

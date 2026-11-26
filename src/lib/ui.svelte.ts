@@ -3,6 +3,7 @@
   Sheet-Höhe, Kartensteuerung, offene Dialoge, Hinweise, Foto-Großansicht, Ort-Wahl.
 */
 import type { Component } from 'svelte';
+import { goto } from '$app/navigation';
 import type { Hoehe } from '#lib/ui/Sheet.svelte';
 import type { Rand } from '#lib/map/Karte.svelte';
 import type { Eintrag, LngLat, Ziel } from '#lib/db/typen.ts';
@@ -146,3 +147,9 @@ class Ui {
 }
 
 export const ui = new Ui();
+
+/** Zur Reise springen; der Eintrag (falls angegeben) wird dort aufgeklappt und hingescrollt */
+export function zurReise(reise: string, eintrag?: string) {
+	ui.markiert = eintrag ?? null;
+	goto(`#/reise/${reise}`);
+}

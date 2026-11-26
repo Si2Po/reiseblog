@@ -10,10 +10,17 @@
 	import GearSix from 'phosphor-svelte/lib/GearSix';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { daten } from '#lib/db/daten.svelte.ts';
-	import { abgleich } from '#lib/db/abgleich.svelte.ts';
+	import { abgleich, wartetText } from '#lib/db/abgleich.svelte.ts';
 
 	const aktiv = $derived(page.route.id);
 	const offen = $derived(abgleich.email ? abgleich.wartet : 0);
+	const problem = $derived(!!abgleich.email && !!abgleich.fehler);
+	/** Beschriftung des Zahnrads für Screenreader und Tooltip */
+	const zahnradText = $derived.by(() => {
+		if (problem) return 'Einstellungen – Abgleich-Problem';
+		if (offen) return `Einstellungen – ${wartetText(offen)}`;
+		return 'Einstellungen';
+	});
 </script>
 
 <nav class="reiter" aria-label="Bereiche">
@@ -29,9 +36,9 @@
 		class="symbol"
 		href="#/einstellungen"
 		class:aktiv={aktiv === '/einstellungen'}
-		aria-label={abgleich.fehler && abgleich.email ? 'Einstellungen – Abgleich-Problem' : offen ? `Einstellungen – ${offen} ${offen === 1 ? 'Änderung wartet' : 'Änderungen warten'} auf den Abgleich` : 'Einstellungen'}
-		title={offen ? `${offen} ${offen === 1 ? 'Änderung wartet' : 'Änderungen warten'} auf den Abgleich` : undefined}
-		><GearSix size={20} />{#if abgleich.email && (offen || abgleich.fehler)}<span class="punkt" class:rot={!!abgleich.fehler}></span>{/if}</a
+		aria-label={zahnradText}
+		title={offen ? wartetText(offen) : undefined}
+		><GearSix size={20} />{#if offen || problem}<span class="punkt" class:rot={problem}></span>{/if}</a
 	>
 </nav>
 

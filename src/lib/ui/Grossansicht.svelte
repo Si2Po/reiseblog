@@ -1,6 +1,6 @@
 <!--
   Foto-Großansicht: Wischen links/rechts (iPhone), Pfeiltasten (PC), nach unten wischen schließt.
-  „Datum“ ändert die Aufnahmezeit (siehe datumSpeichern).
+  Titel antippen = Foto zuordnen, Datum antippen = Aufnahmezeit ändern (siehe datumSpeichern).
 -->
 <script lang="ts">
 	import { fade } from 'svelte/transition';
@@ -11,11 +11,11 @@
 	import Van from 'phosphor-svelte/lib/Van';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
 	import { reiseAm } from '#lib/fotos/import.ts';
-	import { goto } from '$app/navigation';
+	import { fotoAufKarte } from '#lib/fotos/aktionen.ts';
 	import { page } from '$app/state';
 	import CaretLeft from 'phosphor-svelte/lib/CaretLeft';
 	import CaretRight from 'phosphor-svelte/lib/CaretRight';
-	import { ui } from '#lib/ui.svelte.ts';
+	import { ui, zurReise } from '#lib/ui.svelte.ts';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { vollbild } from '#lib/fotos/bild.ts';
 	import { tagMitJahr } from '#lib/datum.ts';
@@ -198,10 +198,7 @@
 						onclick={() => {
 							const o = foto.ort!;
 							zu();
-							ui.fotosAn = true;
-							// iPhone: Blatt klein, damit die Karte den Platz bekommt
-							if (!ui.breit) ui.hoehe = 'klein';
-							ui.zeigeOrt(o, 14);
+							fotoAufKarte(o);
 						}}><MapPin size={14} weight="fill" /> Auf der Karte</button
 					>
 				{/if}
@@ -209,11 +206,9 @@
 					<button
 						onclick={() => {
 							// erst merken: nach zu() gibt es kein Foto (und damit keine Reise) mehr
-							const ziel = `#/reise/${reise.id}`;
-							const e = eintrag?.id;
+							const [r, e] = [reise.id, eintrag?.id];
 							zu();
-							ui.markiert = e ?? null;
-							goto(ziel);
+							zurReise(r, e);
 						}}><Van size={14} weight="fill" /> Zur Reise</button
 					>
 				{/if}
