@@ -131,7 +131,10 @@
 			<button role="radio" aria-checked={nurOhneOrt} class:an={nurOhneOrt} onclick={() => (nurOhneOrt = true)}>Ohne Ort ({ohneOrt})</button>
 		</div>
 		{#if nurOhneOrt && !auswaehlen}
-			<p class="hilfe">Diese Fotos stehen noch nicht auf der Karte. Mit „Auswählen“ mehrere antippen und gemeinsam platzieren.</p>
+			<p class="hilfe">
+				Diese Fotos stehen noch nicht auf der Karte. Mit „Auswählen“ mehrere antippen und gemeinsam platzieren oder einem Eintrag zuordnen. Damit neue Fotos ihren
+				Ort mitbringen: in der Fotoauswahl oben „Optionen“ → „Standort“ einschalten.
+			</p>
 		{/if}
 	{/if}
 
@@ -309,17 +312,16 @@
 		border: 0;
 		background: #fff;
 	}
-	/* Aktionen für die Auswahl: bleibt unten im Blick */
+	/* Aktionen für die Auswahl: feste Leiste am unteren Rand, über die ganze Breite */
 	.leiste {
 		position: sticky;
-		bottom: calc(12px + env(safe-area-inset-bottom));
+		bottom: 0;
 		display: flex;
 		gap: 8px;
-		margin-top: 16px;
-		padding: 8px;
-		border-radius: var(--radius-gross);
+		margin: 16px -18px 0;
+		padding: 10px 18px calc(10px + env(safe-area-inset-bottom));
+		border-top: 1px solid var(--linie);
 		background: var(--flaeche);
-		box-shadow: var(--schatten-dialog);
 	}
 	.leiste .knopf:first-child {
 		flex: 1;

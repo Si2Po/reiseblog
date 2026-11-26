@@ -74,9 +74,10 @@ export async function fotosHinzufuegen(dateien: File[], ziel: Ziel = {}) {
 		teile.push(`${n === ok ? (n === 1 ? 'passt' : 'alle passen') : n} zu „${daten.eintrag(eid)?.titel}“`);
 	} else if (einsortiert.size) teile.push(`${[...einsortiert.values()].reduce((a, b) => a + b)} bei ${einsortiert.size} Ausflügen einsortiert`);
 	if (ok < bilder.length) teile.push(`${bilder.length - ok} ließen sich nicht lesen`);
-	if (ohneReise) teile.push(`${ohneReise} ohne Reise – auf der Karte und im Fotoalbum`);
-	else if (ausserhalb) teile.push(`${ausserhalb} außerhalb des Reisezeitraums – unter „Weitere Fotos“`);
-	else if (ohneOrt && !eintrag) teile.push(`${ohneOrt} ohne Ort – in der Fotoauswahl unter „Optionen“ den Standort einschalten`);
+	// kurz halten – der Hinweis ist klein; Erklärungen stehen im Fotoalbum (Filter „Ohne Ort“)
+	if (ohneReise) teile.push(`${ohneReise} ohne Reise`);
+	else if (ausserhalb) teile.push(`${ausserhalb} außerhalb der Reisezeit`);
+	else if (ohneOrt && !eintrag) teile.push(`${ohneOrt} ohne Ort`);
 	// Direkt danach zuordnen können (außer sie gingen gezielt an einen Eintrag)
 	if (neu.length && !ziel.eintrag) ui.zeige(teile.join(' · '), () => (ui.dialog = { art: 'zuordnen', fotos: neu }), 9000, 'Zuordnen');
 	else ui.zeige(teile.join(' · '));
