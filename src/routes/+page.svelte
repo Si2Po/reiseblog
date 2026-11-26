@@ -248,13 +248,11 @@
 		color: #fff;
 	}
 	/* lange Namen: höchstens zwei Zeilen, damit Jahr und Zahlen sichtbar bleiben */
+	/* über die Höhe statt -webkit-line-clamp und break-word statt „anywhere“: beides bringt die Texterkennung der Tests in WebKit durcheinander */
 	.r-titel {
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
-		-webkit-box-orient: vertical;
+		max-height: 2.2em;
 		overflow: hidden;
-		overflow-wrap: anywhere;
+		overflow-wrap: break-word;
 		font-size: 28px;
 		font-weight: var(--kopf-gewicht);
 		letter-spacing: var(--kopf-sperrung);

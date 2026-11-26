@@ -31,7 +31,7 @@ await p.goto(BASIS);
 await warte(2500);
 await p.getByText('Beispielreisen laden').click();
 await warte(1200);
-ok((await p.getByText('Geplant · 2027').count()) === 1, 'Geplante Reise ist als „Geplant“ markiert');
+ok(await p.getByText('Geplant · 2027').waitFor({ timeout: 8000 }).then(() => true, () => false), 'Geplante Reise ist als „Geplant“ markiert');
 
 // --- Statistik ---
 await p.locator('a.summe').click();
@@ -41,6 +41,15 @@ ok(laender.trim() === '3', `Statistik: ${laender} Länder (Norwegen, Frankreich,
 ok((await p.locator('.balken li').first().innerText()).includes('Frankreich'), 'Länderliste beginnt mit Frankreich (14 Nächte vor Norwegen mit 13)');
 ok((await p.locator('.rekorde li').count()) >= 3, `Rekorde: ${await p.locator('.rekorde li').count()}`);
 await foto('1-statistik');
+// Jahr antippen: nur dieses Jahr
+await p.locator('.jahre button', { hasText: '2025' }).click();
+await warte(600);
+const kachel = await p.locator('.kacheln').innerText();
+ok(/\b1\s+Reise\b/.test(kachel) && (await p.locator('.balken:not(.jahre) li').count()) === 1, 'Statistik nur 2025: 1 Reise, 1 Land (' + kachel.replace(/\s+/g, ' ') + ')');
+await foto('1b-statistik-2025');
+await p.getByRole('button', { name: 'Alle Jahre zeigen' }).click();
+await warte(400);
+ok((await p.locator('.balken:not(.jahre) li').count()) === 3, 'Alle Jahre wieder: 3 Länder');
 
 // --- Plätze: Karte + Filter ---
 await p.goto(BASIS + '#/plaetze');

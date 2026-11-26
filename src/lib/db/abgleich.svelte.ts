@@ -129,8 +129,17 @@ class Abgleich {
 		});
 	}
 
-	async zaehlen() {
-		this.wartet = await db.outbox.filter((o) => !o.id.startsWith('bsp-')).count();
+	#zaehlZeit: ReturnType<typeof setTimeout> | undefined;
+	/** wartende Änderungen zählen – nur angemeldet und gebündelt (bei vielen Änderungen am Stück, z. B. Beispieldaten, nicht jedes Mal) */
+	zaehlen() {
+		clearTimeout(this.#zaehlZeit);
+		if (!this.email) {
+			this.wartet = 0;
+			return;
+		}
+		this.#zaehlZeit = setTimeout(async () => {
+			this.wartet = await db.outbox.filter((o) => !o.id.startsWith('bsp-')).count();
+		}, 250);
 	}
 
 	/** kurz nach einer Änderung abgleichen (mehrere Änderungen werden gebündelt) */

@@ -6,6 +6,7 @@
 import { asset } from '$app/paths';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { eintraegeVon, km, naechte, platzBewertung, besuche } from '#lib/auswertung.ts';
+import { reiseKosten, summe, wechselkurse } from '#lib/kosten.svelte.ts';
 import type { Eintrag, Ort } from '#lib/db/typen.ts';
 
 type Ring = [number, number][];
@@ -61,11 +62,18 @@ export interface Statistik {
 	plaetze: number;
 	fotos: number;
 	laender: { code: string; name: string; naechte: number }[];
-	jahre: { jahr: string; naechte: number; km: number; reisen: number }[];
+	/** über alle Reisen (zum Auswählen eines Jahres); euro = ungefähre Kosten, null wenn ohne Kurs */
+	jahre: { jahr: string; naechte: number; km: number; reisen: number; euro: number | null }[];
 	rekorde: { titel: string; wert: string; link?: string }[];
 }
 
-export function berechnen(grenzen: Land[]): Statistik {
+/** jahr: nur Reisen, die in diesem Jahr beginnen (sonst alle) */
+export function berechnen(grenzen: Land[], jahr?: string): Statistik {
+	const reisen = jahr ? daten.reisen.filter((r) => r.start.startsWith(jahr)) : daten.reisen;
+	const ids = new Set(reisen.map((r) => r.id));
+	const eintraege = jahr ? daten.eintraege.filter((e) => ids.has(e.reise)) : daten.eintraege;
+	const platzIds = new Set(eintraege.map((e) => e.platz).filter(Boolean));
+	const plaetze = jahr ? daten.plaetze.filter((p) => platzIds.has(p.id)) : daten.plaetze;
 	const name = new Map(grenzen.map((l) => [l.c, l.n]));
 	const landCache = new Map<string, string | undefined>();
 	const land = (o: Ort) => {
@@ -77,7 +85,7 @@ export function berechnen(grenzen: Land[]): Statistik {
 
 	const nachtProLand = new Map<string, number>();
 	const besucht = new Set<string>();
-	for (const e of daten.eintraege) {
+	for (const e of eintraege) {
 		const orte = [e.ort, e.von, e.nach, ...(e.via ?? [])].filter(Boolean) as Ort[];
 		for (const o of orte) {
 			const c = land(o);
@@ -89,37 +97,39 @@ export function berechnen(grenzen: Land[]): Statistik {
 		}
 	}
 
-	const jahre = new Map<string, { naechte: number; km: number; reisen: number }>();
+	const jahre = new Map<string, { naechte: number; km: number; reisen: number; euro: number | null }>();
 	for (const r of daten.reisen) {
 		const j = r.start.slice(0, 4);
-		const x = jahre.get(j) ?? { naechte: 0, km: 0, reisen: 0 };
+		const x = jahre.get(j) ?? { naechte: 0, km: 0, reisen: 0, euro: 0 };
 		x.naechte += naechte(r.id);
 		x.km += km(r.id);
 		x.reisen++;
+		const euro = wechselkurse.inEuro(summe(reiseKosten(r.id)));
+		x.euro = x.euro === null || euro === null ? null : x.euro + euro;
 		jahre.set(j, x);
 	}
 
 	// Rekorde
 	const rekorde: Statistik['rekorde'] = [];
-	const fahrten = daten.eintraege.filter((e) => e.typ === 'drive' && e.km);
+	const fahrten = eintraege.filter((e) => e.typ === 'drive' && e.km);
 	const weiteste = fahrten.sort((a, b) => (b.km ?? 0) - (a.km ?? 0))[0];
 	if (weiteste) rekorde.push({ titel: 'Längste Fahrt', wert: `${weiteste.titel} · ${weiteste.km?.toLocaleString('de-DE')} km`, link: `#/reise/${weiteste.reise}` });
-	const laengste = [...daten.reisen].sort((a, b) => naechte(b.id) - naechte(a.id))[0];
+	const laengste = [...reisen].sort((a, b) => naechte(b.id) - naechte(a.id))[0];
 	if (laengste && naechte(laengste.id)) rekorde.push({ titel: 'Längste Reise', wert: `${laengste.titel} · ${naechte(laengste.id)} Nächte`, link: `#/reise/${laengste.id}` });
-	const lieblings = [...daten.plaetze].filter((p) => platzBewertung(p.id)).sort((a, b) => platzBewertung(b.id) - platzBewertung(a.id) || besuche(b.id).length - besuche(a.id).length)[0];
+	const lieblings = [...plaetze].filter((p) => platzBewertung(p.id)).sort((a, b) => platzBewertung(b.id) - platzBewertung(a.id) || besuche(b.id).length - besuche(a.id).length)[0];
 	if (lieblings) rekorde.push({ titel: 'Lieblingsplatz', wert: `${lieblings.name} · ${platzBewertung(lieblings.id).toLocaleString('de-DE', { maximumFractionDigits: 1 })}★`, link: `#/platz/${lieblings.id}` });
-	const oft = [...daten.plaetze].sort((a, b) => besuche(b.id).length - besuche(a.id).length)[0];
+	const oft = [...plaetze].sort((a, b) => besuche(b.id).length - besuche(a.id).length)[0];
 	if (oft && besuche(oft.id).length > 1) rekorde.push({ titel: 'Am häufigsten besucht', wert: `${oft.name} · ${besuche(oft.id).length}×`, link: `#/platz/${oft.id}` });
-	const laengsterAufenthalt = daten.eintraege.filter((e) => e.typ === 'stay').sort((a, b) => (b.naechte ?? 1) - (a.naechte ?? 1))[0] as Eintrag | undefined;
+	const laengsterAufenthalt = eintraege.filter((e) => e.typ === 'stay').sort((a, b) => (b.naechte ?? 1) - (a.naechte ?? 1))[0] as Eintrag | undefined;
 	if (laengsterAufenthalt && (laengsterAufenthalt.naechte ?? 1) > 1)
 		rekorde.push({ titel: 'Am längsten an einem Ort', wert: `${laengsterAufenthalt.titel} · ${laengsterAufenthalt.naechte} Nächte`, link: `#/reise/${laengsterAufenthalt.reise}` });
 
 	return {
-		reisen: daten.reisen.length,
-		naechte: daten.reisen.reduce((s, r) => s + naechte(r.id), 0),
-		km: daten.reisen.reduce((s, r) => s + km(r.id), 0),
-		plaetze: new Set(daten.eintraege.filter((e) => e.typ === 'stay').map((e) => e.platz ?? e.id)).size,
-		fotos: daten.fotos.length,
+		reisen: reisen.length,
+		naechte: reisen.reduce((s, r) => s + naechte(r.id), 0),
+		km: reisen.reduce((s, r) => s + km(r.id), 0),
+		plaetze: new Set(eintraege.filter((e) => e.typ === 'stay').map((e) => e.platz ?? e.id)).size,
+		fotos: jahr ? daten.fotos.filter((f) => f.reise && ids.has(f.reise)).length : daten.fotos.length,
 		laender: [...besucht]
 			.map((c) => ({ code: c, name: name.get(c) ?? c, naechte: nachtProLand.get(c) ?? 0 }))
 			.sort((a, b) => b.naechte - a.naechte || a.name.localeCompare(b.name)),

@@ -256,7 +256,11 @@ await cc.waitForTimeout(800);
 await cc.getByRole('button', { name: 'Neue Reise' }).first().click();
 await cc.locator('input[placeholder^="z. B. Norwegen"]').fill('Testreise C');
 await cc.getByRole('button', { name: 'Anlegen' }).click();
-await cc.waitForTimeout(400);
+// die App öffnet die neue Reise – zurück zur Startseite, dort sind die Reiter mit dem Zahnrad
+await cc.waitForURL((u) => u.hash.startsWith('#/reise/'));
+await cc.waitForTimeout(300);
+await cc.locator('a.zurueck').click();
+await cc.waitForTimeout(500);
 ok((await cc.locator('.reiter .punkt').count()) === 1, 'Änderung wartet: Punkt am Zahnrad');
 await cc.waitForTimeout(5000);
 ok((await cc.locator('.reiter .punkt').count()) === 0, 'Nach dem Abgleich ist der Punkt weg');

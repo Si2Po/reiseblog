@@ -2,6 +2,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import CaretRight from 'phosphor-svelte/lib/CaretRight';
+	import X from 'phosphor-svelte/lib/X';
+	import { pfeile } from '#lib/ui/pfeile.ts';
+	import { wechselkurse } from '#lib/kosten.svelte.ts';
 	import Kopf from '#lib/ui/Kopf.svelte';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
@@ -11,10 +14,13 @@
 	let grenzen = $state.raw<Awaited<ReturnType<typeof grenzenLaden>> | null>(null);
 	let fehler = $state('');
 	// rechnet automatisch neu, wenn sich Daten ändern (z. B. nach dem Abgleich)
-	const s = $derived<Statistik | null>(grenzen && daten.geladen ? berechnen(grenzen.laender) : null);
+	/** gewähltes Jahr (Tipp in „Pro Jahr“) – alles andere zeigt dann nur dieses Jahr */
+	let jahr = $state<string | undefined>();
+	const s = $derived<Statistik | null>(grenzen && daten.geladen ? berechnen(grenzen.laender, jahr) : null);
 
 	onMount(() => {
 		ui.auswahl = null;
+		wechselkurse.holen();
 		let weg = false;
 		grenzenLaden()
 			.then((g) => {
@@ -42,7 +48,7 @@
 <Kopf />
 
 <div class="seite">
-	<h1>Statistik</h1>
+	<h1>Statistik{#if jahr}<button class="nur" onclick={() => (jahr = undefined)} aria-label="Alle Jahre zeigen">{jahr} <X size={14} weight="bold" /></button>{/if}</h1>
 	{#if fehler}<p class="leer">{fehler}</p>{/if}
 	{#if !s && !fehler}<p class="leer">Wird berechnet …</p>{/if}
 	{#if s && !s.reisen}
@@ -71,13 +77,18 @@
 		{/if}
 
 		{#if s.jahre.length}
-			<h4>Pro Jahr</h4>
-			<ul class="balken">
+			<h4>Pro Jahr <small>– antippen für nur dieses Jahr</small></h4>
+			<ul class="balken jahre" {@attach pfeile('button')}>
 				{#each s.jahre as j (j.jahr)}
 					<li>
-						<span class="name zahl">{j.jahr}</span>
-						<span class="bahn"><span style:width="{(j.naechte / maxJahr) * 100}%"></span></span>
-						<span class="wert zahl">{j.naechte} N. · {zahl(j.km)} km</span>
+						<button class:an={jahr === j.jahr} aria-pressed={jahr === j.jahr} onclick={() => (jahr = jahr === j.jahr ? undefined : j.jahr)}>
+							<span class="name zahl">{j.jahr}</span>
+							<span class="bahn"><span style:width="{(j.naechte / maxJahr) * 100}%"></span></span>
+							<span class="wert zahl">{j.naechte} N.</span>
+							<small class="zahl"
+								>{j.reisen} {wort(j.reisen, 'Reise', 'Reisen')} · {zahl(j.km)} km{#if j.euro}{' · '}ca. {zahl(Math.round(j.euro))} €{/if}</small
+							>
+						</button>
 					</li>
 				{/each}
 			</ul>
@@ -140,6 +151,53 @@
 	.kacheln span {
 		font-size: 12px;
 		opacity: 0.75;
+	}
+	.nur {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		margin-left: 12px;
+		height: 32px;
+		padding: 0 12px;
+		border: 0;
+		border-radius: 16px;
+		background: var(--text);
+		color: var(--flaeche);
+		font-size: 15px;
+		font-weight: 650;
+		vertical-align: middle;
+	}
+	h4 small {
+		font-weight: 500;
+		letter-spacing: 0;
+		text-transform: none;
+	}
+	.balken.jahre li {
+		display: block;
+	}
+	.jahre button {
+		display: grid;
+		grid-template-columns: 110px 1fr auto;
+		align-items: center;
+		gap: 2px 10px;
+		width: 100%;
+		padding: 6px 8px;
+		margin: 0 -8px;
+		box-sizing: content-box;
+		border: 0;
+		border-radius: var(--radius);
+		background: none;
+		color: var(--text);
+		text-align: left;
+	}
+	.jahre button.an {
+		background: var(--flaeche-2);
+		box-shadow: inset 0 0 0 1.5px var(--text);
+	}
+	.jahre small {
+		grid-column: 1 / -1;
+		color: var(--text-2);
+		font-size: 13px;
 	}
 	.balken {
 		margin: 0;
