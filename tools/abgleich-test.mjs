@@ -221,7 +221,9 @@ ok((await a.getByText('Wanderung zum Feldberg').count()) > 0, 'A sieht den Ausfl
 // A löscht den Ausflug → B bekommt die Löschung
 await voll(a);
 await a.getByText('Wanderung zum Feldberg').click();
-await a.getByRole('button', { name: 'Löschen' }).click();
+await a.locator('.aktionen').getByLabel('Mehr').click();
+await a.waitForTimeout(300);
+await a.getByRole('menuitem', { name: 'Löschen', exact: true }).click();
 await a.waitForTimeout(4500);
 ok([...docs.values()].some((d) => d.art === 'eintrag' && d.geloescht), 'Löschung liegt auf dem Server');
 await bb.goto(BASIS + '#/einstellungen');

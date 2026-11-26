@@ -25,6 +25,7 @@
 	import Sheet from '#lib/ui/Sheet.svelte';
 	import Hinweis from '#lib/ui/Hinweis.svelte';
 	import Grossansicht from '#lib/ui/Grossansicht.svelte';
+	import Aktionen from '#lib/ui/Aktionen.svelte';
 	import NeueVersion from '#lib/ui/NeueVersion.svelte';
 	import ReiseFormular from '#lib/formulare/ReiseFormular.svelte';
 	import EintragFormular from '#lib/formulare/EintragFormular.svelte';
@@ -37,7 +38,7 @@
 	import { thema } from '#lib/thema.svelte.ts';
 	import { KARTE_DUNKEL, KARTE_HELL, halo, reiseFarbe } from '#lib/farben.ts';
 	import { offeneRoutenNachtragen, ortsnamenNachtragen } from '#lib/geo/routen.ts';
-	import { fotosHinzufuegen } from '#lib/fotos/import.ts';
+	import { fotosHinzufuegen, fotoOrteNachtragen } from '#lib/fotos/import.ts';
 
 	let { children }: LayoutProps = $props();
 	let karte: ReturnType<typeof Karte> | undefined = $state();
@@ -51,6 +52,7 @@
 		// offline Eingetragenes vervollständigen: erst Ortsnamen (für die Titel), dann Straßenrouten
 		const nachtragen = () => ortsnamenNachtragen().then(offeneRoutenNachtragen);
 		daten.laden().then(() => {
+			fotoOrteNachtragen();
 			nachtragen();
 			abgleich.starten();
 		});
@@ -237,7 +239,7 @@
 	{#if ui.dialog?.art === 'reise'}
 		<ReiseFormular id={ui.dialog.id} />
 	{:else if ui.dialog?.art === 'eintrag'}
-		<EintragFormular id={ui.dialog.id} vorlage={ui.dialog.vorlage} />
+		<EintragFormular id={ui.dialog.id} vorlage={ui.dialog.vorlage} kostenNeu={ui.dialog.kostenNeu} />
 	{:else if ui.dialog?.art === 'hier'}
 		<HierEintragen />
 	{:else if ui.dialog?.art === 'platz'}
@@ -253,6 +255,7 @@
 	<PinLeiste />
 	<Hinweis />
 	<Grossansicht />
+	<Aktionen />
 	<NeueVersion />
 </div>
 

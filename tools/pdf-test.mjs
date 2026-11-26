@@ -28,9 +28,9 @@ const kosten = p.locator('label.schalter', { hasText: 'Kosten' }).locator('input
 ok(!(await kosten.isChecked()), 'Kosten sind standardmäßig aus');
 await kosten.check();
 await p.getByText('PDF erstellen').click();
-await p.getByRole('button', { name: 'Teilen' }).waitFor({ timeout: 60000 }).catch(async () => { await p.screenshot({ path: 'tools/bilder/pdf-haengt.png' }); console.log('Fehler bisher:', fehler); process.exit(1); });
+await p.getByRole('button', { name: 'Herunterladen' }).waitFor({ timeout: 60000 }).catch(async () => { await p.screenshot({ path: 'tools/bilder/pdf-haengt.png' }); console.log('Fehler bisher:', fehler); process.exit(1); });
 await p.screenshot({ path: 'tools/bilder/pdf-fertig.png' });
-const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: 'Teilen' }).click()]);
+const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: 'Herunterladen' }).click()]);
 const ziel = process.env.PDF ?? 'tools/bilder/reise.pdf';
 await dl.saveAs(ziel);
 const fs = await import('node:fs');
@@ -48,6 +48,36 @@ await p.getByRole('button', { name: 'Zur Reise' }).click();
 await warte(1200);
 ok(p.url().includes('#/reise/') && !(await p.locator('.gross').count()), 'Aus dem Album zur Reise gesprungen');
 
+// Foto ohne Ort und ohne Reise hinzufügen → Filter „Ohne Ort“ → auswählen → auf der Karte platzieren
+await p.goto(BASIS + '#/fotos');
+await warte(1200);
+const bild = await p.evaluate(() => {
+	const c = document.createElement('canvas');
+	c.width = 800;
+	c.height = 600;
+	const g = c.getContext('2d');
+	g.fillStyle = '#3f6f80';
+	g.fillRect(0, 0, 800, 600);
+	return c.toDataURL('image/jpeg', 0.9).split(',')[1];
+});
+const [wahl] = await Promise.all([p.waitForEvent('filechooser'), klick(p.getByLabel('Fotos hinzufügen'))]);
+await wahl.setFiles({ name: 'ohne-ort.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(bild, 'base64') });
+await warte(3000);
+const filter = p.getByRole('radio', { name: /Ohne Ort/ });
+ok((await filter.count()) === 1, 'Filter „Ohne Ort“ erscheint');
+await klick(filter);
+await warte(400);
+ok((await p.locator('.raster button').count()) === 1, 'Filter zeigt nur das Foto ohne Ort');
+await klick(p.getByRole('button', { name: 'Auswählen' }));
+await klick(p.locator('.raster button').first());
+await warte(300);
+await p.screenshot({ path: 'tools/bilder/album-auswahl.png' });
+await klick(p.getByRole('button', { name: 'Auf der Karte platzieren' }));
+await warte(800);
+await p.getByRole('button', { name: 'Übernehmen' }).click();
+await warte(1200);
+ok((await p.getByRole('radio', { name: /Ohne Ort/ }).count()) === 0, 'Nach dem Platzieren hat das Foto einen Ort (Filter weg)');
+
 // Sicherung mit Passwort
 await p.goto(BASIS + '#/einstellungen');
 await warte(1200);
@@ -55,8 +85,8 @@ await klick(p.getByText('Als Datei sichern'));
 await p.getByLabel('Passwort für die Sicherung').fill('geheim123');
 await p.getByLabel('Noch einmal').fill('geheim123');
 await p.getByLabel('Noch einmal').press('Enter');
-await p.getByRole('button', { name: 'Datei sichern' }).waitFor({ timeout: 20000 });
-const [sd] = await Promise.all([p.waitForEvent('download'), klick(p.getByRole('button', { name: 'Datei sichern' }))]);
+await p.getByRole('button', { name: 'Herunterladen' }).waitFor({ timeout: 20000 });
+const [sd] = await Promise.all([p.waitForEvent('download'), klick(p.getByRole('button', { name: 'Herunterladen' }))]);
 const sPfad = 'tools/bilder/sicherung.json';
 await sd.saveAs(sPfad);
 const sicherung = fs.readFileSync(sPfad, 'utf8');

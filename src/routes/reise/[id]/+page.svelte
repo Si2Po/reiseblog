@@ -22,9 +22,12 @@
 	import Trash from 'phosphor-svelte/lib/Trash';
 	import CaretRight from 'phosphor-svelte/lib/CaretRight';
 	import Kopf from '#lib/ui/Kopf.svelte';
+	import Wischzeile from '#lib/ui/Wischzeile.svelte';
+	import DotsThree from 'phosphor-svelte/lib/DotsThree';
+	import Coins from 'phosphor-svelte/lib/Coins';
 	import Sterne from '#lib/ui/Sterne.svelte';
 	import { daten } from '#lib/db/daten.svelte.ts';
-	import { ui } from '#lib/ui.svelte.ts';
+	import { ui, type Aktion } from '#lib/ui.svelte.ts';
 	import { thema } from '#lib/thema.svelte.ts';
 	import { reiseFarbe } from '#lib/farben.ts';
 	import { naechte, km, plaetzeAnzahl, fotosVon, fotosVonEintrag, tage, reiseEnde, weitereFotos, nachtNotizen } from '#lib/auswertung.ts';
@@ -80,8 +83,23 @@
 		ui.oeffnen();
 		if (!ui.markiert) ui.zeigeReise(r.id);
 	});
+	// Von außen markiert (Suche, Fotoalbum, Karte, neuer Eintrag): aufklappen, hinscrollen, auf der Karte zeigen.
+	// Beim eigenen Tippen nicht scrollen.
+	let selbstGetippt = false;
 	$effect(() => {
-		if (ui.markiert) offen = ui.markiert;
+		const m = ui.markiert;
+		if (!m) return;
+		offen = m;
+		if (selbstGetippt) {
+			selbstGetippt = false;
+			return;
+		}
+		untrack(() => {
+			const e = daten.eintrag(m);
+			if (e?.route?.length) ui.zeigeLinie(e.route);
+			else if (e?.ort) ui.zeigeOrt(e.ort, 13);
+			setTimeout(() => document.getElementById('e-' + m)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 350);
+		});
 	});
 	// Wetter vergangener Tage nachtragen, Wechselkurse für die Kosten holen
 	$effect(() => {
@@ -106,7 +124,9 @@
 	function getippt(e: Eintrag, schluessel = e.id) {
 		offen = offen === schluessel ? null : schluessel;
 		// Folgenächte nicht als Markierung setzen – sonst springt die Auswahl auf die erste Nacht
-		ui.markiert = offen && schluessel === e.id ? e.id : null;
+		const neu = offen && schluessel === e.id ? e.id : null;
+		if (neu && neu !== ui.markiert) selbstGetippt = true;
+		ui.markiert = neu;
 		if (offen) {
 			if (e.route?.length) ui.zeigeLinie(e.route);
 			else if (e.ort) ui.zeigeOrt(e.ort, 13);
@@ -143,6 +163,28 @@
 		ui.dialog = { art: 'eintrag', vorlage: { reise: id, datum: letzter ?? r?.start } };
 	}
 	const notiz = (e: Eintrag, datum: string) => (ui.dialog = { art: 'notiz', eintrag: e.id, datum });
+	const bearbeiten = (e: Eintrag) => (ui.dialog = { art: 'eintrag', id: e.id });
+
+	/** Was sich zu einem Eintrag hinzufügen lässt (Wischen nach rechts, „…“) */
+	function hinzuPunkte(e: Eintrag, datum: string): Aktion[] {
+		const punkte: Aktion[] = [{ text: 'Fotos hinzufügen', icon: Camera, los: () => fotosWaehlen({ reise: e.reise, eintrag: e.id }) }];
+		if (e.typ === 'stay') punkte.push({ text: 'Notiz zu dieser Nacht', icon: NotePencil, los: () => notiz(e, datum) });
+		punkte.push({ text: 'Ausgabe hinzufügen', icon: Coins, los: () => (ui.dialog = { art: 'eintrag', id: e.id, kostenNeu: true }) });
+		return punkte;
+	}
+	function hinzufuegen(e: Eintrag, datum: string) {
+		ui.aktionen = { titel: `Zu „${e.titel}“ hinzufügen`, punkte: hinzuPunkte(e, datum) };
+	}
+	/** Alle Aktionen eines Eintrags („…“ bzw. Rechtsklick am PC an der Mausposition) */
+	function menue(e: Eintrag, datum: string, x?: number, y?: number) {
+		const punkte: Aktion[] = [];
+		if (e.typ === 'stay' && aktuelleUebernachtung()?.id === e.id) punkte.push({ text: 'Weiterfahren', icon: Van, los: () => losfahren(e) });
+		punkte.push(...hinzuPunkte(e, datum));
+		if (e.platz) punkte.push({ text: 'Platz ansehen', icon: Tent, los: () => goto(`#/platz/${e.platz}`) });
+		punkte.push({ text: e.typ === 'stay' && datum !== e.datum ? 'Übernachtung bearbeiten' : 'Bearbeiten', icon: PencilSimple, los: () => bearbeiten(e) });
+		if (datum === e.datum) punkte.push({ text: 'Löschen', icon: Trash, gefahr: true, los: () => loeschen(e) });
+		ui.aktionen = { titel: e.titel, punkte, x, y };
+	}
 </script>
 
 {#snippet fotoreihe(fotos: Foto[])}
@@ -156,6 +198,17 @@
 			{/if}
 		</div>
 	{/if}
+{/snippet}
+
+<!-- Aufgeklappter Eintrag: nur das Wichtigste sichtbar, alles andere hinter „…“, Wischen bzw. Rechtsklick -->
+{#snippet leiste(e: Eintrag, datum: string)}
+	<div class="aktionen" transition:slide={{ duration: 180 }}>
+		{#if e.typ === 'stay' && aktuelleUebernachtung()?.id === e.id}
+			<button class="los" onclick={() => losfahren(e)}><Van size={16} /> Weiterfahren</button>
+		{/if}
+		<button class="rund-klein" onclick={() => fotosWaehlen({ reise: e.reise, eintrag: e.id })} aria-label="Fotos hinzufügen"><Camera size={18} /></button>
+		<button class="rund-klein" onclick={(ev) => menue(e, datum, ev.clientX, ev.clientY)} aria-label="Mehr"><DotsThree size={20} weight="bold" /></button>
+	</div>
 {/snippet}
 
 {#snippet notizen(e: Eintrag, datum: string)}
@@ -265,20 +318,21 @@
 							{@const e = nacht.eintrag}
 							{@const schluessel = e.id + ':' + nacht.nr}
 							<div class="ein folge" class:markiert={offen === schluessel}>
-								<button class="ein-knopf" onclick={() => getippt(e, schluessel)} aria-expanded={offen === schluessel}>
-									<span class="sym klein"><Moon size={15} weight="fill" /></span>
-									<span class="ein-txt">
-										<span class="ein-titel">{e.titel}</span>
-										<span class="ein-meta">Nacht {nacht.nr} von {nacht.von}</span>
-									</span>
-								</button>
-								{@render notizen(e, tag.datum)}
-								{#if offen === schluessel}
-									<div class="aktionen" transition:slide={{ duration: 180 }}>
-										<button onclick={() => notiz(e, tag.datum)}><NotePencil size={16} /> Notiz</button>
-										{#if e.platz}<button onclick={() => goto(`#/platz/${e.platz}`)}><Tent size={16} /> Platz <CaretRight size={13} /></button>{/if}
-									</div>
-								{/if}
+								<Wischzeile
+									links={[{ text: 'Bearbeiten', icon: PencilSimple, los: () => bearbeiten(e) }]}
+									rechts={{ text: 'Hinzufügen', icon: Plus, los: () => hinzufuegen(e, tag.datum) }}
+									onmenue={(x, y) => menue(e, tag.datum, x, y)}
+								>
+									<button class="ein-knopf" onclick={() => getippt(e, schluessel)} aria-expanded={offen === schluessel}>
+										<span class="sym klein"><Moon size={15} weight="fill" /></span>
+										<span class="ein-txt">
+											<span class="ein-titel">{e.titel}</span>
+											<span class="ein-meta">Nacht {nacht.nr} von {nacht.von}</span>
+										</span>
+									</button>
+									{@render notizen(e, tag.datum)}
+									{#if offen === schluessel}{@render leiste(e, tag.datum)}{/if}
+								</Wischzeile>
 							</div>
 						{/each}
 					{/snippet}
@@ -288,33 +342,29 @@
 						{@const Sym = SYMBOL[e.typ]}
 						{@const ef = fotosVonEintrag(e.id)}
 						<div class="ein typ-{e.typ}" class:markiert={offen === e.id} id="e-{e.id}">
-							<button class="ein-knopf" onclick={() => getippt(e)} aria-expanded={offen === e.id}>
-								<span class="sym"><Sym size={18} weight={e.typ === 'stay' ? 'fill' : 'regular'} /></span>
-								<span class="ein-txt">
-									<span class="ein-titel">{e.titel}</span>
-									<span class="ein-meta zahl">
-										{#if e.typ === 'stay' && e.bewertung}<Sterne wert={e.bewertung} groesse={12} />{/if}
-										<span>{metaText(e)}</span>
+							<Wischzeile
+								links={[
+									{ text: 'Bearbeiten', icon: PencilSimple, los: () => bearbeiten(e) },
+									{ text: 'Löschen', icon: Trash, gefahr: true, los: () => loeschen(e) }
+								]}
+								rechts={{ text: 'Hinzufügen', icon: Plus, los: () => hinzufuegen(e, e.datum) }}
+								onmenue={(x, y) => menue(e, e.datum, x, y)}
+							>
+								<button class="ein-knopf" onclick={() => getippt(e)} aria-expanded={offen === e.id}>
+									<span class="sym"><Sym size={18} weight={e.typ === 'stay' ? 'fill' : 'regular'} /></span>
+									<span class="ein-txt">
+										<span class="ein-titel">{e.titel}</span>
+										<span class="ein-meta zahl">
+											{#if e.typ === 'stay' && e.bewertung}<Sterne wert={e.bewertung} groesse={12} />{/if}
+											<span>{metaText(e)}</span>
+										</span>
+										{#if e.text}<span class="ein-text">{e.text}</span>{/if}
 									</span>
-									{#if e.text}<span class="ein-text">{e.text}</span>{/if}
-								</span>
-							</button>
-							{#if e.typ === 'stay'}{@render notizen(e, e.datum)}{/if}
-							{#if ef.length}<div class="beim-eintrag">{@render fotoreihe(ef)}</div>{/if}
-							{#if offen === e.id}
-								<div class="aktionen" transition:slide={{ duration: 180 }}>
-									{#if e.typ === 'stay' && e.platz}
-										<button onclick={() => goto(`#/platz/${e.platz}`)}><Tent size={16} /> Platz <CaretRight size={13} /></button>
-									{/if}
-									{#if e.typ === 'stay' && aktuelleUebernachtung()?.id === e.id}
-										<button class="los" onclick={() => losfahren(e)}><Van size={16} /> Weiterfahren</button>
-									{/if}
-									{#if e.typ === 'stay'}<button onclick={() => notiz(e, e.datum)}><NotePencil size={16} /> Notiz</button>{/if}
-									<button onclick={() => fotosWaehlen({ reise: r.id, eintrag: e.id })}><Plus size={16} /> Fotos</button>
-									<button onclick={() => (ui.dialog = { art: 'eintrag', id: e.id })}><PencilSimple size={16} /> Bearbeiten</button>
-									<button class="weg" onclick={() => loeschen(e)} aria-label="Löschen"><Trash size={16} /></button>
-								</div>
-							{/if}
+								</button>
+								{#if e.typ === 'stay'}{@render notizen(e, e.datum)}{/if}
+								{#if ef.length}<div class="beim-eintrag">{@render fotoreihe(ef)}</div>{/if}
+								{#if offen === e.id}{@render leiste(e, e.datum)}{/if}
+							</Wischzeile>
 						</div>
 					{/each}
 					{#if ersteNacht < 0}{@render folgeNaechte()}{/if}
@@ -543,6 +593,8 @@
 	}
 	.ein {
 		position: relative;
+		/* beim Hinspringen nicht unter der festen Kopfzeile landen */
+		scroll-margin-top: 64px;
 		border-radius: var(--radius);
 		transition: background 0.3s;
 	}
@@ -677,9 +729,16 @@
 		background: var(--signal);
 		color: var(--signal-text);
 	}
-	.aktionen .weg {
+	/* kleine runde Symbol-Knöpfe rechts (Foto, „…“) */
+	.aktionen .rund-klein {
+		justify-content: center;
+		width: 36px;
+		padding: 0;
+		color: var(--text-2);
+	}
+	.aktionen .rund-klein:first-of-type,
+	.aktionen .los + .rund-klein {
 		margin-left: auto;
-		color: var(--gefahr);
 	}
 	.geplant {
 		margin-top: 14px;

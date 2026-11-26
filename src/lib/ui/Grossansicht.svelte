@@ -56,9 +56,11 @@
 		ui.zeige(`Titelbild von „${reise.titel}“`);
 	}
 
-	// Wischen
+	// Wischen: Die Richtung wird nach den ersten Pixeln festgelegt – seitwärts blättert nur,
+	// nach unten schließt nur (sonst wackelt das Bild beim Blättern, als wolle es zugehen).
 	let x0 = 0,
 		y0 = 0,
+		richtung: 'x' | 'y' | null = null,
 		dx = $state(0),
 		dy = $state(0),
 		zieht = $state(false);
@@ -66,19 +68,26 @@
 		if (e.touches.length !== 1) return;
 		x0 = e.touches[0].clientX;
 		y0 = e.touches[0].clientY;
+		richtung = null;
 		zieht = true;
 	}
 	function bewegen(e: TouchEvent) {
 		if (!zieht) return;
-		dx = e.touches[0].clientX - x0;
-		dy = Math.max(0, e.touches[0].clientY - y0);
+		const mx = e.touches[0].clientX - x0,
+			my = e.touches[0].clientY - y0;
+		if (!richtung) {
+			if (Math.abs(mx) < 10 && Math.abs(my) < 10) return;
+			richtung = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+		}
+		if (richtung === 'x') dx = mx;
+		else dy = Math.max(0, my);
 	}
 	function ende() {
 		if (!zieht) return;
 		zieht = false;
-		if (dy > 110 && Math.abs(dy) > Math.abs(dx)) zu();
-		else if (dx < -60) blaettern(1);
-		else if (dx > 60) blaettern(-1);
+		if (richtung === 'y' && dy > 110) zu();
+		else if (richtung === 'x' && dx < -60) blaettern(1);
+		else if (richtung === 'x' && dx > 60) blaettern(-1);
 		dx = dy = 0;
 	}
 </script>
@@ -125,6 +134,8 @@
 							const o = foto.ort!;
 							zu();
 							ui.fotosAn = true;
+							// iPhone: Blatt klein, damit die Karte den Platz bekommt
+							if (!ui.breit) ui.hoehe = 'klein';
 							ui.zeigeOrt(o, 14);
 						}}><MapPin size={14} weight="fill" /> Auf der Karte</button
 					>

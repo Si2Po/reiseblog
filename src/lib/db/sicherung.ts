@@ -25,9 +25,17 @@ export async function sicherungErstellen(passwort: string): Promise<File> {
 	return new File([JSON.stringify(datei)], `reiseblog-sicherung-${format(new Date(), 'yyyy-MM-dd')}.json`, { type: 'application/json' });
 }
 
-/** Datei teilen (iPhone: „In Dateien sichern“ usw.), sonst herunterladen */
-export async function dateiWeitergeben(datei: File) {
-	if (navigator.canShare?.({ files: [datei] })) {
+/*
+  Datei weitergeben: Am iPhone/iPad ist das Teilen-Menü der Weg zum Sichern („In Dateien sichern“).
+  Am PC gibt es „Herunterladen“ – Teilen nur zusätzlich, wo der Browser es kann (Windows, Mac).
+*/
+/** Bedienung mit dem Finger (iPhone, iPad) statt Maus */
+export const mitFinger = () => matchMedia('(pointer: coarse)').matches;
+export const kannTeilen = (datei: File) => !!navigator.canShare?.({ files: [datei] });
+
+/** Teilen-Menü; geht das nicht, wird heruntergeladen */
+export async function dateiTeilen(datei: File) {
+	if (kannTeilen(datei)) {
 		try {
 			await navigator.share({ files: [datei] });
 			return;
@@ -35,6 +43,10 @@ export async function dateiWeitergeben(datei: File) {
 			if ((e as Error).name === 'AbortError') return;
 		}
 	}
+	herunterladen(datei);
+}
+
+export function herunterladen(datei: File) {
 	const a = document.createElement('a');
 	a.href = URL.createObjectURL(datei);
 	a.download = datei.name;

@@ -103,7 +103,7 @@ async function einFoto(datei: File, ziel: Ziel): Promise<Foto> {
 	let ort: Ort | undefined = gps && Number.isFinite(gps.latitude) ? { lat: gps.latitude, lng: gps.longitude } : undefined;
 	const reise = ziel.reise ?? daten.eintrag(ziel.eintrag)?.reise ?? reiseAm(tag);
 	const eintrag = daten.eintrag(ziel.eintrag) ?? (reise && ort ? ausflugBeiFoto(reise, tag, ort) : undefined);
-	if (!ort) ort = eintrag?.ort ?? (reise ? ortAmTag(reise, tag) : undefined);
+	if (!ort) ort = ortOhneGps(eintrag, reise, tag);
 
 	const id = crypto.randomUUID();
 	await db.dateien.put({ id, bild: await (bild as Blob).arrayBuffer(), typ: 'image/jpeg' });
@@ -143,6 +143,60 @@ export function ausflugBeiFoto(reise: string, tag: string, ort: Ort): Eintrag | 
 /** Reise, in deren Zeitraum das Datum fällt */
 function reiseAm(tag: string): string | undefined {
 	return daten.reisen.find((r) => r.start <= tag && reiseBis(r) >= tag)?.id;
+}
+
+/**
+ * Ort für ein Foto ohne GPS:
+ * - beim Eintrag: dessen Ort (Fahrt: Mitte der Strecke)
+ * - sonst bei der Reise: Ort des Tages (Übernachtung bzw. letzte davor), sonst die Mitte der Reise
+ * Ohne Reise bleibt das Foto ohne Ort (lässt sich im Fotoalbum auf der Karte platzieren).
+ */
+export function ortOhneGps(eintrag: Eintrag | undefined, reise: string | undefined, tag: string): Ort | undefined {
+	const o = eintrag && eintragOrt(eintrag);
+	if (o) return o;
+	return reise ? (ortAmTag(reise, tag) ?? reiseMitte(reise)) : undefined;
+}
+
+/** Ort eines Eintrags; bei Fahrten der Punkt auf halber Strecke */
+function eintragOrt(e: Eintrag): Ort | undefined {
+	if (e.ort) return e.ort;
+	if (e.typ !== 'drive') return undefined;
+	const linie = e.route?.length ? e.route : [e.von, ...(e.via ?? []), e.nach].filter((x): x is Ort => !!x).map((x): [number, number] => [x.lng, x.lat]);
+	if (!linie.length) return undefined;
+	const pkt = (i: number) => ({ lng: linie[i][0], lat: linie[i][1] });
+	let gesamt = 0;
+	for (let i = 1; i < linie.length; i++) gesamt += abstand(pkt(i - 1), pkt(i));
+	let weg = 0;
+	for (let i = 1; i < linie.length; i++) {
+		const stueck = abstand(pkt(i - 1), pkt(i));
+		if (weg + stueck >= gesamt / 2) {
+			const t = stueck ? (gesamt / 2 - weg) / stueck : 0;
+			return { lat: linie[i - 1][1] + (linie[i][1] - linie[i - 1][1]) * t, lng: linie[i - 1][0] + (linie[i][0] - linie[i - 1][0]) * t };
+		}
+		weg += stueck;
+	}
+	return pkt(0);
+}
+
+/** Mitte der Reise: der Ort der Reise, der am nächsten an der Mitte aller Orte liegt (nicht irgendwo im Meer) */
+function reiseMitte(reise: string): Ort | undefined {
+	const orte = eintraegeVon(reise)
+		.map(eintragOrt)
+		.filter((x): x is Ort => !!x);
+	if (!orte.length) return undefined;
+	const lat = orte.reduce((a, o) => a + o.lat, 0) / orte.length;
+	const lng = orte.reduce((a, o) => a + o.lng, 0) / orte.length;
+	const nah = orte.reduce((a, o) => (abstand(o, { lat, lng }) < abstand(a, { lat, lng }) ? o : a));
+	return { lat: nah.lat, lng: nah.lng };
+}
+
+/** Einmal beim Start: Fotos in Reisen, die noch keinen Ort haben, nach denselben Regeln einordnen */
+export async function fotoOrteNachtragen() {
+	for (const f of daten.fotos) {
+		if (f.ort || !f.reise) continue;
+		const ort = ortOhneGps(daten.eintrag(f.eintrag), f.reise, f.aufgenommen.slice(0, 10));
+		if (ort) await daten.speichern('fotos', { ...f, ort });
+	}
 }
 
 /** Ort eines Eintrags am selben Tag (sonst die letzte Übernachtung davor) */

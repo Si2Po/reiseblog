@@ -10,7 +10,8 @@
 	import { ui } from '#lib/ui.svelte.ts';
 	import { fotosVon } from '#lib/auswertung.ts';
 	import { reiseKosten } from '#lib/kosten.svelte.ts';
-	import { dateiWeitergeben } from '#lib/db/sicherung.ts';
+	import DownloadSimple from 'phosphor-svelte/lib/DownloadSimple';
+	import { dateiTeilen, herunterladen, mitFinger, kannTeilen } from '#lib/db/sicherung.ts';
 	import type { PdfWahl } from '#lib/pdf/reisePdf.ts';
 
 	let { reise }: { reise: string } = $props();
@@ -59,9 +60,15 @@
 		}
 	}
 
+	const finger = mitFinger();
 	async function teilen() {
 		if (!datei) return;
-		await dateiWeitergeben(datei);
+		await dateiTeilen(datei);
+		zu();
+	}
+	function laden() {
+		if (!datei) return;
+		herunterladen(datei);
 		zu();
 	}
 
@@ -73,7 +80,9 @@
 		<div class="fertig">
 			<span class="symbol"><FilePdf size={34} weight="duotone" /></span>
 			<p><b>{datei.name}</b><br /><span class="grau">{groesse(datei)}</span></p>
-			<p class="grau">Fertig. Über „Teilen“ kannst du es verschicken oder z. B. in „Dateien“ sichern.</p>
+			<p class="grau">
+				{finger ? 'Fertig. Über „Teilen“ kannst du es verschicken oder z. B. in „Dateien“ sichern.' : 'Fertig. „Herunterladen“ legt es in deinen Download-Ordner.'}
+			</p>
 		</div>
 	{:else}
 		<p class="einleitung">„{r?.titel}“ als PDF zum Verschicken oder Ausdrucken: Tag für Tag, mit Karte der Route.</p>
@@ -98,10 +107,15 @@
 	{/if}
 
 	{#snippet fuss()}
-		<button class="knopf zweit" onclick={zu}>{datei ? 'Schließen' : 'Abbrechen'}</button>
-		{#if datei}
+		{#if datei && !finger}
+			<!-- PC: Herunterladen, Teilen nur, wo der Browser es anbietet -->
+			{#if kannTeilen(datei)}<button class="knopf zweit" onclick={teilen}><Export size={18} /> Teilen</button>{/if}
+			<button class="knopf" onclick={laden}><DownloadSimple size={18} /> Herunterladen</button>
+		{:else if datei}
+			<button class="knopf zweit" onclick={zu}>Schließen</button>
 			<button class="knopf" onclick={teilen}><Export size={18} /> Teilen</button>
 		{:else}
+			<button class="knopf zweit" onclick={zu}>Abbrechen</button>
 			<button class="knopf" onclick={erstellen} disabled={laeuft}>{laeuft ? 'Einen Moment …' : 'PDF erstellen'}</button>
 		{/if}
 	{/snippet}

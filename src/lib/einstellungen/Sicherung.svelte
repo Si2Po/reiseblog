@@ -9,7 +9,7 @@
 	import UploadSimple from 'phosphor-svelte/lib/UploadSimple';
 	import Export from 'phosphor-svelte/lib/Export';
 	import { ui } from '#lib/ui.svelte.ts';
-	import { sicherungErstellen, sicherungPruefen, sicherungEinlesen, dateiWeitergeben } from '#lib/db/sicherung.ts';
+	import { sicherungErstellen, sicherungPruefen, sicherungEinlesen, dateiTeilen, herunterladen, mitFinger, kannTeilen } from '#lib/db/sicherung.ts';
 
 	type Schritt = 'nichts' | 'sichern' | 'fertig' | 'einlesen';
 	let schritt = $state<Schritt>('nichts');
@@ -17,7 +17,7 @@
 	let pw2 = $state('');
 	let laeuft = $state(false);
 	let fehler = $state('');
-	let fertig: File | null = null;
+	let fertig = $state<File | null>(null);
 	let gewaehlt: File | null = null;
 	let eingabe: HTMLInputElement | undefined = $state();
 
@@ -43,8 +43,13 @@
 		}
 	}
 
-	async function weitergeben() {
-		if (fertig) await dateiWeitergeben(fertig);
+	const finger = mitFinger();
+	async function teilen() {
+		if (fertig) await dateiTeilen(fertig);
+		zurueck();
+	}
+	function laden() {
+		if (fertig) herunterladen(fertig);
 		zurueck();
 	}
 
@@ -110,10 +115,15 @@
 		</form>
 	{:else if schritt === 'fertig'}
 		<div transition:slide={{ duration: 180 }}>
-			<p class="hilfe oben">Die Sicherung ist fertig. Auf dem iPhone z. B. „In Dateien sichern“ wählen.</p>
+			<p class="hilfe oben">Die Sicherung ist fertig.{finger ? ' Im Teilen-Menü z. B. „In Dateien sichern“ wählen.' : ''}</p>
 			<div class="zeile">
 				<button class="knopf zweit" onclick={zurueck}>Abbrechen</button>
-				<button class="knopf" onclick={weitergeben}><Export size={18} /> Datei sichern</button>
+				{#if finger}
+					<button class="knopf" onclick={teilen}><Export size={18} /> Datei sichern</button>
+				{:else}
+					{#if fertig && kannTeilen(fertig)}<button class="knopf zweit" onclick={teilen}><Export size={18} /> Teilen</button>{/if}
+					<button class="knopf" onclick={laden}><DownloadSimple size={18} /> Herunterladen</button>
+				{/if}
 			</div>
 		</div>
 	{:else}

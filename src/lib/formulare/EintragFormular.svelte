@@ -12,6 +12,7 @@
 	import { format, addDays, parseISO } from 'date-fns';
 	import { page } from '$app/state';
 	import { slide } from 'svelte/transition';
+	import { untrack } from 'svelte';
 	import Tent from 'phosphor-svelte/lib/Tent';
 	import Van from 'phosphor-svelte/lib/Van';
 	import Footprints from 'phosphor-svelte/lib/Footprints';
@@ -38,7 +39,8 @@
 	import { aufraeumen } from '#lib/merkmale.ts';
 	import { TYP_NAME, PLATZ_ART, type Eintrag, type Kosten, type Merkmale, type Notiz, type Ort, type PlatzArt, type Typ } from '#lib/db/typen.ts';
 
-	let { id, vorlage }: { id?: string; vorlage?: Partial<Eintrag> } = $props();
+	/** kostenNeu: gleich eine leere Ausgabe-Zeile anlegen und hinspringen (aus „Ausgabe hinzufügen“) */
+	let { id, vorlage, kostenNeu = false }: { id?: string; vorlage?: Partial<Eintrag>; kostenNeu?: boolean } = $props();
 
 	// svelte-ignore state_referenced_locally
 	const alt = daten.eintrag(id);
@@ -72,6 +74,19 @@
 	let notizen = $state<Notiz[]>([...(v.notizen ?? [])]);
 	let neueNotiz = $state('');
 	let mehr = $state(false);
+
+	// „Ausgabe hinzufügen“ aus der Zeitleiste: leere Zeile anlegen, hinscrollen, Betrag fokussieren
+	// (einmalig beim Öffnen – untrack: Startwerte, keine Abhängigkeit)
+	untrack(() => {
+		if (!kostenNeu) return;
+		const vorschlag = { drive: 'tanken', outing: 'eintritt', stay: 'einkauf' } as const;
+		kosten.push({ id: crypto.randomUUID(), art: vorschlag[typ], betrag: null as unknown as number, waehrung: kosten.at(-1)?.waehrung ?? waehrung });
+		setTimeout(() => {
+			const feld = document.querySelector<HTMLInputElement>('.kosten-zeile:last-of-type input');
+			feld?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+			feld?.focus({ preventScroll: true });
+		}, 350);
+	});
 
 	// Fahrt
 	const vorige = $derived(letzteUebernachtung(reise, datum));

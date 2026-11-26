@@ -2,6 +2,7 @@
   Zustand der Oberfläche, den mehrere Seiten teilen:
   Sheet-Höhe, Kartensteuerung, offene Dialoge, Hinweise, Foto-Großansicht, Ort-Wahl.
 */
+import type { Component } from 'svelte';
 import type { Hoehe } from '#lib/ui/Sheet.svelte';
 import type { Rand } from '#lib/map/Karte.svelte';
 import type { Eintrag, LngLat, Ziel } from '#lib/db/typen.ts';
@@ -16,12 +17,20 @@ export interface KartenApi {
 
 export type Dialog =
 	| { art: 'reise'; id?: string }
-	| { art: 'eintrag'; id?: string; vorlage?: Partial<Eintrag> }
+	| { art: 'eintrag'; id?: string; vorlage?: Partial<Eintrag>; kostenNeu?: boolean }
 	| { art: 'hier' }
 	| { art: 'platz'; id: string }
 	| { art: 'notiz'; eintrag: string; datum: string }
 	| { art: 'ziel'; id?: string; vorlage?: Partial<Ziel> }
 	| { art: 'pdf'; reise: string };
+
+/** Eintrag im Aktionen-Menü (`…`, Rechtsklick, Wischen) */
+export interface Aktion {
+	text: string;
+	icon?: Component;
+	gefahr?: boolean;
+	los: () => unknown;
+}
 
 interface Hinweis {
 	nr: number;
@@ -45,6 +54,8 @@ class Ui {
 	ich = $state<{ lat: number; lng: number; genau: number } | null>(null);
 
 	dialog = $state<Dialog | null>(null);
+	/** Aktionen-Menü: am iPhone von unten, am PC an der Mausposition (x/y) */
+	aktionen = $state<{ titel?: string; punkte: Aktion[]; x?: number; y?: number } | null>(null);
 	hinweis = $state<Hinweis | null>(null);
 	/** Foto-Großansicht: Liste von Foto-IDs und Position */
 	gross = $state<{ ids: string[]; i: number } | null>(null);

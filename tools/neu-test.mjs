@@ -45,7 +45,9 @@ await foto('1-folgenaechte');
 const nacht2 = p.locator('.ein.folge', { hasText: 'Geiranger Camping' }).filter({ hasText: 'Nacht 2 von 4' });
 await nacht2.locator('.ein-knopf').click();
 await warte(400);
-await p.getByRole('button', { name: 'Notiz', exact: true }).click();
+await p.locator('.aktionen').getByLabel('Mehr').click();
+await p.waitForTimeout(300);
+await p.getByRole('menuitem', { name: 'Notiz zu dieser Nacht', exact: true }).click();
 await warte(400);
 await p.locator('textarea').fill('Nachbarn bis 1 Uhr laut.');
 await foto('1b-notizdialog');
@@ -114,9 +116,11 @@ await foto('4-zeitraum');
 const stayKnopf = p.locator('.typ-stay .ein-knopf').first();
 if ((await stayKnopf.getAttribute('aria-expanded')) !== 'true') await stayKnopf.click();
 await warte(300);
-await p.locator('.typ-stay .aktionen').getByRole('button', { name: 'Bearbeiten' }).click();
+await p.locator('.typ-stay').locator('.aktionen').getByLabel('Mehr').click();
+await p.waitForTimeout(300);
+await p.getByRole('menuitem', { name: 'Bearbeiten', exact: true }).click();
 await warte(400);
-await p.getByRole('button', { name: 'Mehr', exact: true }).click();
+await p.locator('.dialog').getByRole('button', { name: 'Mehr', exact: true }).click();
 await warte(400);
 ok((await p.getByText('Privat', { exact: false }).count()) === 0, 'Kein „Privat“-Schalter mehr');
 ok((await p.getByText('Ausstattung').count()) > 0 && (await p.getByText('Links zum Wiederfinden').count()) > 0, 'Unter „Mehr“: Merkmale aus dem Katalog und Links');
@@ -169,7 +173,9 @@ ok(nachher.includes('über') && nachher !== vorher, `Route neu: „${vorher}“ 
 await foto('9-route-neu');
 
 // --- Zwischenziel im Formular ---
-await fahrt.getByRole('button', { name: 'Bearbeiten' }).click();
+await fahrt.locator('.aktionen').getByLabel('Mehr').click();
+await p.waitForTimeout(300);
+await p.getByRole('menuitem', { name: 'Bearbeiten', exact: true }).click();
 await warte(500);
 ok((await p.locator('.via').count()) === 1, 'Formular zeigt das Zwischenziel');
 await foto('10-via-formular');
