@@ -78,6 +78,21 @@ await p.getByRole('button', { name: 'Übernehmen' }).click();
 await warte(1200);
 ok((await p.getByRole('radio', { name: /Ohne Ort/ }).count()) === 0, 'Nach dem Platzieren hat das Foto einen Ort (Filter weg)');
 
+// Datum in der Großansicht ändern: Foto ohne Reise bekommt ein Datum in Norwegen → wandert dorthin
+const norwegenVorher = await p.locator('.seite > section', { hasText: 'Norwegen' }).locator('.raster button').count();
+await klick(p.locator('.seite > section', { hasText: 'Ohne Reise' }).locator('.raster button').first());
+await warte(600);
+await p.getByRole('button', { name: 'Aufnahmezeit ändern' }).click();
+await p.locator('.datum input').fill('2025-07-08T12:30');
+await p.getByRole('button', { name: 'Speichern' }).click();
+await warte(800);
+await p.screenshot({ path: 'tools/bilder/datum-geaendert.png' });
+ok((await p.locator('.gross').innerText()).includes('Di, 8. Juli 2025'), 'Großansicht zeigt das neue Datum');
+await p.keyboard.press('Escape');
+await warte(500);
+const norwegenNachher = await p.locator('.seite > section', { hasText: 'Norwegen' }).locator('.raster button').count();
+ok(norwegenNachher === norwegenVorher + 1, 'Foto ist mit dem neuen Datum zur Reise Norwegen gewandert');
+
 // Sicherung mit Passwort
 await p.goto(BASIS + '#/einstellungen');
 await warte(1200);

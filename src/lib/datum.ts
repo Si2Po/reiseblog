@@ -22,6 +22,8 @@ export const tagLang = (s: string) => format(d(s), 'EEEEEE, d. MMMM', { locale: 
 export const monatJahr = (s: string) => format(d(s), 'MMMM yyyy', { locale: de });
 export const jahr = (s: string) => format(d(s), 'yyyy');
 export const kurz = (s: string) => format(d(s), 'd. MMM yyyy', { locale: de });
+/** „Do, 26. Nov. 2026“ */
+export const tagMitJahr = (s: string) => format(d(s), 'EEEEEE, d. MMM yyyy', { locale: de });
 /** Reisetag 1, 2, … */
 export const reiseTag = (start: string, s: string) => differenceInCalendarDays(d(s), d(start)) + 1;
 

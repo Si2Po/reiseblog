@@ -142,7 +142,7 @@ export function ausflugBeiFoto(reise: string, tag: string, ort: Ort): Eintrag | 
 }
 
 /** Reise, in deren Zeitraum das Datum fällt */
-function reiseAm(tag: string): string | undefined {
+export function reiseAm(tag: string): string | undefined {
 	return daten.reisen.find((r) => r.start <= tag && reiseBis(r) >= tag)?.id;
 }
 
