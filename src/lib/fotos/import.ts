@@ -148,13 +148,14 @@ function reiseAm(tag: string): string | undefined {
 /**
  * Ort für ein Foto ohne GPS:
  * - beim Eintrag: dessen Ort (Fahrt: Mitte der Strecke)
- * - sonst bei der Reise: Ort des Tages (Übernachtung bzw. letzte davor), sonst die Mitte der Reise
- * Ohne Reise bleibt das Foto ohne Ort (lässt sich im Fotoalbum auf der Karte platzieren).
+ * - sonst bei der Reise: Ort des Tages (Übernachtung bzw. letzte davor)
+ * Passt nichts (z. B. Foto vor dem ersten Eintrag), bleibt es bewusst ohne Ort – lieber selbst setzen
+ * (Fotoalbum, Filter „Ohne Ort“) als an einem geratenen Ort. Ohne Reise genauso.
  */
 export function ortOhneGps(eintrag: Eintrag | undefined, reise: string | undefined, tag: string): Ort | undefined {
 	const o = eintrag && eintragOrt(eintrag);
 	if (o) return o;
-	return reise ? (ortAmTag(reise, tag) ?? reiseMitte(reise)) : undefined;
+	return reise ? ortAmTag(reise, tag) : undefined;
 }
 
 /** Ort eines Eintrags; bei Fahrten der Punkt auf halber Strecke */
@@ -176,18 +177,6 @@ function eintragOrt(e: Eintrag): Ort | undefined {
 		weg += stueck;
 	}
 	return pkt(0);
-}
-
-/** Mitte der Reise: der Ort der Reise, der am nächsten an der Mitte aller Orte liegt (nicht irgendwo im Meer) */
-function reiseMitte(reise: string): Ort | undefined {
-	const orte = eintraegeVon(reise)
-		.map(eintragOrt)
-		.filter((x): x is Ort => !!x);
-	if (!orte.length) return undefined;
-	const lat = orte.reduce((a, o) => a + o.lat, 0) / orte.length;
-	const lng = orte.reduce((a, o) => a + o.lng, 0) / orte.length;
-	const nah = orte.reduce((a, o) => (abstand(o, { lat, lng }) < abstand(a, { lat, lng }) ? o : a));
-	return { lat: nah.lat, lng: nah.lng };
 }
 
 /** Einmal beim Start: Fotos in Reisen, die noch keinen Ort haben, nach denselben Regeln einordnen */
