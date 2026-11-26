@@ -87,7 +87,7 @@ await p.locator('input[type="date"]').first().fill(format(addDays(new Date(), -1
 await p.getByRole('button', { name: 'Anlegen' }).click();
 await warte(1000);
 await voll();
-await p.getByRole('button', { name: 'Eintrag hinzufügen' }).click();
+await p.locator('button.knopf.neu').click();
 await warte(500);
 await p.locator('input[placeholder="Ort suchen"]').fill('Überlingen');
 await p.waitForSelector('.vorschlaege button', { timeout: 10000 });

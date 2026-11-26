@@ -51,7 +51,7 @@ ok((await p.locator('.typ-stay').count()) === 1, 'Übernachtung 1 eingetragen');
 
 // 3. Zweite Übernachtung in Ålesund über die Ortssuche (WebKit übernimmt geänderte Standorte im Test nicht)
 await voll();
-await p.getByRole('button', { name: 'Eintrag hinzufügen' }).click();
+await p.locator('button.knopf.neu').click();
 await p.waitForTimeout(600);
 await p.locator('input[placeholder="Ort suchen"]').fill('Ålesund');
 await p.waitForSelector('.vorschlaege button', { timeout: 10000 });

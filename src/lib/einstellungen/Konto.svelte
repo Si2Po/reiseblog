@@ -50,6 +50,7 @@
 					{#if !tresor.offen}Wartet auf die Verschlüsselung
 					{:else if abgleich.laeuft}Wird abgeglichen …
 					{:else if abgleich.fehler}{abgleich.fehler}
+					{:else if abgleich.wartet}{abgleich.wartet} {abgleich.wartet === 1 ? 'Änderung wartet' : 'Änderungen warten'} auf den Abgleich{navigator.onLine ? '' : ' (kein Internet)'}
 					{:else if abgleich.zuletzt}Abgeglichen {formatDistanceToNow(abgleich.zuletzt, { locale: de, addSuffix: true })}
 					{:else}Noch nicht abgeglichen{/if}
 				</span>

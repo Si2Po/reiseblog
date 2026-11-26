@@ -10,8 +10,10 @@
 	import GearSix from 'phosphor-svelte/lib/GearSix';
 	import { ui } from '#lib/ui.svelte.ts';
 	import { daten } from '#lib/db/daten.svelte.ts';
+	import { abgleich } from '#lib/db/abgleich.svelte.ts';
 
 	const aktiv = $derived(page.route.id);
+	const offen = $derived(abgleich.email ? abgleich.wartet : 0);
 </script>
 
 <nav class="reiter" aria-label="Bereiche">
@@ -22,7 +24,15 @@
 		<a href="#/fotos" class:aktiv={aktiv === '/fotos'}><Images size={18} /> Fotos</a>
 	</div>
 	<a class="symbol" href="#/suche" class:aktiv={aktiv === '/suche'} onclick={() => !ui.breit && (ui.hoehe = 'voll')} aria-label="Suche"><MagnifyingGlass size={20} /></a>
-	<a class="symbol" href="#/einstellungen" class:aktiv={aktiv === '/einstellungen'} aria-label="Einstellungen"><GearSix size={20} /></a>
+	<!-- Punkt am Zahnrad: Änderungen warten auf den Abgleich (gelb) bzw. Abgleich-Fehler (rot) -->
+	<a
+		class="symbol"
+		href="#/einstellungen"
+		class:aktiv={aktiv === '/einstellungen'}
+		aria-label={abgleich.fehler && abgleich.email ? 'Einstellungen – Abgleich-Problem' : offen ? `Einstellungen – ${offen} ${offen === 1 ? 'Änderung wartet' : 'Änderungen warten'} auf den Abgleich` : 'Einstellungen'}
+		title={offen ? `${offen} ${offen === 1 ? 'Änderung wartet' : 'Änderungen warten'} auf den Abgleich` : undefined}
+		><GearSix size={20} />{#if abgleich.email && (offen || abgleich.fehler)}<span class="punkt" class:rot={!!abgleich.fehler}></span>{/if}</a
+	>
 </nav>
 
 <style>
@@ -69,6 +79,23 @@
 		height: 46px;
 		border-radius: calc(var(--radius) + 2px);
 		background: var(--flaeche-2);
+	}
+	.symbol {
+		position: relative;
+	}
+	.punkt {
+		position: absolute;
+		top: 9px;
+		right: 9px;
+		width: 9px;
+		height: 9px;
+		border: 2px solid var(--flaeche-2);
+		border-radius: 50%;
+		background: var(--signal);
+		box-sizing: content-box;
+	}
+	.punkt.rot {
+		background: var(--gefahr);
 	}
 	.symbol.aktiv {
 		color: var(--text);

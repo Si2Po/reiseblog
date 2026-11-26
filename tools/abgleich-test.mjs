@@ -202,7 +202,7 @@ await bb.keyboard.press('Escape');
 await bb.goto(BASIS + '#/reise/' + reiseId);
 await bb.waitForTimeout(800);
 await voll(bb);
-await bb.getByRole('button', { name: 'Eintrag hinzufügen' }).click();
+await bb.locator('button.knopf.neu').click();
 await bb.waitForTimeout(500);
 await bb.getByRole('radio', { name: 'Ausflug' }).click();
 await bb.locator('input[placeholder^="z. B. Wanderung"]').fill('Wanderung zum Feldberg');
@@ -249,6 +249,17 @@ ok((await cc.getByText('Ende-zu-Ende verschlüsselt').count()) > 0, 'C: neues Pa
 await cc.goto(BASIS + '#/');
 await cc.waitForTimeout(1500);
 ok((await cc.getByText('Schwarzwald').count()) > 0, 'C sieht die Reise');
+
+// Wartende Änderungen: Punkt am Zahnrad, bis hochgeladen ist
+await cc.goto(BASIS + '#/');
+await cc.waitForTimeout(800);
+await cc.getByRole('button', { name: 'Neue Reise' }).first().click();
+await cc.locator('input[placeholder^="z. B. Norwegen"]').fill('Testreise C');
+await cc.getByRole('button', { name: 'Anlegen' }).click();
+await cc.waitForTimeout(400);
+ok((await cc.locator('.reiter .punkt').count()) === 1, 'Änderung wartet: Punkt am Zahnrad');
+await cc.waitForTimeout(5000);
+ok((await cc.locator('.reiter .punkt').count()) === 0, 'Nach dem Abgleich ist der Punkt weg');
 
 // Abmelden entfernt den Schlüssel vom Gerät
 await bb.goto(BASIS + '#/einstellungen');

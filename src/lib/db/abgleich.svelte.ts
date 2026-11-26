@@ -38,6 +38,8 @@ class Abgleich {
 	laeuft = $state(false);
 	zuletzt = $state<number | null>(null);
 	fehler = $state('');
+	/** Änderungen, die noch auf das Hochladen warten (z. B. ohne Netz) */
+	wartet = $state(0);
 	#client: SupabaseClient | null = null;
 	#uid: string | null = null;
 	#nochmal = false;
@@ -65,7 +67,11 @@ class Abgleich {
 			if ((s?.user?.id ?? null) !== this.#uid) this.#setzen(s?.user ?? null);
 		});
 		this.zuletzt = ((await db.meta.get('zuletzt'))?.wert as number) ?? null;
-		daten.beobachter = () => this.bald();
+		daten.beobachter = () => {
+			this.zaehlen();
+			this.bald();
+		};
+		this.zaehlen();
 		addEventListener('online', () => this.jetzt());
 		document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && this.jetzt());
 		setInterval(() => document.visibilityState === 'visible' && this.jetzt(), 60_000);
@@ -123,6 +129,10 @@ class Abgleich {
 		});
 	}
 
+	async zaehlen() {
+		this.wartet = await db.outbox.filter((o) => !o.id.startsWith('bsp-')).count();
+	}
+
 	/** kurz nach einer Änderung abgleichen (mehrere Änderungen werden gebündelt) */
 	bald() {
 		clearTimeout(this.#zeit);
@@ -149,6 +159,7 @@ class Abgleich {
 			console.warn('Abgleich:', e);
 		} finally {
 			this.laeuft = false;
+			this.zaehlen();
 			if (this.#nochmal) {
 				this.#nochmal = false;
 				this.bald();

@@ -93,7 +93,7 @@ await p.getByRole('button', { name: 'Anlegen' }).click();
 await warte(1000);
 // erste Übernachtung vor 3 Tagen, 1 Nacht (man weiß es ja noch nicht)
 await voll();
-await p.getByRole('button', { name: 'Eintrag hinzufügen' }).click();
+await p.locator('button.knopf.neu').click();
 await warte(500);
 await p.locator('input[type="date"]').first().fill(format(addDays(new Date(), -3), 'yyyy-MM-dd'));
 await p.getByRole('button', { name: 'Hier', exact: true }).click();
@@ -114,7 +114,7 @@ const nachtText = await p.locator('.typ-stay .ein-meta').first().innerText();
 ok(nachtText.includes('3 Nächte'), `Nächte bis heute gesetzt: „${nachtText.trim()}“`);
 ok((await p.locator('.typ-drive .ein-meta', { hasText: 'unterwegs' }).count()) === 1, 'Offene Fahrt „unterwegs …“');
 // Ziel erreichen: Übernachtung in Erding → Fahrt endet dort
-await p.getByRole('button', { name: 'Eintrag hinzufügen' }).click();
+await p.locator('button.knopf.neu').click();
 await warte(500);
 await p.locator('input[placeholder="Ort suchen"]').fill('Erding');
 await p.waitForSelector('.vorschlaege button', { timeout: 10000 });
