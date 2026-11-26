@@ -28,7 +28,9 @@
 	// Gruppen: geplante Reisen (nach Start), dann „Irgendwann“
 	const gruppen = $derived.by(() => {
 		const nachReise = new Map<string, Ziel[]>();
-		for (const z of offen) nachReise.set(z.reise ?? '', [...(nachReise.get(z.reise ?? '') ?? []), z]);
+		// Ziele einer (z. B. gelöschten) Reise, die es nicht mehr gibt, zählen zu „Irgendwann“
+		const schluessel = (z: Ziel) => (daten.reise(z.reise) ? z.reise! : '');
+		for (const z of offen) nachReise.set(schluessel(z), [...(nachReise.get(schluessel(z)) ?? []), z]);
 		const liste = [...nachReise.entries()]
 			.filter(([r]) => r)
 			.map(([r, ziele]) => ({ titel: `Für „${daten.reise(r)?.titel ?? 'Reise'}“`, start: daten.reise(r)?.start ?? '', ziele }))

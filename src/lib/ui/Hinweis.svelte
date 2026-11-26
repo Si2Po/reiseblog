@@ -1,4 +1,4 @@
-<!-- Kurzer Hinweis (iPhone: oben, PC: unten), optional mit „Rückgängig“. -->
+<!-- Kurzer Hinweis (iPhone: oben, PC: unten), optional mit Knopf („Rückgängig“ oder z. B. „Zuordnen“). -->
 <script lang="ts">
 	import { fly } from 'svelte/transition';
 	import { ui } from '#lib/ui.svelte.ts';
@@ -14,7 +14,7 @@
 						const r = ui.hinweis?.rueckgaengig;
 						ui.hinweis = null;
 						r?.();
-					}}>Rückgängig</button
+					}}>{ui.hinweis.knopf ?? 'Rückgängig'}</button
 				>
 			{/if}
 		</div>

@@ -72,7 +72,7 @@ await klick(p.getByRole('button', { name: 'Auswählen' }));
 await klick(p.locator('.raster button').first());
 await warte(300);
 await p.screenshot({ path: 'tools/bilder/album-auswahl.png' });
-await klick(p.getByRole('button', { name: 'Auf der Karte platzieren' }));
+await klick(p.getByRole('button', { name: 'Platzieren' }));
 await warte(800);
 await p.getByRole('button', { name: 'Übernehmen' }).click();
 await warte(1200);
@@ -92,6 +92,22 @@ await p.keyboard.press('Escape');
 await warte(500);
 const norwegenNachher = await p.locator('.seite > section', { hasText: 'Norwegen' }).locator('.raster button').count();
 ok(norwegenNachher === norwegenVorher + 1, 'Foto ist mit dem neuen Datum zur Reise Norwegen gewandert');
+
+// Foto zuordnen: über den Titel in der Großansicht einem Ausflug zuordnen
+await klick(p.locator('.seite > section', { hasText: 'Norwegen' }).locator('.raster button').first());
+await warte(600);
+await p.getByRole('button', { name: 'Foto zuordnen' }).click();
+await warte(700);
+await p.screenshot({ path: 'tools/bilder/zuordnen.png' });
+ok((await p.locator('.dialog .marke', { hasText: 'Aufnahmetag' }).count()) >= 1, 'Zuordnen: Aufnahmetag ist markiert');
+await p.locator('.dialog .zeile', { hasText: 'Trolltunga' }).click();
+await p.locator('.dialog').getByRole('button', { name: 'Zuordnen' }).click();
+await warte(800);
+await p.goto(BASIS + '#/reise/bsp-no25');
+await warte(1500);
+ok((await p.locator('.ein', { hasText: 'Trolltunga' }).locator('.beim-eintrag img').count()) === 1, 'Foto steht jetzt beim Ausflug „Trolltunga“');
+await p.goto(BASIS + '#/fotos');
+await warte(1200);
 
 // Sicherung mit Passwort
 await p.goto(BASIS + '#/einstellungen');

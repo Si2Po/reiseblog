@@ -19,7 +19,7 @@
 	import { thema } from '#lib/thema.svelte.ts';
 	import { reiseFarbe } from '#lib/farben.ts';
 	import { reisenSortiert, naechte, km, fotosVon, reiseEnde, summe } from '#lib/auswertung.ts';
-	import { zeitraum, jahr, zahl, heute } from '#lib/datum.ts';
+	import { zeitraum, jahr, zahl, heute, wort } from '#lib/datum.ts';
 	import { beispielLaden } from '#lib/beispiel/daten.ts';
 
 	const reisen = $derived(reisenSortiert());
@@ -37,7 +37,7 @@
 			{ text: 'Öffnen', icon: ArrowRight, los: () => goto(`#/reise/${r.id}`) },
 			{ text: 'Details', icon: PencilSimple, los: () => (ui.dialog = { art: 'reise', id: r.id }) }
 		];
-		if (r.start <= heute()) punkte.push({ text: 'Als PDF', icon: FilePdf, los: () => (ui.dialog = { art: 'pdf', reise: r.id }) });
+		if (naechte(r.id) || km(r.id)) punkte.push({ text: 'Als PDF', icon: FilePdf, los: () => (ui.dialog = { art: 'pdf', reise: r.id }) });
 		return { titel: r.titel, punkte };
 	}
 
@@ -65,7 +65,7 @@
 		</div>
 	{:else}
 		<a class="summe" href="#/statistik">
-			<span class="ueber zahl">{s.reisen} {s.reisen === 1 ? 'Reise' : 'Reisen'} · {s.naechte} Nächte · {zahl(s.km)} km</span>
+			<span class="ueber zahl">{s.reisen} {s.reisen === 1 ? 'Reise' : 'Reisen'} · {s.naechte} {wort(s.naechte, 'Nacht', 'Nächte')} · {zahl(s.km)} km</span>
 			<span class="statistik"><ChartBar size={15} weight="bold" /> Statistik</span>
 		</a>
 		<div class="reisen" {@attach pfeile('a.reise')}>
@@ -75,7 +75,7 @@
 					{#if bild}<img class="cover" alt="" src={bild} />{/if}
 					<span class="r-txt">
 						<span class="jahr zahl">{r.start > heute() ? `Geplant · ${jahr(r.start)}` : jahr(r.start)}</span>
-						<span class="r-titel">{r.titel}</span>
+						<span class="r-titel" class:lang={r.titel.length > 26}>{r.titel}</span>
 						<span class="zeit">{zeitraum(r.start, r.ende ?? reiseEnde(r))}</span>
 						<span class="zahlen zahl">
 							{#if r.start > heute() && !naechte(r.id)}
@@ -85,9 +85,9 @@
 								<span>noch <b>{zahl(bis)}</b> {bis === 1 ? 'Tag' : 'Tage'}</span>
 								{#if z}<span><b>{z}</b> {z === 1 ? 'Ziel' : 'Ziele'} geplant</span>{/if}
 							{:else}
-								<span><b>{naechte(r.id)}</b> Nächte</span>
+								<span><b>{naechte(r.id)}</b> {wort(naechte(r.id), 'Nacht', 'Nächte')}</span>
 								<span><b>{zahl(km(r.id))}</b> km</span>
-								<span><b>{fotosVon(r.id).length}</b> Fotos</span>
+								<span><b>{fotosVon(r.id).length}</b> {wort(fotosVon(r.id).length, 'Foto', 'Fotos')}</span>
 							{/if}
 						</span>
 					</span>
@@ -134,7 +134,7 @@
 		display: flex;
 		flex-direction: column;
 		justify-content: flex-end;
-		height: 200px;
+		min-height: 200px;
 		border-radius: var(--radius-gross);
 		overflow: hidden;
 		color: #fff;
@@ -163,7 +163,7 @@
 	}
 	/* Ohne Foto: Fläche in Reisefarbe statt Bild */
 	.ohne-bild {
-		height: 150px;
+		min-height: 150px;
 		background: linear-gradient(135deg, color-mix(in srgb, var(--rf) 85%, #000), color-mix(in srgb, var(--rf) 55%, #000));
 	}
 	.ohne-bild .r-txt {
@@ -185,11 +185,21 @@
 		background: rgba(255, 255, 255, 0.2);
 		color: #fff;
 	}
+	/* lange Namen: höchstens zwei Zeilen, damit Jahr und Zahlen sichtbar bleiben */
 	.r-titel {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		overflow-wrap: anywhere;
 		font-size: 28px;
 		font-weight: var(--kopf-gewicht);
 		letter-spacing: var(--kopf-sperrung);
 		line-height: 1.1;
+	}
+	.r-titel.lang {
+		font-size: 23px;
 	}
 	.zeit {
 		color: rgba(255, 255, 255, 0.78);

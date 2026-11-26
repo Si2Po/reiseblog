@@ -35,6 +35,8 @@ export function dauer(min: number): string {
 }
 
 export const zahl = (n: number) => n.toLocaleString('de-DE');
+/** Einzahl/Mehrzahl: wort(1, 'Nacht', 'Nächte') → „Nacht“ */
+export const wort = (n: number, eins: string, viele: string) => (n === 1 ? eins : viele);
 
 /** „38 €“, „420 NOK“, „gratis“ */
 export function preisText(preis: number | undefined, waehrung = 'EUR'): string {

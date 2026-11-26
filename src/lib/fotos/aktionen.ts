@@ -4,6 +4,7 @@ import MapPin from 'phosphor-svelte/lib/MapPin';
 import Van from 'phosphor-svelte/lib/Van';
 import ArrowsOut from 'phosphor-svelte/lib/ArrowsOut';
 import Trash from 'phosphor-svelte/lib/Trash';
+import Tray from 'phosphor-svelte/lib/Tray';
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { daten } from '#lib/db/daten.svelte.ts';
@@ -35,6 +36,7 @@ export function fotoAktionen(f: Foto, ansehen: () => void): { titel: string; pun
 			}
 		});
 	}
+	punkte.push({ text: 'Zuordnen …', icon: Tray, los: () => (ui.dialog = { art: 'zuordnen', fotos: [f.id] }) });
 	if (reise && reise.titelbild !== f.id) {
 		punkte.push({
 			text: 'Als Titelbild',

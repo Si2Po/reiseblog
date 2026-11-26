@@ -56,9 +56,15 @@
 		for (const e of daten.eintraege) if (e.reise === alt.id) teile.push(['eintraege', e.id]);
 		for (const f of daten.fotos) if (f.reise === alt.id) teile.push(['fotos', f.id]);
 		const zurueck = await daten.loeschenAlle(teile);
+		// Für diese Reise geplante Ziele bleiben erhalten und wandern nach „Irgendwann“
+		const ziele = daten.ziele.filter((z) => z.reise === alt.id);
+		for (const z of ziele) await daten.speichern('ziele', { ...z, reise: undefined });
 		zu();
 		goto('#/');
-		ui.zeige(`Reise „${alt.titel}“ gelöscht`, zurueck);
+		ui.zeige(`Reise „${alt.titel}“ gelöscht`, async () => {
+			await zurueck();
+			for (const z of ziele) await daten.speichern('ziele', { ...z });
+		});
 	}
 </script>
 

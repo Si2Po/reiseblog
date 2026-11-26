@@ -210,6 +210,10 @@
 
 		const e = await daten.speichern('eintraege', neu);
 		if (e.typ === 'drive' && e.routeOk === false) routeNachtragen(e.id);
+		// Eintrag in eine andere Reise verschoben: seine Fotos gehen mit (sonst zählen sie noch zur alten Reise)
+		if (alt && alt.reise !== e.reise) {
+			for (const f of daten.fotos.filter((x) => x.eintrag === e.id)) await daten.speichern('fotos', { ...f, reise: e.reise });
+		}
 
 		// Fahrt vom letzten Platz gleich mit anlegen
 		if (start?.ort && ort) {

@@ -16,6 +16,7 @@
 	import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
 	import MapPinPlus from 'phosphor-svelte/lib/MapPinPlus';
 	import Trash from 'phosphor-svelte/lib/Trash';
+	import Tray from 'phosphor-svelte/lib/Tray';
 	import Reiter from '#lib/ui/Reiter.svelte';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
@@ -119,7 +120,7 @@
 			<span class="ueber zahl">{fotoText(daten.fotos.length)}</span>
 			<span class="knoepfe">
 				{#if daten.fotos.length}<button class="knopf zweit" onclick={() => (auswaehlen = true)}>Auswählen</button>{/if}
-				<button class="knopf zweit" onclick={() => fotosWaehlen()} aria-label="Fotos hinzufügen"><Plus size={18} weight="bold" /></button>
+				{#if daten.fotos.length}<button class="knopf zweit" onclick={() => fotosWaehlen()} aria-label="Fotos hinzufügen"><Plus size={18} weight="bold" /></button>{/if}
 			</span>
 		{/if}
 	</div>
@@ -136,9 +137,10 @@
 
 	{#if !daten.fotos.length}
 		<p class="leer">
-			Noch keine Fotos. Füge sie bei einer Reise hinzu oder hier mit „+“: Fotos aus einer Reisezeit landen automatisch bei der Reise, alle anderen stehen für
+			Noch keine Fotos. Füge sie bei einer Reise hinzu oder hier: Fotos aus einer Reisezeit landen automatisch bei der Reise, alle anderen stehen für
 			sich auf der Karte. Damit der Ort mitkommt, in der Fotoauswahl unter „Optionen“ den Standort einschalten.
 		</p>
+		<button class="knopf breit-leer" onclick={() => fotosWaehlen()}><Plus size={18} weight="bold" /> Fotos hinzufügen</button>
 	{/if}
 
 	{#each gruppen as g (g.id)}
@@ -172,7 +174,15 @@
 
 	{#if auswaehlen && gewaehlt.size}
 		<div class="leiste" transition:fly={{ y: 40, duration: 180 }}>
-			<button class="knopf" onclick={platzieren}><MapPinPlus size={18} /> Auf der Karte platzieren</button>
+			<button class="knopf" onclick={platzieren}><MapPinPlus size={18} /> Platzieren</button>
+			<button
+				class="knopf zweit"
+				onclick={() => {
+					const fotos = [...gewaehlt];
+					auswahlEnde();
+					ui.dialog = { art: 'zuordnen', fotos };
+				}}><Tray size={18} /> Zuordnen</button
+			>
 			<button class="knopf zweit weg" onclick={loeschen} aria-label="Ausgewählte Fotos löschen"><Trash size={18} /></button>
 		</div>
 	{/if}
@@ -197,6 +207,9 @@
 		height: 38px;
 		padding: 0 14px;
 		font-size: 15px;
+	}
+	.breit-leer {
+		width: 100%;
 	}
 	.filter {
 		display: flex;

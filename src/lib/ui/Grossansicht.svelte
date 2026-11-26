@@ -161,7 +161,17 @@
 			<button class="blatt rechts" onclick={() => blaettern(1)} aria-label="Nächstes Foto"><CaretRight size={26} /></button>
 		{/if}
 		<div class="unterschrift">
-			<b>{eintrag?.titel ?? reise?.titel ?? foto.ort?.name ?? 'Foto'}</b>
+			<!-- Titel antippen = Foto einer Reise / einem Eintrag zuordnen -->
+			<button
+				class="titel"
+				onclick={() => {
+					const id = foto.id;
+					zu();
+					ui.dialog = { art: 'zuordnen', fotos: [id] };
+				}}
+				aria-label="Foto zuordnen"
+				>{eintrag?.titel ?? reise?.titel ?? foto.ort?.name ?? 'Foto'} <PencilSimple size={15} /></button
+			>
 			<!-- Datum antippen = Aufnahmezeit ändern -->
 			<span class="zeile"
 				><button class="zeit zahl" onclick={datumAendern} aria-label="Aufnahmezeit ändern"
@@ -282,9 +292,24 @@
 		padding: 16px 20px calc(20px + env(safe-area-inset-bottom));
 		color: #eee;
 	}
-	.unterschrift b {
+	.titel {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		align-self: flex-start;
+		margin: 0 0 0 -4px;
+		padding: 2px 4px;
+		border: 0;
+		border-radius: 6px;
+		background: none;
+		color: #eee;
 		font-size: 20px;
 		font-weight: 650;
+		text-align: left;
+	}
+	.titel :global(svg) {
+		flex: none;
+		color: #888;
 	}
 	.zeit {
 		display: inline-flex;

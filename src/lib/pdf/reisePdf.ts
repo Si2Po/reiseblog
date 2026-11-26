@@ -11,7 +11,7 @@
 import type { jsPDF as JsPdf } from 'jspdf';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { tage, naechte, km, plaetzeAnzahl, fotosVon, fotosVonEintrag, reiseEnde, nachtNotizen, weitereFotos, eintraegeVon } from '#lib/auswertung.ts';
-import { zeitraum, tagLang, monatJahr, reiseTag, dauer, zahl, preisText, notizZeit } from '#lib/datum.ts';
+import { zeitraum, tagLang, monatJahr, reiseTag, dauer, zahl, preisText, notizZeit, wort } from '#lib/datum.ts';
 import { reiseKosten, summe, nurEuro, wechselkurse, kostenName, type Betraege } from '#lib/kosten.svelte.ts';
 import { wetterArt, tagesWetter } from '#lib/wetter.ts';
 import { reiseFarbe } from '#lib/farben.ts';
@@ -148,10 +148,10 @@ export async function reisePdf(r: Reise, wahl: PdfWahl, fortschritt?: (n: number
 
 	// Kennzahlen
 	const zahlen: [string, string][] = [
-		[String(naechte(r.id)), 'Nächte'],
+		[String(naechte(r.id)), wort(naechte(r.id), 'Nacht', 'Nächte')],
 		[zahl(km(r.id)), 'km'],
-		[String(plaetzeAnzahl(r.id)), 'Plätze'],
-		[String(fotosVon(r.id).length), 'Fotos']
+		[String(plaetzeAnzahl(r.id)), wort(plaetzeAnzahl(r.id), 'Platz', 'Plätze')],
+		[String(fotosVon(r.id).length), wort(fotosVon(r.id).length, 'Foto', 'Fotos')]
 	];
 	const zb = (INNEN - 3 * 4) / 4;
 	zahlen.forEach(([w, name], i) => {

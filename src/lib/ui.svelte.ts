@@ -22,7 +22,8 @@ export type Dialog =
 	| { art: 'platz'; id: string }
 	| { art: 'notiz'; eintrag: string; datum: string }
 	| { art: 'ziel'; id?: string; vorlage?: Partial<Ziel> }
-	| { art: 'pdf'; reise: string };
+	| { art: 'pdf'; reise: string }
+	| { art: 'zuordnen'; fotos: string[] };
 
 /** Eintrag im Aktionen-Menü (`…`, Rechtsklick, Wischen) */
 export interface Aktion {
@@ -36,6 +37,8 @@ interface Hinweis {
 	nr: number;
 	text: string;
 	rueckgaengig?: () => unknown;
+	/** Beschriftung des Knopfs (Standard „Rückgängig“), z. B. „Zuordnen“ */
+	knopf?: string;
 }
 
 class Ui {
@@ -112,10 +115,10 @@ class Ui {
 	// --- Hinweise ---
 	#nr = 0;
 	#zeit: ReturnType<typeof setTimeout> | undefined;
-	zeige(text: string, rueckgaengig?: () => unknown, dauer?: number) {
+	zeige(text: string, rueckgaengig?: () => unknown, dauer?: number, knopf?: string) {
 		clearTimeout(this.#zeit);
 		const nr = ++this.#nr;
-		this.hinweis = { nr, text, rueckgaengig };
+		this.hinweis = { nr, text, rueckgaengig, knopf };
 		this.#zeit = setTimeout(() => {
 			if (this.hinweis?.nr === nr) this.hinweis = null;
 		}, dauer ?? (rueckgaengig ? 6000 : 2600));

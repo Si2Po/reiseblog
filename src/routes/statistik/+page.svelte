@@ -5,7 +5,7 @@
 	import Kopf from '#lib/ui/Kopf.svelte';
 	import { daten } from '#lib/db/daten.svelte.ts';
 	import { ui } from '#lib/ui.svelte.ts';
-	import { zahl } from '#lib/datum.ts';
+	import { zahl, wort } from '#lib/datum.ts';
 	import { grenzenLaden, berechnen, alleOrte, type Statistik } from '#lib/statistik.ts';
 
 	let grenzen = $state.raw<Awaited<ReturnType<typeof grenzenLaden>> | null>(null);
@@ -45,14 +45,16 @@
 	<h1>Statistik</h1>
 	{#if fehler}<p class="leer">{fehler}</p>{/if}
 	{#if !s && !fehler}<p class="leer">Wird berechnet …</p>{/if}
-	{#if s}
+	{#if s && !s.reisen}
+		<p class="leer">Noch keine Reisen. Sobald du Übernachtungen und Fahrten einträgst, siehst du hier deine Länder, Nächte, Kilometer und Rekorde.</p>
+	{:else if s}
 		<div class="kacheln zahl">
 			<div class="gelb"><b>{s.laender.length}</b><span>{s.laender.length === 1 ? 'Land' : 'Länder'}</span></div>
-			<div><b>{s.naechte}</b><span>Nächte</span></div>
+			<div><b>{s.naechte}</b><span>{wort(s.naechte, 'Nacht', 'Nächte')}</span></div>
 			<div><b>{zahl(s.km)}</b><span>km</span></div>
-			<div><b>{s.reisen}</b><span>Reisen</span></div>
-			<div><b>{s.plaetze}</b><span>Plätze</span></div>
-			<div><b>{s.fotos}</b><span>Fotos</span></div>
+			<div><b>{s.reisen}</b><span>{wort(s.reisen, 'Reise', 'Reisen')}</span></div>
+			<div><b>{s.plaetze}</b><span>{wort(s.plaetze, 'Platz', 'Plätze')}</span></div>
+			<div><b>{s.fotos}</b><span>{wort(s.fotos, 'Foto', 'Fotos')}</span></div>
 		</div>
 
 		{#if s.laender.length}

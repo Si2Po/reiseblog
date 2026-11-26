@@ -34,7 +34,7 @@
 	import { thema } from '#lib/thema.svelte.ts';
 	import { reiseFarbe } from '#lib/farben.ts';
 	import { naechte, km, plaetzeAnzahl, fotosVon, fotosVonEintrag, tage, reiseEnde, weitereFotos, nachtNotizen } from '#lib/auswertung.ts';
-	import { zeitraum, tagLang, monatJahr, reiseTag, dauer, zahl, preisText, notizZeit, heute } from '#lib/datum.ts';
+	import { zeitraum, tagLang, monatJahr, reiseTag, dauer, zahl, preisText, notizZeit, heute, wort } from '#lib/datum.ts';
 	import { fotosWaehlen } from '#lib/fotos/import.ts';
 	import { aktuelleUebernachtung, weiterfahren, zieleInDerNaehe, entfernungText } from '#lib/unterwegs.ts';
 	import { laufendeReise } from '#lib/auswertung.ts';
@@ -242,7 +242,7 @@
 	<Kopf>
 		{#snippet rechts()}
 			{#if !untenSichtbar}<button onclick={neuerEintrag} aria-label="Eintrag hinzufügen"><Plus size={18} weight="bold" /></button>{/if}
-			{#if !inPlanung}<button onclick={() => (ui.dialog = { art: 'pdf', reise: r.id })} aria-label="Als PDF"><FilePdf size={18} /></button>{/if}
+			{#if alleTage.some((t) => t.eintraege.length)}<button onclick={() => (ui.dialog = { art: 'pdf', reise: r.id })} aria-label="Als PDF"><FilePdf size={18} /></button>{/if}
 			<button onclick={() => (ui.dialog = { art: 'reise', id: r.id })}><PencilSimple size={17} /> Details</button>
 		{/snippet}
 	</Kopf>
@@ -253,8 +253,10 @@
 			<h1>{r.titel}</h1>
 			<p class="zeit">{zeitraum(r.start, r.ende ?? reiseEnde(r))}</p>
 			{#if !inPlanung}
+				{@const n = naechte(r.id)}
+				{@const pl = plaetzeAnzahl(r.id)}
 			<div class="kennzahlen zahl" role="group" aria-label="Zeitleiste filtern" {@attach pfeile('button', 'zeile')}>
-				{#each [['naechte', naechte(r.id), 'Nächte'], ['km', zahl(km(r.id)), 'km'], ['plaetze', plaetzeAnzahl(r.id), 'Plätze'], ['fotos', fs.length, 'Fotos']] as [k, wert, name], i (k)}
+				{#each [['naechte', n, wort(n, 'Nacht', 'Nächte')], ['km', zahl(km(r.id)), 'km'], ['plaetze', pl, wort(pl, 'Platz', 'Plätze')], ['fotos', fs.length, wort(fs.length, 'Foto', 'Fotos')]] as [k, wert, name], i (k)}
 					<button class:gelb={i === 0} class:an={filter === k} aria-pressed={filter === k} onclick={() => (filter = filter === k ? null : (k as Filter))}>
 						<b>{wert}</b><span>{name}</span>
 					</button>

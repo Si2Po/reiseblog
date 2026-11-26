@@ -51,10 +51,12 @@ export async function fotosHinzufuegen(dateien: File[], ziel: Ziel = {}) {
 		ohneReise = 0,
 		ausserhalb = 0;
 	const einsortiert = new Map<string, number>();
+	const neu: string[] = [];
 	for (const [i, datei] of bilder.entries()) {
 		ui.zeige(bilder.length === 1 ? 'Foto wird hinzugefügt …' : `Foto ${i + 1} von ${bilder.length} …`);
 		try {
 			const f = await einFoto(datei, ziel);
+			neu.push(f.id);
 			ok++;
 			if (!f.ort) ohneOrt++;
 			if (f.eintrag && !ziel.eintrag) einsortiert.set(f.eintrag, (einsortiert.get(f.eintrag) ?? 0) + 1);
@@ -75,7 +77,9 @@ export async function fotosHinzufuegen(dateien: File[], ziel: Ziel = {}) {
 	if (ohneReise) teile.push(`${ohneReise} ohne Reise – auf der Karte und im Fotoalbum`);
 	else if (ausserhalb) teile.push(`${ausserhalb} außerhalb des Reisezeitraums – unter „Weitere Fotos“`);
 	else if (ohneOrt && !eintrag) teile.push(`${ohneOrt} ohne Ort – in der Fotoauswahl unter „Optionen“ den Standort einschalten`);
-	ui.zeige(teile.join(' · '));
+	// Direkt danach zuordnen können (außer sie gingen gezielt an einen Eintrag)
+	if (neu.length && !ziel.eintrag) ui.zeige(teile.join(' · '), () => (ui.dialog = { art: 'zuordnen', fotos: neu }), 9000, 'Zuordnen');
+	else ui.zeige(teile.join(' · '));
 }
 
 function ausserhalbDerReise(f: Foto): boolean {
