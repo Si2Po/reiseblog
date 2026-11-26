@@ -68,7 +68,7 @@ ok((await p.locator('.kosten').innerText()).includes('Eintritt'), 'und in der Ko
 
 // --- Foto beim passenden Ausflug ---
 const zu = await p.evaluate(async () => {
-	const m = await import(performance.getEntriesByType('resource').map((e) => e.name).find((n) => n.endsWith('/src/lib/fotos/import.ts')) ?? '/src/lib/fotos/import.ts');
+	const m = await import(performance.getEntriesByType('resource').map((e) => e.name).find((n) => n.includes('/src/lib/fotos/import.ts')) ?? '/src/lib/fotos/import.ts');
 	return [
 		m.ausflugBeiFoto('bsp-no25', '2025-07-08', { lat: 58.986, lng: 6.19 })?.titel, // am Preikestolen
 		m.ausflugBeiFoto('bsp-no25', '2025-07-08', { lat: 59.0, lng: 6.05 })?.titel ?? null, // am Platz in Jørpeland
@@ -98,7 +98,7 @@ await p.getByRole('button', { name: 'Eintragen' }).click();
 await warte(1200);
 // Ziel in 10 km Entfernung merken
 await p.evaluate(async () => {
-	const { daten } = await import(performance.getEntriesByType('resource').map((e) => e.name).find((n) => n.endsWith('/src/lib/db/daten.svelte.ts')) ?? '/src/lib/db/daten.svelte.ts');
+	const { daten } = await import(performance.getEntriesByType('resource').map((e) => e.name).find((n) => n.includes('/src/lib/db/daten.svelte.ts')) ?? '/src/lib/db/daten.svelte.ts');
 	await daten.speichern('ziele', { name: 'Insel Mainau', art: 'sehenswert', ort: { lat: 47.705, lng: 9.194, name: 'Konstanz' }, links: [] });
 	await daten.speichern('ziele', { name: 'Weit weg', art: 'stadt', ort: { lat: 52.52, lng: 13.4, name: 'Berlin' }, links: [] });
 });
