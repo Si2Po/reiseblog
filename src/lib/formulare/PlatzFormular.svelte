@@ -22,7 +22,6 @@
 	let merkmale = $state<Merkmale>({ ...alt.merkmale });
 	let links = $state<string[]>([...alt.links]);
 	let notiz = $state(alt.notiz ?? '');
-	let wiederkommen = $state(!!alt.wiederkommen);
 
 	const ok = $derived(name.trim().length > 0 && !!ort);
 	const zu = () => (ui.dialog = null);
@@ -36,8 +35,7 @@
 			ort: ort!,
 			merkmale: aufraeumen(merkmale) ?? {},
 			links,
-			notiz: notiz.trim() || undefined,
-			wiederkommen
+			notiz: notiz.trim() || undefined
 		});
 		zu();
 	}
@@ -74,10 +72,6 @@
 			</div>
 		</div>
 		<OrtFeld bind:ort />
-		<label class="schalter">
-			<span>Gern wieder<small>Platz für später merken</small></span>
-			<input type="checkbox" bind:checked={wiederkommen} />
-		</label>
 		<MerkmalFelder bezug="platz" bind:werte={merkmale} />
 		<LinkFeld bind:links />
 		<label class="feld"><span class="name">Notiz zum Platz</span><textarea bind:value={notiz} placeholder="Was man beim nächsten Mal wissen sollte"></textarea></label>

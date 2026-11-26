@@ -64,7 +64,6 @@
 	let platzArt = $state<PlatzArt>(altPlatz?.art ?? 'camping');
 	let platzMerkmale = $state<Merkmale>({ ...(altPlatz?.merkmale ?? {}) });
 	let platzLinks = $state<string[]>([...(altPlatz?.links ?? [])]);
-	let wiederkommen = $state(altPlatz?.wiederkommen ?? false);
 	let naechte = $state(v.naechte ?? 1);
 	let preis = $state<number | null>(v.preis ?? null);
 	// Währung: zuletzt benutzte in DIESER Reise, sonst Euro (Beispieldaten zählen nicht)
@@ -136,7 +135,6 @@
 			platzArt = p.art;
 			platzMerkmale = { ...p.merkmale };
 			platzLinks = [...p.links];
-			wiederkommen = !!p.wiederkommen;
 		}
 	}
 
@@ -171,12 +169,12 @@
 			const name = platzName.trim() || ort?.name || 'Platz';
 			const pm = aufraeumen(platzMerkmale) ?? {};
 			if (p) {
-				const neu = { ...p, name, art: platzArt, wiederkommen, merkmale: pm, links: platzLinks };
-				if (JSON.stringify([p.name, p.art, !!p.wiederkommen, p.merkmale, p.links]) !== JSON.stringify([name, platzArt, wiederkommen, pm, platzLinks]))
+				const neu = { ...p, name, art: platzArt, merkmale: pm, links: platzLinks };
+				if (JSON.stringify([p.name, p.art, p.merkmale, p.links]) !== JSON.stringify([name, platzArt, pm, platzLinks]))
 					await daten.speichern('plaetze', neu);
 				platz = p.id;
 			} else if (ort) {
-				platz = (await daten.speichern('plaetze', { name, art: platzArt, ort, merkmale: pm, links: platzLinks, wiederkommen })).id;
+				platz = (await daten.speichern('plaetze', { name, art: platzArt, ort, merkmale: pm, links: platzLinks })).id;
 			}
 		}
 
@@ -393,10 +391,6 @@
 				<span class="name">Bewertung</span>
 				<SterneWahl bind:wert={bewertung} />
 			</div>
-			<label class="schalter">
-				<span>Gern wieder<small>Platz für später merken</small></span>
-				<input type="checkbox" bind:checked={wiederkommen} />
-			</label>
 			{#if fahrtSinnvoll}
 				<label class="schalter">
 					<span>Fahrt vom letzten Platz eintragen<small>{vorige?.titel} → hier, mit Straßenroute</small></span>

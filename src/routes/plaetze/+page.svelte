@@ -33,10 +33,10 @@
 	let filterOffen = $state(false);
 	let sortierung = $state<'bewertung' | 'naehe'>('bewertung');
 	const SCHNELL = [
-		{ key: 'gern', name: 'Gern wieder' },
+		{ key: 'top', name: '4+ Sterne' },
 		{ key: 'gratis', name: 'Gratis' }
 	];
-	const passtSchnell = (p: Platz, f: string) => (f === 'gern' ? !!p.wiederkommen : besuche(p.id).some((b) => b.preis === 0));
+	const passtSchnell = (p: Platz, f: string) => (f === 'top' ? platzBewertung(p.id) >= 4 : besuche(p.id).some((b) => b.preis === 0));
 	const passtMerkmale = (p: Platz) => Object.entries(merkmale).every(([k, w]) => p.merkmale[k] === w);
 	const anzahlFilter = $derived(Object.keys(merkmale).length + arten.length + (minSterne ? 1 : 0));
 

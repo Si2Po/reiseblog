@@ -3,7 +3,6 @@
 	import { page } from '$app/state';
 	import NavigationArrow from 'phosphor-svelte/lib/NavigationArrow';
 	import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
-	import Heart from 'phosphor-svelte/lib/Heart';
 	import ArrowSquareOut from 'phosphor-svelte/lib/ArrowSquareOut';
 	import Kopf from '#lib/ui/Kopf.svelte';
 	import Sterne from '#lib/ui/Sterne.svelte';
@@ -53,7 +52,6 @@
 			{:else}
 				<span class="ohne">Noch nicht bewertet</span>
 			{/if}
-			{#if p.wiederkommen}<span class="marke"><Heart size={13} weight="fill" /> Gern wieder</span>{/if}
 		</div>
 		<div class="aktionen">
 			<a class="knopf" href="https://maps.apple.com/?daddr={p.ort.lat},{p.ort.lng}" target="_blank" rel="noopener"
@@ -154,17 +152,6 @@
 	.ohne {
 		color: var(--text-2);
 		font-weight: 500;
-	}
-	.marke {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		margin-left: auto;
-		padding: 4px 10px;
-		border-radius: 20px;
-		background: var(--signal);
-		color: var(--signal-text);
-		font-size: 13px;
 	}
 	.aktionen {
 		display: flex;

@@ -129,6 +129,7 @@ export interface Platz extends Basis {
 	/** Links zum Wiederfinden (Park4Night, Webseite, …) */
 	links: string[];
 	notiz?: string;
+	/** früher „Gern wieder“ – nicht mehr in der Oberfläche, bleibt in alten Daten stehen */
 	wiederkommen?: boolean;
 }
 
