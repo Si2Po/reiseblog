@@ -22,9 +22,15 @@
 	});
 
 	const zu = () => (ui.aktionen = null);
-	function los(p: Aktion) {
+	async function los(p: Aktion) {
 		zu();
-		p.los();
+		// Fehler einer Aktion dürfen das Menü nicht „hängen“ lassen
+		try {
+			await p.los();
+		} catch (e) {
+			console.error('Aktion', p.text, e);
+			ui.zeige(`„${p.text}“ ging nicht: ${(e as Error).message}`);
+		}
 	}
 	function zumBody(el: HTMLElement) {
 		document.body.append(el);

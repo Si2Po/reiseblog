@@ -14,6 +14,7 @@ import { reiseBis, eintraegeVon } from '#lib/auswertung.ts';
 import { abstand } from '#lib/geo.ts';
 import { plusTage } from '#lib/datum.ts';
 import type { Eintrag, Foto, Ort } from '#lib/db/typen.ts';
+import { neueId } from '#lib/db/id.ts';
 
 const GROSS = 1600;
 const KLEIN = 320;
@@ -105,7 +106,7 @@ async function einFoto(datei: File, ziel: Ziel): Promise<Foto> {
 	const eintrag = daten.eintrag(ziel.eintrag) ?? (reise && ort ? ausflugBeiFoto(reise, tag, ort) : undefined);
 	if (!ort) ort = ortOhneGps(eintrag, reise, tag);
 
-	const id = crypto.randomUUID();
+	const id = neueId();
 	await db.dateien.put({ id, bild: await (bild as Blob).arrayBuffer(), typ: 'image/jpeg' });
 	return daten.speichern('fotos', {
 		id,

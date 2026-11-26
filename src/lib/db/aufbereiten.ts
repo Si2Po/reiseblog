@@ -4,6 +4,7 @@
 */
 import type { Eintrag, Merkmale, Platz, TabellenName } from './typen.ts';
 import { merkmal } from '#lib/merkmale.ts';
+import { neueId } from './id.ts';
 
 type Alt = Record<string, unknown>;
 
@@ -32,7 +33,7 @@ function eintrag(e: Eintrag & Alt): Eintrag {
 	const { privat, ...rest } = e;
 	if (event) rest.typ = 'outing';
 	if (rest.typ === 'stay' && rest.text) {
-		rest.notizen = [...(rest.notizen ?? []), { id: crypto.randomUUID(), zeit: `${rest.datum}T20:00`, text: rest.text }];
+		rest.notizen = [...(rest.notizen ?? []), { id: neueId(), zeit: `${rest.datum}T20:00`, text: rest.text }];
 		delete rest.text;
 	}
 	return rest as Eintrag;

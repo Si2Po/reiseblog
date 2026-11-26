@@ -8,6 +8,7 @@
 import { db } from './db.ts';
 import { aufbereiten } from './aufbereiten.ts';
 import type { Basis, Tabellen, TabellenName } from './typen.ts';
+import { neueId } from './id.ts';
 
 type Liste<T extends TabellenName> = Tabellen[T][];
 
@@ -33,7 +34,7 @@ class Daten {
 
 	/** Anlegen oder ändern. Gibt den gespeicherten Datensatz zurück. */
 	async speichern<T extends TabellenName>(tabelle: T, wert: Omit<Tabellen[T], keyof Basis> & Partial<Basis>): Promise<Tabellen[T]> {
-		const neu = { ...wert, id: wert.id ?? crypto.randomUUID(), geaendert: Date.now(), geloescht: false } as Tabellen[T];
+		const neu = { ...wert, id: wert.id ?? neueId(), geaendert: Date.now(), geloescht: false } as Tabellen[T];
 		const sauber = $state.snapshot(neu) as Tabellen[T];
 		await db.transaction('rw', db.table(tabelle), db.outbox, async () => {
 			await db.table(tabelle).put(sauber);

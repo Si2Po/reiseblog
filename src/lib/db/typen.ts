@@ -10,7 +10,7 @@
   Länder zusätzlich als ISO-Code (landCode), Freitext nur in Notizen.
 
   Jede Tabelle hat dieselben Grundfelder (Basis):
-  - id: vom Gerät erzeugt (crypto.randomUUID), bleibt für immer gleich
+  - id: vom Gerät erzeugt (neueId in id.ts), bleibt für immer gleich
   - geaendert: Zeitpunkt der letzten Änderung auf diesem Gerät (ms)
   - geloescht: weiches Löschen (bleibt für Abgleich und Rückgängig erhalten)
 */

@@ -8,6 +8,7 @@
   Liegt das Datum außerhalb der Reise, wird der Reisezeitraum automatisch erweitert.
 -->
 <script lang="ts">
+	import { neueId } from '#lib/db/id.ts';
 	import { goto } from '$app/navigation';
 	import { format, addDays, parseISO } from 'date-fns';
 	import { page } from '$app/state';
@@ -80,7 +81,7 @@
 	untrack(() => {
 		if (!kostenNeu) return;
 		const vorschlag = { drive: 'tanken', outing: 'eintritt', stay: 'einkauf' } as const;
-		kosten.push({ id: crypto.randomUUID(), art: vorschlag[typ], betrag: null as unknown as number, waehrung: kosten.at(-1)?.waehrung ?? waehrung });
+		kosten.push({ id: neueId(), art: vorschlag[typ], betrag: null as unknown as number, waehrung: kosten.at(-1)?.waehrung ?? waehrung });
 		setTimeout(() => {
 			const feld = document.querySelector<HTMLInputElement>('.kosten-zeile:last-of-type input');
 			feld?.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -192,7 +193,7 @@
 		};
 		let neu: Omit<Eintrag, 'id' | 'geaendert'> & { id?: string };
 		if (typ === 'stay') {
-			const alle = neueNotiz.trim() ? [...notizen, { id: crypto.randomUUID(), zeit: notizZeitpunkt(), text: neueNotiz.trim() }] : notizen;
+			const alle = neueNotiz.trim() ? [...notizen, { id: neueId(), zeit: notizZeitpunkt(), text: neueNotiz.trim() }] : notizen;
 			neu = { ...gemeinsam, ort, platz, naechte, preis: preis ?? undefined, waehrung, bewertung, notizen: alle.length ? alle : undefined };
 		} else if (typ === 'drive') {
 			// Strecke unverändert (gleiche Punkte)? Dann die berechnete Route behalten.

@@ -1,5 +1,6 @@
 <!-- Schnelle Notiz zu einer Übernachtung (z. B. zur zweiten Nacht). Zeitpunkt wird vorgeschlagen, lässt sich ändern. -->
 <script lang="ts">
+	import { neueId } from '#lib/db/id.ts';
 	import { format } from 'date-fns';
 	import Dialog from '#lib/ui/Dialog.svelte';
 	import { daten } from '#lib/db/daten.svelte.ts';
@@ -22,7 +23,7 @@
 	const zu = () => (ui.dialog = null);
 	async function speichern() {
 		if (!e || !text.trim()) return;
-		await daten.speichern('eintraege', { ...e, notizen: [...(e.notizen ?? []), { id: crypto.randomUUID(), zeit, text: text.trim() }] });
+		await daten.speichern('eintraege', { ...e, notizen: [...(e.notizen ?? []), { id: neueId(), zeit, text: text.trim() }] });
 		zu();
 		ui.zeige('Notiz gespeichert');
 	}

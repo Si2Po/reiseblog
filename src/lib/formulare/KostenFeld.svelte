@@ -1,5 +1,6 @@
 <!-- Ausgaben eines Eintrags: je Zeile Art, Betrag, Währung. Leere Beträge werden beim Speichern weggelassen. -->
 <script lang="ts">
+	import { neueId } from '#lib/db/id.ts';
 	import X from 'phosphor-svelte/lib/X';
 	import Plus from 'phosphor-svelte/lib/Plus';
 	import { KOSTEN_ART, type Kosten, type KostenArt, type Typ } from '#lib/db/typen.ts';
@@ -10,7 +11,7 @@
 	const VORSCHLAG: Record<Typ, KostenArt> = { drive: 'tanken', outing: 'eintritt', stay: 'einkauf' };
 
 	function neu() {
-		kosten = [...kosten, { id: crypto.randomUUID(), art: kosten.length && typ === 'drive' ? 'maut' : VORSCHLAG[typ], betrag: null as unknown as number, waehrung: kosten.at(-1)?.waehrung ?? waehrung }];
+		kosten = [...kosten, { id: neueId(), art: kosten.length && typ === 'drive' ? 'maut' : VORSCHLAG[typ], betrag: null as unknown as number, waehrung: kosten.at(-1)?.waehrung ?? waehrung }];
 		// Fokus ins neue Betragsfeld
 		setTimeout(() => document.querySelector<HTMLInputElement>('.kosten-zeile:last-of-type input')?.focus(), 30);
 	}
