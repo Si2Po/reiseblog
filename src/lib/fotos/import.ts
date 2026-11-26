@@ -2,8 +2,9 @@
   Fotos hinzufügen:
   1. Aufnahmeort und -zeit aus den EXIF-Daten lesen (vor dem Verkleinern, das Canvas entfernt sie)
   2. auf max. 1600 px verkleinern (JPEG, ca. 300 KB) + Vorschaubild 320 px
-  3. Reise und Eintrag zuordnen (vorgegeben oder nach Datum; mit GPS landen Fotos beim passenden Ausflug)
-  4. Bild lokal speichern (IndexedDB), Hochladen übernimmt später der Abgleich
+  3. Ort: aus dem Foto; fehlt er bei einem gerade aufgenommenen Foto, der aktuelle Standort; sonst Eintrag/Tag
+  4. Reise und Eintrag zuordnen (vorgegeben oder nach Datum; mit Ort landen Fotos beim passenden Ausflug)
+  5. Bild lokal speichern (IndexedDB), Hochladen übernimmt später der Abgleich
 */
 import exifr from 'exifr';
 import { format } from 'date-fns';
@@ -11,7 +12,7 @@ import { db } from '#lib/db/db.ts';
 import { daten } from '#lib/db/daten.svelte.ts';
 import { ui } from '#lib/ui.svelte.ts';
 import { reiseBis, eintraegeVon } from '#lib/auswertung.ts';
-import { abstand } from '#lib/geo.ts';
+import { abstand, standort } from '#lib/geo.ts';
 import { plusTage } from '#lib/datum.ts';
 import type { Eintrag, Foto, Ort } from '#lib/db/typen.ts';
 import { neueId } from '#lib/db/id.ts';
@@ -40,6 +41,25 @@ export function fotosWaehlen(ziel: Ziel = {}) {
 	});
 	input.addEventListener('cancel', weg);
 	input.click();
+}
+
+/*
+  „Foto aufnehmen“ aus der Fotoauswahl: iOS liefert das frische Foto ohne Ort (dort gibt es kein
+  „Optionen → Standort“). Ist ein Foto ohne Ort gerade eben entstanden, nehmen wir den aktuellen
+  Standort – dort wurde es ja aufgenommen. Einmal je Hinzufügen abfragen, nicht für jedes Foto.
+*/
+const FRISCH = 30 * 60_000;
+let hierGerade: { zeit: number; ort: Promise<Ort | undefined> } | null = null;
+function aktuellerOrt(): Promise<Ort | undefined> {
+	if (!hierGerade || Date.now() - hierGerade.zeit > 2 * 60_000) {
+		hierGerade = {
+			zeit: Date.now(),
+			ort: standort()
+				.then((p) => ({ lat: p.coords.latitude, lng: p.coords.longitude }))
+				.catch(() => undefined)
+		};
+	}
+	return hierGerade.ort;
 }
 
 /** Für Drag & Drop am PC und die Auswahl oben */
@@ -107,6 +127,8 @@ async function einFoto(datei: File, ziel: Ziel): Promise<Foto> {
 
 	// Zuordnung
 	let ort: Ort | undefined = gps && Number.isFinite(gps.latitude) ? { lat: gps.latitude, lng: gps.longitude } : undefined;
+	// gerade aufgenommen und ohne Ort (z. B. „Foto aufnehmen“): hier und jetzt – außer es geht gezielt an einen Eintrag
+	if (!ort && !ziel.eintrag && Date.now() - zeit.getTime() < FRISCH) ort = await aktuellerOrt();
 	const reise = ziel.reise ?? daten.eintrag(ziel.eintrag)?.reise ?? reiseAm(tag);
 	const eintrag = daten.eintrag(ziel.eintrag) ?? (reise && ort ? ausflugBeiFoto(reise, tag, ort) : undefined);
 	if (!ort) ort = ortOhneGps(eintrag, reise, tag);
